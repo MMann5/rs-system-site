@@ -1,0 +1,13 @@
+_bmad/
+_bmad-output/
+.claude/
+.bmad-loop/
+brand/
+archive-ancien-handoff/
+node_modules/
+dist/
+.astro/
+.wrangler/
+.env
+.env.*
+.DS_Store
