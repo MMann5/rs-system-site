@@ -35,5 +35,14 @@
   "nav.accessibility": "Accessibility statement",
   "nav.privacy": "Privacy policy",
   "contact.zone": "From Beer Sheva to Jerusalem, including the settlements",
-  "placeholder.email": "email"
+  "placeholder.email": "email",
+  "home.hero.title": "See everything. Sleep easy.",
+  "home.hero.subtitle": "Cameras, detectors, intercoms and smart home. Installed properly.",
+  "home.hero.alt": "Lit entrance of a modern private house at night",
+  "action.call": "Call",
+  "action.whatsapp": "WhatsApp",
+  "contact-band.title": "Contact us",
+  "contact-band.midrag": "Midrag rating",
+  "contact-band.reviews": "{n} reviews",
+  "contact-band.leave-details": "Leave your details"
 }

@@ -1,6 +1,11 @@
 ---
-// Accueil minimal (story 1.3) : héros et bloc contact en 1.8. Textes depuis src/i18n.
+// FR1, FR21 (story 1.8) : accueil = héros photo puis bloc contact. Textes depuis src/i18n, photo
+// Pexels n° 31737862 (décision D5) en paysage et en recadrage 4:5 (src/assets/photos/).
 // AD-13 : construit son contexte de page et rend le layout unique.
+import heroPortrait from '../assets/photos/home-hero-portrait.jpg';
+import hero from '../assets/photos/home-hero.jpg';
+import ContactBand from '../components/ContactBand.astro';
+import HeroPhoto from '../components/HeroPhoto.astro';
 import Base from '../layouts/Base.astro';
 import { t } from '../lib/i18n';
 import type { Lang } from '../lib/langs';
@@ -17,6 +22,11 @@ const ctx = createPageContext({ id, lang });
 const { meta } = page(id);
 ---
 <Base ctx={ctx} title={meta.title[lang]} description={meta.description[lang]}>
-  <h1>{t(lang, 'site.name')}</h1>
-  <p>{t(lang, 'site.tagline')}</p>
+  <HeroPhoto
+    ctx={ctx}
+    photo={{ src: hero, portrait: heroPortrait, alt: t(lang, 'home.hero.alt') }}
+    title={t(lang, 'home.hero.title')}
+    subtitle={t(lang, 'home.hero.subtitle')}
+  />
+  <ContactBand ctx={ctx} />
 </Base>

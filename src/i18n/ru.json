@@ -35,5 +35,14 @@
   "nav.accessibility": "Заявление о доступности",
   "nav.privacy": "Политика конфиденциальности",
   "contact.zone": "От Беэр-Шевы до Иерусалима, включая поселения",
-  "placeholder.email": "эл. почта"
+  "placeholder.email": "эл. почта",
+  "home.hero.title": "Всё видно. Спите спокойно.",
+  "home.hero.subtitle": "Камеры, датчики, домофоны и умный дом. Установлены как надо.",
+  "home.hero.alt": "Освещённый вход в современный частный дом ночью",
+  "action.call": "Позвонить",
+  "action.whatsapp": "WhatsApp",
+  "contact-band.title": "Связаться с нами",
+  "contact-band.midrag": "Рейтинг на Midrag",
+  "contact-band.reviews": "отзывов: {n}",
+  "contact-band.leave-details": "Оставить контакты"
 }

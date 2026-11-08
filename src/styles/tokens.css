@@ -287,4 +287,26 @@
   --icon-stroke-width: 1.8;
   /* DESIGN.md › Layout › Footer : « auto-fit minmax(min(100%, 200px), 1fr) » (largeur min. d'une colonne) */
   --footer-col-min: 200px;
+  /* DESIGN.md › Layout (tableau des hauteurs) › Héros photo accueil : « min-block-size 780px » */
+  --hero-photo-min: 780px;
+  /* DESIGN.md › Layout › Héros photo, tablette : 680px */
+  --hero-photo-min-tablet: 680px;
+  /* DESIGN.md › Layout › Héros photo, mobile : « max(560px, 100svh - 128px) » (écran moins header et barre) */
+  --hero-photo-min-mobile: 560px;
+  /* UX-DR36 : zoom du héros « scale(1.1) → 1 en 2,6 s » (canvas Main.dc.html : @keyframes kb) */
+  --hero-zoom-from: 1.1;
+  --hero-zoom-duration: 2.6s;
+  /* UX-DR36 : montée décalée « 24px, 0,9 s, délais 0,25 / 0,45 / 0,65 s », opacité de départ 0,4 */
+  --rise-distance: 24px;
+  --rise-duration: 0.9s;
+  --rise-opacity-from: 0.4;
+  --rise-delay-1: 0.25s;
+  --rise-delay-2: 0.45s;
+  --rise-delay-3: 0.65s;
+  /* DESIGN.md › Scrims : calque de maintien, colors.scrim à 0,62 jusqu'au bas du bloc + 32px, puis fondu sur 64px */
+  --scrim-hold: linear-gradient(to bottom, rgba(6,16,32,.62) 0%, rgba(6,16,32,.62) calc(100% - 64px), rgba(6,16,32,0) 100%);
+  /* DESIGN.md › Scrims : le calque dépasse le bloc de texte de 32px + 64px de fondu */
+  --scrim-hold-extend: 96px;
+  /* EXPERIENCE.md › Accessibility Floor : h2 du bloc contact masqué visuellement (utilitaire .visually-hidden) */
+  --visually-hidden-size: 1px;
 }

@@ -1,0 +1,49 @@
+---
+// UX-DR18 : lien texte « › » (DESIGN.md › Components › Lien texte). Libellé puis chevron U+203A, précédé
+// d'une espace insécable, dans un <span aria-hidden> : le bidi le retourne en RTL, jamais le CSS.
+// Trois tons : `light` (fond clair, link), `night` (navy, link-on-night), `photo` (sous scrim, blanc 600).
+// Souligné au survol et au focus seulement ; cible ≥ 44px de haut. data-track / data-placement (AD-6)
+// seulement s'ils sont fournis.
+interface Props {
+  href: string;
+  label: string;
+  tone: 'light' | 'night' | 'photo';
+  track?: string;
+  placement?: string;
+}
+
+const { href, label, tone, track, placement } = Astro.props;
+---
+<a href={href} class:list={['text-link', tone]} data-track={track} data-placement={placement}>{label}<span aria-hidden="true">{' ›'}</span></a>
+
+<style>
+  .text-link {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: var(--space-12);
+    font-size: var(--type-text-link-size);
+    font-weight: var(--type-text-link-weight);
+    line-height: var(--type-text-link-leading);
+    text-decoration: none;
+  }
+
+  .text-link:hover,
+  .text-link:focus-visible {
+    text-decoration: underline;
+  }
+
+  .light {
+    color: var(--color-link);
+  }
+
+  .night {
+    color: var(--color-link-on-night);
+  }
+
+  .photo {
+    font-size: var(--type-text-link-on-photo-size);
+    font-weight: var(--type-text-link-on-photo-weight);
+    line-height: var(--type-text-link-on-photo-leading);
+    color: var(--color-link-on-photo);
+  }
+</style>

@@ -1,8 +1,8 @@
-// Stories 1.3 à 1.7 : sortie réelle du build, sur une branche puis sur main (registre, layout Base.astro).
+// Stories 1.3 à 1.8 : sortie réelle du build, sur une branche puis sur main (registre, layout Base.astro).
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -69,6 +69,8 @@ const SWITCHER_LINK = /<a\b[^>]*\shreflang="[^"]*"[^>]*>/g;
 const I18N = Object.fromEntries(LANGS.map((lang) => [lang, JSON.parse(readFileSync(join(ROOT, `src/i18n/${lang}.json`), 'utf8'))]));
 /** Baseline hébraïque isolée en RTL dans la ligne basse du footer hors hébreu (seul autre lang=/dir=). */
 const BASELINE_BDI = /<bdi lang="he" dir="rtl"[^>]*>/g;
+/** Story 1.8 : note Midrag du bloc contact, isolée en LTR (seul autre dir= avec le numéro). */
+const RATING_BDI = /<bdi dir="ltr"[^>]*>[\d.,]+<\/bdi>/g;
 const FOCUSABLE = /<(?:a\b[^>]*\shref=|button\b|input\b|select\b|textarea\b|[a-z][\w-]*\b[^>]*\stabindex=)[^>]*>/i;
 
 /** Story 1.7 (FR19, UX-DR33, D1) : footer pendant l'epic 1 (aucune page de colonne ni légale active). */
@@ -114,7 +116,7 @@ function assertLayout(html, id, lang, out, site = '', indexable = false) {
   // liens du sélecteur de langues, qui portent chacun lang + hreflang, et baseline du footer hors hébreu).
   assert.equal(html.match(BASELINE_BDI)?.length ?? 0, lang === 'he' ? 0 : 1, `${where} : bdi de la baseline`);
   assert.equal(html.replace(SWITCHER_LINK, '').replace(BASELINE_BDI, '').match(/\slang=/g)?.length, 1, `${where} : lang= en double`);
-  assert.equal(html.replaceAll(PHONE_BDI, '').replace(BASELINE_BDI, '').match(/\sdir=/g)?.length, 1, `${where} : dir= en double`);
+  assert.equal(html.replaceAll(PHONE_BDI, '').replace(BASELINE_BDI, '').replace(RATING_BDI, '').match(/\sdir=/g)?.length, 1, `${where} : dir= en double`);
   assert.match(html, new RegExp(`<html lang="${lang}" dir="${lang === 'he' ? 'rtl' : 'ltr'}" data-page-id="${id}"[\\s>]`), where);
   // AD-13 : un seul #rs-data, qui vaut { context }.
   assert.equal(html.match(/\sid="rs-data"/g)?.length, 1, `${where} : #rs-data absent ou en double`);
@@ -212,6 +214,114 @@ function assertLayout(html, id, lang, out, site = '', indexable = false) {
   assert.ok(!/[?]/.test([...canon, ...alts.map((a) => a[1])].join('')), `${where} : paramètre d'URL`);
 }
 
+/** Story 1.8 : attributs d'une balise ouvrante `tag` (chaîne). */
+const attr = (tag, name) => tag.match(new RegExp(`\\s${name}="([^"]*)"`))?.[1];
+const CHEVRON = '<span aria-hidden="true"[^>]*> ›</span>';
+
+/** Lien « › » : href, data-track/data-placement (ou aucun), libellé puis chevron aria-hidden. */
+function assertTextLink(match, href, label, track, placement, where) {
+  assert.ok(match, `${where} : lien absent`);
+  const [, attrs, inner] = match;
+  assert.equal(attr(`<a${attrs}>`, 'href'), href.replaceAll('&', '&amp;'), `${where} : href`);
+  assert.equal(attr(`<a${attrs}>`, 'data-track'), track, `${where} : data-track`);
+  assert.equal(attr(`<a${attrs}>`, 'data-placement'), placement, `${where} : data-placement`);
+  assert.match(inner, new RegExp(`^${label}${CHEVRON}$`), `${where} : libellé et chevron ${inner}`);
+}
+
+/** Story 1.8 (FR1, FR21, NFR4, UX-DR13, UX-DR19, D2, D3) : héros photo puis bloc contact de l'accueil. */
+function assertHome(html, lang, out) {
+  const where = `home (${lang})`;
+  const dict = I18N[lang];
+  const main = html.match(/<main id="content"[^>]*>([\s\S]*?)<\/main>/)?.[1] ?? '';
+  // Héros en tête de <main>, puis le bloc contact ; plus de h1 site.name ni de baseline.
+  assert.match(main, /^<section class="hero" aria-labelledby="hero-title" data-surface="photo"[\s>]/, `${where} : héros en tête`);
+  const hero = main.match(/^<section class="hero"[\s\S]*?<\/section>/)?.[0] ?? '';
+  const band = main.slice(hero.length);
+  assert.match(band, /^<section class="band" aria-labelledby="contact-band-title" data-surface="navy"[\s>]/, `${where} : bloc après le héros`);
+  assert.ok(band.trimEnd().endsWith('</section>') && band.match(/<section[\s>]/g)?.length === 1, `${where} : rien d'autre dans <main>`);
+  // Un seul h1, celui du héros ; sous-titre.
+  assert.equal(html.match(/<h1[\s>]/g)?.length, 1, `${where} : <h1>`);
+  assert.equal(hero.match(/<h1 id="hero-title"[^>]*>([^<]*)<\/h1>/)?.[1], dict['home.hero.title'], `${where} : h1`);
+  assert.equal(hero.match(/<p class="subtitle"[^>]*>([^<]*)<\/p>/)?.[1], dict['home.hero.subtitle'], `${where} : sous-titre`);
+  // Liens du héros : Appeler puis WhatsApp, ton photo.
+  const heroLinks = [...hero.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)];
+  assert.equal(heroLinks.length, 2, `${where} : liens du héros`);
+  assertTextLink(heroLinks[0], 'tel:+972509565669', dict['action.call'], 'call_click', 'hero', `${where} : héros Appeler`);
+  assertTextLink(heroLinks[1], waHref(), dict['action.whatsapp'], 'whatsapp_click', 'hero', `${where} : héros WhatsApp`);
+  for (const [, attrs] of heroLinks) assert.match(attrs, /\sclass="text-link photo"/, `${where} : ton photo`);
+  // <picture> : 3 sources 4:5 sous 700px, 2 sources paysage, puis <img> JPEG.
+  const pictures = html.match(/<picture>[\s\S]*?<\/picture>/g) ?? [];
+  assert.equal(pictures.length, 1, `${where} : <picture>`);
+  assert.ok(hero.includes(pictures[0]), `${where} : <picture> hors du héros`);
+  const sources = pictures[0].match(/<source\b[^>]*>/g) ?? [];
+  assert.equal(sources.length, 5, `${where} : <source>`);
+  const widthsOf = (srcset) => (srcset ?? '').split(', ').map((c) => Number(c.split(' ')[1]?.replace('w', '')));
+  ['avif', 'webp', 'jpeg'].forEach((format, i) => {
+    const tag = sources[i];
+    assert.equal(attr(tag, 'media'), '(width < 700px)', `${where} : media ${format}`);
+    assert.equal(attr(tag, 'type'), `image/${format}`, `${where} : type portrait ${format}`);
+    assert.deepEqual(widthsOf(attr(tag, 'srcset')), [480, 768, 1080, 1440], `${where} : largeurs portrait ${format}`);
+    assert.equal(attr(tag, 'sizes'), '100vw', `${where} : sizes portrait ${format}`);
+    assert.equal(attr(tag, 'width'), '1440', `${where} : width portrait`);
+    assert.equal(attr(tag, 'height'), '1800', `${where} : height portrait`);
+  });
+  ['avif', 'webp'].forEach((format, i) => {
+    const tag = sources[3 + i];
+    assert.equal(attr(tag, 'media'), undefined, `${where} : media paysage ${format}`);
+    assert.equal(attr(tag, 'type'), `image/${format}`, `${where} : type paysage ${format}`);
+    assert.deepEqual(widthsOf(attr(tag, 'srcset')), [480, 768, 1080, 1440, 1920, 2560], `${where} : largeurs paysage ${format}`);
+    assert.equal(attr(tag, 'sizes'), '100vw', `${where} : sizes paysage ${format}`);
+    assert.equal(attr(tag, 'width'), '2560', `${where} : width paysage`);
+    assert.equal(attr(tag, 'height'), '1707', `${where} : height paysage`);
+  });
+  const img = pictures[0].match(/<img\b[^>]*>/)?.[0] ?? '';
+  assert.ok(pictures[0].indexOf(img) > pictures[0].lastIndexOf('<source'), `${where} : <img> après les <source>`);
+  assert.equal(attr(img, 'alt'), dict['home.hero.alt'], `${where} : alt`);
+  assert.equal(attr(img, 'width'), '2560', `${where} : width img`);
+  assert.equal(attr(img, 'height'), '1707', `${where} : height img`);
+  assert.equal(attr(img, 'loading'), 'eager', `${where} : loading`);
+  assert.equal(attr(img, 'fetchpriority'), 'high', `${where} : fetchpriority`);
+  assert.equal(attr(img, 'decoding'), undefined, `${where} : decoding`);
+  assert.equal(attr(img, 'sizes'), '100vw', `${where} : sizes img`);
+  assert.match(attr(img, 'src') ?? '', /\.jpe?g$/, `${where} : src JPEG`);
+  assert.deepEqual(widthsOf(attr(img, 'srcset')), [480, 768, 1080, 1440, 1920, 2560], `${where} : largeurs img`);
+  // Aucun autre <img> de photo : le seul autre est le logo du header.
+  const imgs = html.match(/<img\b[^>]*>/g) ?? [];
+  assert.equal(imgs.length, 2, `${where} : <img>`);
+  assert.ok((html.match(/<header[\s>][\s\S]*?<\/header>/)?.[0] ?? '').includes(imgs.find((i) => i !== img) ?? ''), `${where} : <img> hors header`);
+  // Poids (NFR4) : paysage 1440w ≤ 250 000 octets, portrait 1080w ≤ 120 000 octets, en AVIF et WebP.
+  const fileAt = (tag, width) => (attr(tag, 'srcset') ?? '').split(', ').find((c) => c.endsWith(` ${width}w`))?.split(' ')[0];
+  for (const [tag, width, budget] of [[sources[0], 1080, 120_000], [sources[1], 1080, 120_000], [sources[3], 1440, 250_000], [sources[4], 1440, 250_000]]) {
+    const file = fileAt(tag, width);
+    assert.ok(file, `${where} : ${width}w absent`);
+    const size = statSync(join(out, file)).size;
+    assert.ok(size <= budget, `${where} : ${file} ${size} > ${budget}`);
+  }
+  // Bloc contact, dans l'ordre : h2 masqué, note, ligne, zone (texte simple), numéro, Appeler, WhatsApp.
+  const h2 = band.match(/<h2 id="contact-band-title" class="visually-hidden"[^>]*>([^<]*)<\/h2>/);
+  assert.equal(h2?.[1], dict['contact-band.title'], `${where} : h2 du bloc`);
+  const score = band.match(/<p class="score"[^>]*><bdi dir="ltr"[^>]*>([^<]*)<\/bdi><\/p>/);
+  assert.equal(score?.[1], lang === 'he' || lang === 'en' ? '9.94' : '9,94', `${where} : note`);
+  const line = band.match(/<p class="rating-line"[^>]*>([^<]*)<\/p>/);
+  assert.equal(line?.[1], dict['contact-band.midrag'], `${where} : ligne Midrag`);
+  const zone = band.match(/<p class="zone"[^>]*>([^<]*)<\/p>/);
+  assert.equal(zone?.[1], dict['contact.zone'], `${where} : zone`);
+  const links = [...band.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)];
+  assert.equal(links.length, 3, `${where} : liens du bloc`);
+  assert.equal(attr(`<a${links[0][1]}>`, 'href'), 'tel:+972509565669', `${where} : numéro`);
+  assert.equal(attr(`<a${links[0][1]}>`, 'data-track'), 'call_click', `${where} : numéro data-track`);
+  assert.equal(attr(`<a${links[0][1]}>`, 'data-placement'), 'contact_band', `${where} : numéro data-placement`);
+  assert.equal(links[0][2], PHONE_BDI, `${where} : numéro du bloc`);
+  assertTextLink(links[1], 'tel:+972509565669', dict['action.call'], 'call_click', 'contact_band', `${where} : bloc Appeler`);
+  assertTextLink(links[2], waHref(), dict['action.whatsapp'], 'whatsapp_click', 'contact_band', `${where} : bloc WhatsApp`);
+  for (const [, attrs] of links.slice(1)) assert.match(attrs, /\sclass="text-link night"/, `${where} : ton nuit`);
+  const order = [h2.index, score.index, line.index, zone.index, links[0].index, links[1].index, links[2].index];
+  assert.deepEqual(order, [...order].sort((a, b) => a - b), `${where} : ordre du bloc`);
+  // Aucun lien contact/areas ni « Laisser ses coordonnées », aucun placeholder dans le bloc.
+  assert.ok(!band.includes(dict['contact-band.leave-details']), `${where} : leave-details`);
+  assert.ok(!band.includes('data-placeholder'), `${where} : placeholder dans le bloc`);
+}
+
 test('build de branche : 4 accueils + 4 path-probe, layout Base (lang/dir, #rs-data, évitement, repères, hreflang relatifs), _redirects', { timeout: 120_000 }, () => {
   const out = build({});
   assert.deepEqual(indexFiles(out), [...HOMES, ...PROBES].sort());
@@ -222,6 +332,7 @@ test('build de branche : 4 accueils + 4 path-probe, layout Base (lang/dir, #rs-d
     const html = readFileSync(join(out, lang, 'index.html'), 'utf8');
     assert.equal(html.match(/<title>(.*?)<\/title>/)?.[1], titles[lang]);
     assertLayout(html, 'home', lang, out);
+    assertHome(html, lang, out);
   }
   for (const file of PROBES) {
     assertLayout(readFileSync(join(out, file), 'utf8'), 'path-probe', file.split('/')[0], out);

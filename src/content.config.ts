@@ -42,4 +42,14 @@ const services = defineCollection({
   }),
 });
 
-export const collections = { pages, i18n, services };
+// Preuves du bloc contact : src/content/proof.yaml (FR41, AD-4, D2). Champs optionnels : absent = masqué.
+const proof = defineCollection({
+  loader: file('src/content/proof.yaml'),
+  schema: z.strictObject({
+    id: z.string(),
+    rating: z.number().min(0).max(10).optional(),
+    reviews: z.number().int().positive().optional(),
+  }),
+});
+
+export const collections = { pages, i18n, services, proof };

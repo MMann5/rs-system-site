@@ -1,0 +1,197 @@
+---
+// FR1, UX-DR5, UX-DR13, UX-DR18, UX-DR36, AD-5, AD-6, AD-9, AD-13, décision D5 : héros photo de l'accueil
+// (DESIGN.md › Components › Héros photo). Photo plein cadre (`cover`, `center 60%`, source 4:5 sous 700px)
+// sous scrim-hero, sur fond navy-deep (lisible si la photo ne charge pas). Texte centré dans le tiers
+// haut : h1 blanc, sous-titre, liens Appeler › WhatsApp › blancs 600 (message WhatsApp du contexte de page).
+// Calque de maintien derrière le bloc de texte : opacité ≥ 0,62 sous tout le texte (mobile, russe, zoom).
+// Entrée : dézoom de la photo, montée décalée du texte (le h1 sans opacité) ; coupées par
+// prefers-reduced-motion (base.css). Hauteur minimale par largeur, jamais de `height`.
+import type { ImageMetadata } from 'astro';
+import { telHref, waHref } from '../lib/contact/core';
+import { serviceLabels } from '../lib/contact/labels';
+import { pageWaInput } from '../lib/contact/table';
+import { t } from '../lib/i18n';
+import type { PageContext } from '../lib/page-context';
+import ResponsivePhoto from './ResponsivePhoto.astro';
+import TextLink from './TextLink.astro';
+
+interface Props {
+  ctx: PageContext;
+  photo: { src: ImageMetadata; portrait: ImageMetadata; alt: string };
+  title: string;
+  subtitle: string;
+}
+
+const { ctx, photo, title, subtitle } = Astro.props;
+const wa = waHref(pageWaInput(ctx, serviceLabels('he')));
+---
+<section class="hero" aria-labelledby="hero-title" data-surface="photo">
+  <div class="media">
+    <ResponsivePhoto src={photo.src} portrait={photo.portrait} alt={photo.alt} sizes="100vw" priority class="photo" />
+  </div>
+  <div class="scrim"></div>
+  <div class="content">
+    <h1 id="hero-title" class="title">{title}</h1>
+    <p class="subtitle">{subtitle}</p>
+    <div class="links">
+      <TextLink href={telHref()} label={t(ctx.lang, 'action.call')} tone="photo" track="call_click" placement="hero" />
+      <TextLink href={wa} label={t(ctx.lang, 'action.whatsapp')} tone="photo" track="whatsapp_click" placement="hero" />
+    </div>
+  </div>
+</section>
+
+<style>
+  /* container-type : le calque de maintien se cale sur la largeur du héros (unités cqi). */
+  .hero {
+    position: relative;
+    isolation: isolate;
+    container-type: inline-size;
+    box-sizing: border-box;
+    min-block-size: var(--hero-photo-min);
+    /* Contient le calque de maintien (--scrim-hold-extend sous le texte) : il ne déborde jamais sur le bloc suivant. */
+    padding-block-end: var(--scrim-hold-extend);
+    background-color: var(--color-navy-deep);
+    color: var(--color-white);
+  }
+
+  /* Seuils (les @media ne lisent pas les tokens) : --bp-menu 960px, --bp-mobile-bar 700px.
+   * Sous 700px : l'écran moins le header et la barre mobile, au moins --hero-photo-min-mobile. */
+  @media (width < 960px) {
+    .hero {
+      min-block-size: var(--hero-photo-min-tablet);
+    }
+  }
+
+  @media (width < 700px) {
+    .hero {
+      min-block-size: max(var(--hero-photo-min-mobile), 100svh - var(--header-height) - var(--mobile-bar-height));
+    }
+  }
+
+  /* Seul porteur d'overflow: hidden : le cadre de la photo, jamais le texte. */
+  .media {
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+    overflow: hidden;
+  }
+
+  .media :global(picture) {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+  }
+
+  .media :global(.photo) {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+    object-position: center 60%;
+    animation: hero-zoom var(--hero-zoom-duration) var(--ease) both;
+  }
+
+  .scrim {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: var(--scrim-hero);
+  }
+
+  /* Dans le flux : la section grandit avec le texte (russe, zoom). */
+  .content {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    max-inline-size: var(--container);
+    margin-inline: auto;
+    padding-block-start: var(--hero-pad-top);
+    padding-inline: var(--page-gutter);
+    text-align: center;
+  }
+
+  @media (width < 960px) {
+    .content {
+      padding-block-start: var(--hero-pad-top-tablet);
+    }
+  }
+
+  @media (width < 700px) {
+    .content {
+      padding-block-start: var(--hero-pad-top-mobile);
+    }
+  }
+
+  /* Calque de maintien (UX-DR5) : du haut du bloc jusqu'à son bas + --scrim-hold-extend, derrière le texte,
+   * sur toute la largeur du héros (le bloc est centré : 50 % du bloc − 50cqi rejoint les deux bords). */
+  .content::before {
+    content: "";
+    position: absolute;
+    inset-block: 0 calc(-1 * var(--scrim-hold-extend));
+    inset-inline: calc(50% - 50cqi);
+    z-index: -1;
+    background: var(--scrim-hold);
+  }
+
+  .title {
+    margin: 0;
+    font-size: var(--type-hero-title-size);
+    font-weight: var(--type-hero-title-weight);
+    line-height: var(--type-hero-title-leading);
+    color: var(--color-white);
+    animation: hero-rise-title var(--rise-duration) var(--ease) var(--rise-delay-1) both;
+  }
+
+  .subtitle {
+    margin: 0;
+    font-size: var(--type-subhead-size);
+    font-weight: var(--type-subhead-weight);
+    line-height: var(--type-subhead-leading);
+    color: var(--color-subhead-on-photo);
+    animation: hero-rise var(--rise-duration) var(--ease) var(--rise-delay-2) both;
+  }
+
+  .links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    column-gap: var(--link-gap);
+    margin-block-start: var(--space-2);
+    animation: hero-rise var(--rise-duration) var(--ease) var(--rise-delay-3) both;
+  }
+
+  @keyframes hero-zoom {
+    from {
+      transform: scale(var(--hero-zoom-from));
+    }
+
+    to {
+      transform: none;
+    }
+  }
+
+  /* h1 : translation seule, visible dès la première image. */
+  @keyframes hero-rise-title {
+    from {
+      transform: translateY(var(--rise-distance));
+    }
+
+    to {
+      transform: none;
+    }
+  }
+
+  @keyframes hero-rise {
+    from {
+      opacity: var(--rise-opacity-from);
+      transform: translateY(var(--rise-distance));
+    }
+
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+</style>

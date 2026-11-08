@@ -35,5 +35,14 @@
   "nav.accessibility": "הצהרת נגישות",
   "nav.privacy": "מדיניות פרטיות",
   "contact.zone": "מבאר שבע ועד ירושלים, כולל היישובים",
-  "placeholder.email": "אימייל"
+  "placeholder.email": "אימייל",
+  "home.hero.title": "רואים הכול. ישנים בשקט.",
+  "home.hero.subtitle": "מצלמות, גלאים, אינטרקום ובית חכם. מותקנים כמו שצריך.",
+  "home.hero.alt": "כניסה מוארת לבית פרטי מודרני בלילה",
+  "action.call": "התקשרו",
+  "action.whatsapp": "וואטסאפ",
+  "contact-band.title": "דברו איתנו",
+  "contact-band.midrag": "דירוג במידרג",
+  "contact-band.reviews": "{n} חוות דעת",
+  "contact-band.leave-details": "השאירו פרטים"
 }

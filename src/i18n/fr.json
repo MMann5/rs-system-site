@@ -35,5 +35,14 @@
   "nav.accessibility": "Déclaration d'accessibilité",
   "nav.privacy": "Politique de confidentialité",
   "contact.zone": "De Beer-Sheva à Jérusalem, yishouvim compris",
-  "placeholder.email": "e-mail"
+  "placeholder.email": "e-mail",
+  "home.hero.title": "Tout voir. Dormir tranquille.",
+  "home.hero.subtitle": "Caméras, détecteurs, interphones et maison connectée. Bien installés.",
+  "home.hero.alt": "Entrée éclairée d'une maison moderne, la nuit",
+  "action.call": "Appeler",
+  "action.whatsapp": "WhatsApp",
+  "contact-band.title": "Nous contacter",
+  "contact-band.midrag": "Note Midrag",
+  "contact-band.reviews": "{n} avis",
+  "contact-band.leave-details": "Laisser ses coordonnées"
 }
