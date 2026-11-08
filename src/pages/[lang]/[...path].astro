@@ -1,0 +1,47 @@
+---
+// AD-3 : route unique, génère toutes les entrées actives du registre (AD-2) dans les 4 langues.
+// Shell HTML provisoire : remplacé par layouts/Base.astro en 1.4 (seul endroit qui pose lang/dir).
+import '../../styles/base.css';
+import FontPreload from '../../components/FontPreload.astro';
+import { INDEXABLE } from '../../lib/env';
+import { DIR, type Lang } from '../../lib/langs';
+import { page } from '../../lib/pages';
+import { entries } from '../../lib/routes';
+import Home from '../../templates/Home.astro';
+import PathProbe from '../../templates/PathProbe.astro';
+
+export function getStaticPaths() {
+  return entries().map(({ id, lang, segments }) => ({
+    params: { lang, path: segments.length > 0 ? segments.join('/') : undefined },
+    props: { id, lang },
+  }));
+}
+
+interface Props {
+  id: string;
+  lang: Lang;
+}
+
+// Modèle par type d'id (préfixe avant « : », ex. `city:modiin` → `city`).
+const TEMPLATES = { home: Home, 'path-probe': PathProbe } as const;
+
+const { id, lang } = Astro.props;
+const type = id.split(':')[0] as string;
+if (!Object.hasOwn(TEMPLATES, type)) throw new Error(`routes : aucun modèle pour « ${id} » (type « ${type} »)`);
+const Template = TEMPLATES[type as keyof typeof TEMPLATES];
+const { meta } = page(id);
+---
+<!doctype html>
+<html lang={lang} dir={DIR[lang]}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    {!INDEXABLE && <meta name="robots" content="noindex" />}
+    <FontPreload lang={lang} />
+    <title>{meta.title[lang]}</title>
+    <meta name="description" content={meta.description[lang]} />
+  </head>
+  <body>
+    <Template lang={lang} />
+  </body>
+</html>

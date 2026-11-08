@@ -186,7 +186,7 @@ function findBadPreloads(preload, fileExists) {
   return errors;
 }
 
-/** NFR5 : FontPreload rend le bon <link rel="preload"> et la page provisoire l'utilise dans son <head>. */
+/** NFR5 : FontPreload rend le bon <link rel="preload"> et la route attrape-tout l'utilise dans son <head>. */
 function findBadPreloadMarkup(component, page) {
   const errors = [];
   const link = component.match(/<link\b[^>]*>/)?.[0];
@@ -198,7 +198,7 @@ function findBadPreloadMarkup(component, page) {
     if (!/\scrossorigin(?=[\s/>=])/.test(link)) errors.push('FontPreload.astro : crossorigin absent du <link>');
   }
   const head = page.match(/<head>([\s\S]*?)<\/head>/)?.[1] ?? '';
-  if (!head.includes('<FontPreload lang="he" />')) errors.push('index.astro : <FontPreload lang="he" /> absent du <head>');
+  if (!head.includes('<FontPreload lang={lang} />')) errors.push('[...path].astro : <FontPreload lang={lang} /> absent du <head>');
   return errors;
 }
 
@@ -246,10 +246,10 @@ test('FONT_PRELOAD : 700 existante, hébreu pour he, cyrillique pour ru', () => 
   assert.deepEqual(findBadPreloads(FONT_PRELOAD, publicFileExists), []);
 });
 
-// Page provisoire : à déplacer vers le layout en 1.3/1.4.
-test('FontPreload rend le preload et la page provisoire l\'utilise dans son <head>', () => {
+// Shell provisoire de la route attrape-tout : à déplacer vers le layout en 1.4.
+test('FontPreload rend le preload et la route attrape-tout l\'utilise dans son <head>', () => {
   const component = readFileSync(join(SRC, 'components', 'FontPreload.astro'), 'utf8');
-  const page = readFileSync(join(SRC, 'pages', 'index.astro'), 'utf8');
+  const page = readFileSync(join(SRC, 'pages', '[lang]', '[...path].astro'), 'utf8');
   assert.deepEqual(findBadPreloadMarkup(component, page), []);
 });
 
@@ -367,11 +367,11 @@ test('contrôle chiffres : une face hébraïque qui couvre U+0030-0039 est déte
 test('contrôle balisage preload : as, crossorigin et FontPreload absents détectés', () => {
   const errors = findBadPreloadMarkup(
     '<link rel="preload" href={FONT_PRELOAD[lang]} as="style" type="font/woff2" />',
-    '<html><head><title>x</title></head><body><FontPreload lang="he" /></body></html>',
+    '<html><head><title>x</title></head><body><FontPreload lang={lang} /></body></html>',
   );
   assert.deepEqual(errors, [
     'FontPreload.astro : as="font" absent du <link>',
     'FontPreload.astro : crossorigin absent du <link>',
-    'index.astro : <FontPreload lang="he" /> absent du <head>',
+    '[...path].astro : <FontPreload lang={lang} /> absent du <head>',
   ]);
 });

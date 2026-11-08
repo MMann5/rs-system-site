@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { isIndexable } from '../src/lib/env.ts';
+import { isIndexable, isMainBranch } from '../src/lib/env.ts';
 
 test('build local sans variable : non indexable', () => {
   assert.equal(isIndexable({}), false);
@@ -16,4 +16,10 @@ test('main sans domaine : non indexable', () => {
 
 test('main avec domaine : indexable', () => {
   assert.equal(isIndexable({ WORKERS_CI_BRANCH: 'main', DOMAIN_LIVE: 'true' }), true);
+});
+
+test('isMainBranch : vrai seulement sur main', () => {
+  assert.equal(isMainBranch({}), false);
+  assert.equal(isMainBranch({ WORKERS_CI_BRANCH: 'feature/epic-1' }), false);
+  assert.equal(isMainBranch({ WORKERS_CI_BRANCH: 'main' }), true);
 });

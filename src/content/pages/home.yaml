@@ -1,0 +1,19 @@
+# Accueil : seule page à slugs vides (/he/, /en/, /ru/, /fr/). EXPERIENCE.md › Référencement.
+# Textes en/ru/fr traduits par l'agent : relecture humaine recommandée.
+slugs:
+  he: ''
+  en: ''
+  ru: ''
+  fr: ''
+enabled: true
+meta:
+  title:
+    he: 'RS SYSTEM — מצלמות, גלאים, אינטרקום · מבאר שבע ועד ירושלים'
+    en: 'RS SYSTEM — cameras, detectors, intercom · Beer Sheva to Jerusalem'
+    ru: 'RS SYSTEM — камеры, датчики, домофоны · от Беэр-Шевы до Иерусалима'
+    fr: 'RS SYSTEM — caméras, détecteurs, interphone · Beer-Sheva à Jérusalem'
+  description:
+    he: 'התקנת מצלמות אבטחה, גלאי עשן, בית חכם, רשתות ואינטרקום, מבאר שבע ועד ירושלים. התקשרו או כתבו בוואטסאפ: 050-956-5669.'
+    en: 'Security cameras, smoke detectors, smart home, networks and intercoms installed from Beer Sheva to Jerusalem. Call or WhatsApp 050-956-5669.'
+    ru: 'Камеры, датчики дыма, умный дом, сети и домофоны от Беэр-Шевы до Иерусалима. Звоните или пишите в WhatsApp: 050-956-5669.'
+    fr: 'Caméras, détecteurs de fumée, maison connectée, réseaux et interphones, de Beer-Sheva à Jérusalem. Appel ou WhatsApp : 050-956-5669.'

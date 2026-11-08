@@ -1,0 +1,12 @@
+---
+// D6 : page de test des chemins (previewOnly), aucun lien vers elle. Texte depuis son YAML.
+import type { Lang } from '../lib/langs';
+import { page } from '../lib/pages';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+---
+<h1>{page('path-probe').meta.title[lang]}</h1>
