@@ -1,0 +1,21 @@
+{
+  "name": "rs-system-site",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build && node scripts/postbuild/headers.mjs && node scripts/checks/noindex.mjs",
+    "check": "astro check",
+    "check:dist": "node scripts/checks/noindex.mjs",
+    "test": "node --test",
+    "preview": "npm run build && wrangler dev"
+  },
+  "dependencies": {
+    "astro": "7.4.5"
+  },
+  "devDependencies": {
+    "@astrojs/check": "0.9.12",
+    "typescript": "6.0.3",
+    "wrangler": "4.157.0"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "rs-system-site",
+  "compatibility_date": "2026-11-03",
+  // AD-1 : aucun `main`, aucun code Worker ; seuls les fichiers de dist/ sont servis.
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "404-page"
+  },
+  // AD-10 : hôte provisoire tant que le domaine n'est pas en ligne.
+  "workers_dev": true,
+  "preview_urls": true
+}
