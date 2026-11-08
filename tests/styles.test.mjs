@@ -1,87 +1,27 @@
 // Story 1.2 : règles structurelles des styles (AD-7, AD-8, UX-DR2, UX-DR3, UX-DR6, NFR5, NFR7).
 // Tourne partout (CI comprise). Chaque contrôle est une fonction pure, testée aussi sur une entrée fautive.
-// Regroupement en portes scripts/checks/ : story 1.10.
+// Couleurs et propriétés physiques regroupées en portes scripts/checks/ : story 1.10.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { FONT_PRELOAD } from '../src/lib/fonts.ts';
+import { findLiteralColors, lineOf, sourceFiles as sourceFilesOf, stripComments, TOKENS_REL } from '../scripts/checks/colors.mjs';
+import { findPhysicalProperties } from '../scripts/checks/physical-css.mjs';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const SRC = join(ROOT, 'src');
 const STYLES = join(SRC, 'styles');
 const PUBLIC = join(ROOT, 'public');
 const FONTS = join(PUBLIC, 'fonts');
-const TOKENS_REL = 'src/styles/tokens.css';
 const FONT_BUDGET = 120_000;
-const CHECKED_EXT = /\.(css|astro|ts|mjs|js)$/;
-
-// Mots-clés de couleur CSS (couleurs nommées + system colors usuels), hors transparent / currentColor.
-const COLOR_KEYWORDS = (
-  'aliceblue antiquewhite aqua aquamarine azure beige bisque black blanchedalmond blue blueviolet brown ' +
-  'burlywood cadetblue chartreuse chocolate coral cornflowerblue cornsilk crimson cyan darkblue darkcyan ' +
-  'darkgoldenrod darkgray darkgreen darkgrey darkkhaki darkmagenta darkolivegreen darkorange darkorchid ' +
-  'darkred darksalmon darkseagreen darkslateblue darkslategray darkslategrey darkturquoise darkviolet ' +
-  'deeppink deepskyblue dimgray dimgrey dodgerblue firebrick floralwhite forestgreen fuchsia gainsboro ' +
-  'ghostwhite gold goldenrod gray green greenyellow grey honeydew hotpink indianred indigo ivory khaki ' +
-  'lavender lavenderblush lawngreen lemonchiffon lightblue lightcoral lightcyan lightgoldenrodyellow ' +
-  'lightgray lightgreen lightgrey lightpink lightsalmon lightseagreen lightskyblue lightslategray ' +
-  'lightslategrey lightsteelblue lightyellow lime limegreen linen magenta maroon mediumaquamarine ' +
-  'mediumblue mediumorchid mediumpurple mediumseagreen mediumslateblue mediumspringgreen mediumturquoise ' +
-  'mediumvioletred midnightblue mintcream mistyrose moccasin navajowhite navy oldlace olive olivedrab ' +
-  'orange orangered orchid palegoldenrod palegreen paleturquoise palevioletred papayawhip peachpuff peru ' +
-  'pink plum powderblue purple rebeccapurple red rosybrown royalblue saddlebrown salmon sandybrown ' +
-  'seagreen seashell sienna silver skyblue slateblue slategray slategrey snow springgreen steelblue tan ' +
-  'teal thistle tomato turquoise violet wheat white whitesmoke yellow yellowgreen ' +
-  'canvas canvastext linktext visitedtext activetext buttonface buttontext field fieldtext highlight highlighttext graytext'
-).split(' ');
-const KEYWORD_RE = new RegExp(`(?<![\\w-])(${COLOR_KEYWORDS.join('|')})(?![\\w-])`, 'i');
-// Propriétés qui reçoivent une couleur (CSS, style inline, objet TS, attribut SVG) et custom properties.
-const COLOR_PROP =
-  '(?:--[\\w-]+|color|background(?:-color)?|border(?:-[\\w-]+)?|outline(?:-color)?|fill|stroke|' +
-  'caret-color|accent-color|text-decoration(?:-color)?|text-emphasis(?:-color)?|column-rule(?:-color)?|' +
-  'stop-color|flood-color|lighting-color|scrollbar-color|-webkit-tap-highlight-color|box-shadow|text-shadow)';
-const COLOR_DECL_RE = new RegExp(`(?<![\\w-])${COLOR_PROP}\\s*:\\s*([^;}\\n]+)`, 'gi');
-const COLOR_ATTR_RE = new RegExp(`(?<![\\w-])${COLOR_PROP}\\s*=\\s*["']([^"']*)["']`, 'gi');
-
-// Remplace les commentaires /* */ par des espaces en gardant les retours à la ligne (numéros de ligne).
-function stripComments(text) {
-  return text.replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, ' '));
-}
-
-function lineOf(text, index) {
-  return text.slice(0, index).split('\n').length;
-}
 
 // Fichiers vérifiés, en chemins relatifs à la racine.
-function sourceFiles(dir) {
-  return readdirSync(dir, { recursive: true })
-    .map((p) => join(dir, String(p)))
-    .filter((p) => CHECKED_EXT.test(p) && statSync(p).isFile())
-    .map((p) => ({ path: relative(ROOT, p), text: readFileSync(p, 'utf8') }));
-}
+const sourceFiles = (dir) => sourceFilesOf(ROOT, dir);
 
 // — Contrôles purs : chacun renvoie la liste des violations (vide = conforme). —
-
-/** AD-8 : aucune couleur littérale hors de tokens.css. */
-function findLiteralColors(files) {
-  const errors = [];
-  for (const { path, text } of files) {
-    if (path === TOKENS_REL) continue;
-    const src = stripComments(text);
-    const report = (i, what) => errors.push(`${path}:${lineOf(src, i)} : couleur littérale ${what}`);
-    for (const m of src.matchAll(/#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})\b/g)) report(m.index, m[0]);
-    for (const m of src.matchAll(/\b(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\(/gi)) report(m.index, m[0]);
-    for (const re of [COLOR_DECL_RE, COLOR_ATTR_RE]) {
-      for (const m of src.matchAll(re)) {
-        const k = m[1].match(KEYWORD_RE);
-        if (k) report(m.index, `« ${k[1]} »`);
-      }
-    }
-  }
-  return errors;
-}
+// Couleurs littérales et propriétés physiques : portes scripts/checks/colors.mjs et physical-css.mjs (story 1.10).
 
 /** UX-DR3 : --radius-* ∈ {0px, 2px, 9999px} ; tout border*-radius = 0 ou var(--radius-*). */
 function findBadRadii(files) {
@@ -97,28 +37,6 @@ function findBadRadii(files) {
       const value = m[2].trim().replace(/\s*!important$/, '');
       if (!/^(?:0|var\(--radius-(?:none|xs|full)\))$/.test(value)) {
         errors.push(`${path}:${lineOf(src, m.index)} : ${m[1]}: ${value} (attendu 0 ou var(--radius-*))`);
-      }
-    }
-  }
-  return errors;
-}
-
-/** AD-7 : propriétés logiques uniquement (sauf ligne marquée physical-ok). */
-function findPhysicalProperties(files) {
-  const errors = [];
-  const rules = [
-    /(?<=(?:^|[{;])\s*)(left|right)\s*:/gm,
-    /(?<=(?:^|[{;])\s*)([\w-]+-(?:left|right)(?:-[\w-]+)?)\s*:/gm,
-    /(?<![\w-])((?:text-align|float|clear)\s*:\s*(?:left|right))\b/g,
-  ];
-  for (const { path, text } of files) {
-    const src = stripComments(text);
-    const original = text.split('\n');
-    for (const re of rules) {
-      for (const m of src.matchAll(re)) {
-        const line = lineOf(src, m.index);
-        if (original[line - 1].includes('physical-ok')) continue;
-        errors.push(`${path}:${line} : propriété physique « ${m[1]} »`);
       }
     }
   }
@@ -214,8 +132,8 @@ test('rayons limités à 0, 2px et 9999px', () => {
   assert.deepEqual(findBadRadii(sourceFiles(SRC)), []);
 });
 
-test('src/styles/ en propriétés logiques uniquement', () => {
-  assert.deepEqual(findPhysicalProperties(sourceFiles(STYLES)), []);
+test('src/ en propriétés logiques uniquement', () => {
+  assert.deepEqual(findPhysicalProperties(sourceFiles(SRC)), []);
 });
 
 test('base.css porte focus, mouvement réduit, scroll-padding, titres et polices par langue', () => {

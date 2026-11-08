@@ -1,7 +1,9 @@
 name: ci
 
+# AD-11 : portes de build. Le job s'appelle `ci` : c'est le contexte exigé par la protection de `main`.
 on:
   pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
   push:
     branches: [main]
 
@@ -11,6 +13,10 @@ permissions:
 jobs:
   ci:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # FR40 : les placeholders bloquent une PR étiquetée blog-auto, et ne font qu'avertir ailleurs.
+      BLOG_AUTO: ${{ contains(github.event.pull_request.labels.*.name, 'blog-auto') }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -18,8 +24,11 @@ jobs:
           node-version-file: .node-version
           cache: npm
       - run: npm ci
+      # astro check et schémas Zod.
       - run: npm run check
-      - run: npm test
+      # Sources : tel:/wa.me, photos, href internes, couleurs, propriétés physiques, complétude 4 langues.
       - run: npm run lint
+      - run: npm test
       - run: npm run build
+      # dist/ : noindex, 404, liens (wrangler dev), budget JS, placeholders.
       - run: npm run check:dist

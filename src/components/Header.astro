@@ -7,7 +7,8 @@
 // Le bouton existe même sans lien actif (décision D4) : le panneau contient alors le seul sélecteur.
 // Sans JS (`scripting` absent ou non reconnu) : bouton masqué, panneau déplié dans le flux.
 import { Image } from 'astro:assets';
-import logo from '../assets/brand/rs-logo-compact-white-header@2x.png';
+// Pas de « @ » dans un nom d'asset : Cloudflare/wrangler répondent à /_astro/…@2x… par une 307 vers %40 (porte links).
+import logo from '../assets/brand/rs-logo-compact-white-header-2x.png';
 import { telHref } from '../lib/contact/core';
 import { t } from '../lib/i18n';
 import { headerNav } from '../lib/nav';
