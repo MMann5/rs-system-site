@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build && node scripts/postbuild/headers.mjs && node scripts/checks/noindex.mjs",
+    "build": "astro build && node scripts/postbuild/headers.mjs && node scripts/postbuild/not-found.mjs && node scripts/checks/noindex.mjs",
     "check": "astro check",
     "check:dist": "node scripts/checks/noindex.mjs",
     "test": "node --test",

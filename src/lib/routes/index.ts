@@ -5,6 +5,7 @@ import { PAGES } from '../pages.ts';
 import { buildRegistry, type RouteSource } from './core.ts';
 
 export type { RouteEntry, UrlParams } from './core.ts';
+export { NOT_FOUND_ID, NOT_FOUND_SEGMENT, switcherTargetId } from './core.ts';
 
 const sources: RouteSource[] = PAGES.map(({ id, data }) => ({
   id,

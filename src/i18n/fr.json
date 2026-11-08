@@ -44,5 +44,8 @@
   "contact-band.title": "Nous contacter",
   "contact-band.midrag": "Note Midrag",
   "contact-band.reviews": "{n} avis",
-  "contact-band.leave-details": "Laisser ses coordonnées"
+  "contact-band.leave-details": "Laisser ses coordonnées",
+  "not-found.meta-title": "Page introuvable · RS SYSTEM",
+  "not-found.title": "Page introuvable.",
+  "not-found.home": "Aller à l'accueil"
 }

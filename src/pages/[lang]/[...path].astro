@@ -1,16 +1,22 @@
 ---
 // AD-3 : route unique, génère toutes les entrées actives du registre (AD-2) dans les 4 langues.
 // Choisit seulement le modèle ; le shell HTML est dans layouts/Base.astro (AD-13).
-import type { Lang } from '../../lib/langs';
-import { entries } from '../../lib/routes';
+// Génère aussi la 404 de chaque langue en /{lang}/404/, déplacée en /{lang}/404.html par
+// scripts/postbuild/not-found.mjs (chemin réservé par le registre).
+import { LANGS, type Lang } from '../../lib/langs';
+import { entries, NOT_FOUND_ID, NOT_FOUND_SEGMENT } from '../../lib/routes';
 import Home from '../../templates/Home.astro';
+import NotFound from '../../templates/NotFound.astro';
 import PathProbe from '../../templates/PathProbe.astro';
 
 export function getStaticPaths() {
-  return entries().map(({ id, lang, segments }) => ({
-    params: { lang, path: segments.length > 0 ? segments.join('/') : undefined },
-    props: { id, lang },
-  }));
+  return [
+    ...entries().map(({ id, lang, segments }) => ({
+      params: { lang, path: segments.length > 0 ? segments.join('/') : undefined },
+      props: { id, lang },
+    })),
+    ...LANGS.map((lang) => ({ params: { lang, path: NOT_FOUND_SEGMENT }, props: { id: NOT_FOUND_ID, lang } })),
+  ];
 }
 
 interface Props {
@@ -19,7 +25,7 @@ interface Props {
 }
 
 // Modèle par type d'id (préfixe avant « : », ex. `city:modiin` → `city`).
-const TEMPLATES = { home: Home, 'path-probe': PathProbe } as const;
+const TEMPLATES = { home: Home, 'path-probe': PathProbe, 'not-found': NotFound } as const;
 
 const { id, lang } = Astro.props;
 const type = id.split(':')[0] as string;

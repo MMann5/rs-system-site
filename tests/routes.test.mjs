@@ -231,3 +231,32 @@ test('home.yaml : slugs vides, actif, pas réservé aux aperçus', () => {
 test('public/_redirects : exactement la règle / → /he/ en 301', () => {
   assert.equal(read('public/_redirects'), '/ /he/ 301\n');
 });
+
+// — Story 1.9 : 404 (AD-2, AD-3) —
+
+test('id not-found réservé : une source d’id not-found lève', () => {
+  throwsRoutes(() => build([HOME, { id: 'not-found', slugs: slugs('a', 'b', 'c', 'd'), enabled: false }]), /« not-found » réservé/);
+});
+
+test('/{lang}/404/ réservé : une page de slug 404 à la racine lève, même désactivée', () => {
+  throwsRoutes(
+    () => build([HOME, { id: 'oops', slugs: slugs('x', '404', 'y', 'z'), enabled: false }]),
+    /« not-found » et « oops » \(en\) : même chemin \/en\/404\//,
+  );
+  // Sous un parent, le chemin n'est plus /{lang}/404/ : admis.
+  const r = build([HOME, { id: 'p', slugs: slugs('p', 'p', 'p', 'p'), enabled: true }, { id: 'c', slugs: slugs('404', '404', '404', '404'), enabled: true, parent: 'p' }]);
+  assert.equal(r.url('c', 'fr'), '/fr/p/404/');
+});
+
+test('NOT_FOUND_ID, NOT_FOUND_SEGMENT et switcherTargetId', async () => {
+  const { NOT_FOUND_ID, NOT_FOUND_SEGMENT, switcherTargetId } = await import('../src/lib/routes/core.ts');
+  assert.equal(NOT_FOUND_ID, 'not-found');
+  assert.equal(NOT_FOUND_SEGMENT, '404');
+  assert.equal(switcherTargetId('not-found'), 'home');
+  assert.equal(switcherTargetId('home'), 'home');
+  assert.equal(switcherTargetId('cameras'), 'cameras');
+});
+
+test('src/lib/routes/index.ts réexporte NOT_FOUND_ID, NOT_FOUND_SEGMENT et switcherTargetId', () => {
+  assert.match(read('src/lib/routes/index.ts'), /export \{ NOT_FOUND_ID, NOT_FOUND_SEGMENT, switcherTargetId \} from '\.\/core\.ts';/);
+});

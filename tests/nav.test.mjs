@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { buildFooterColumns, buildLinks, buildNav, FOOTER_COLUMNS, HEADER_NAV_IDS, LEGAL_NAV, routeDeps } from '../src/lib/nav/core.ts';
+import { buildFooterColumns, buildLinks, buildNav, FOOTER_COLUMNS, HEADER_NAV_IDS, LEGAL_NAV, NOT_FOUND_NAV, routeDeps } from '../src/lib/nav/core.ts';
 import { buildRegistry } from '../src/lib/routes/core.ts';
 
 const LANGS = ['he', 'en', 'ru', 'fr'];
@@ -130,5 +130,31 @@ test('clés des libellés et titres du footer présentes dans les 4 fichiers i18
     const dict = JSON.parse(readFileSync(new URL(`../src/i18n/${lang}.json`, import.meta.url), 'utf8'));
     for (const key of keys) assert.ok(typeof dict[key] === 'string' && dict[key].trim() !== '', `${lang} : ${key}`);
     assert.ok(!/[[\]]/.test(dict['placeholder.email']), `${lang} : crochets dans placeholder.email`);
+  }
+});
+
+// — Story 1.9 (FR15, UX-DR15) : liens de la 404 —
+
+test('NOT_FOUND_NAV : Accueil, Zones, Contact', () => {
+  assert.deepEqual(NOT_FOUND_NAV, [
+    { id: 'home', label: 'not-found.home' },
+    { id: 'areas', label: 'nav.areas' },
+    { id: 'contact', label: 'nav.contact' },
+  ]);
+});
+
+test('liens de la 404 : areas et contact inactifs → [Accueil] ; actifs → [Accueil, Zones, Contact]', () => {
+  assert.deepEqual(buildLinks(NOT_FOUND_NAV, 'fr', deps(['home'])), [{ href: '/fr/home/', label: 'fr:not-found.home' }]);
+  assert.deepEqual(buildLinks(NOT_FOUND_NAV, 'he', deps(['home', 'areas', 'contact'])), [
+    { href: '/he/home/', label: 'he:not-found.home' },
+    { href: '/he/areas/', label: 'he:nav.areas' },
+    { href: '/he/contact/', label: 'he:nav.contact' },
+  ]);
+});
+
+test('clés not-found.* présentes dans les 4 fichiers i18n', () => {
+  for (const lang of LANGS) {
+    const dict = JSON.parse(readFileSync(new URL(`../src/i18n/${lang}.json`, import.meta.url), 'utf8'));
+    for (const key of ['not-found.meta-title', 'not-found.title', 'not-found.home']) assert.ok(dict[key], `${lang} : ${key}`);
   }
 });

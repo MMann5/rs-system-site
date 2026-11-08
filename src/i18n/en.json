@@ -44,5 +44,8 @@
   "contact-band.title": "Contact us",
   "contact-band.midrag": "Midrag rating",
   "contact-band.reviews": "{n} reviews",
-  "contact-band.leave-details": "Leave your details"
+  "contact-band.leave-details": "Leave your details",
+  "not-found.meta-title": "Page not found · RS SYSTEM",
+  "not-found.title": "Page not found.",
+  "not-found.home": "Go to home page"
 }

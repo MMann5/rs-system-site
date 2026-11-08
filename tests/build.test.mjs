@@ -1,4 +1,4 @@
-// Stories 1.3 à 1.8 : sortie réelle du build, sur une branche puis sur main (registre, layout Base.astro).
+// Stories 1.3 à 1.9 : sortie réelle du build, sur une branche puis sur main (registre, layout Base.astro).
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
@@ -14,6 +14,15 @@ const HOMES = LANGS.map((lang) => `${lang}/index.html`);
 const PROBES = ['en/path-probe/index.html', 'fr/test-de-chemin/index.html', 'he/בדיקת-נתיב/index.html', 'ru/проверка-пути/index.html'];
 const dirs = [];
 
+// Étapes du script `build` de package.json : `astro build`, puis chaque `node <script>` lancé sur le dossier
+// de sortie. build() les rejoue telles quelles, pour que le test et le build réel ne divergent pas.
+const BUILD_STEPS = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).scripts.build.split(' && ');
+const NODE_STEPS = BUILD_STEPS.slice(1).map((step) => {
+  const m = step.match(/^node (\S+)$/);
+  if (!m) throw new Error(`package.json build : étape inattendue « ${step} »`);
+  return m[1];
+});
+
 after(() => {
   for (const dir of dirs) rmSync(dir, { recursive: true, force: true });
 });
@@ -26,8 +35,21 @@ function build(extraEnv) {
   if (!extraEnv.SITE_URL) delete env.SITE_URL;
   if (!extraEnv.DOMAIN_LIVE) delete env.DOMAIN_LIVE;
   execFileSync('npx', ['astro', 'build', '--outDir', out], { cwd: ROOT, env, stdio: 'pipe' });
+  // Post-build et contrôles de package.json (story 1.9), dans son ordre.
+  for (const script of NODE_STEPS) {
+    execFileSync(process.execPath, [script, out], { cwd: ROOT, env, stdio: 'pipe' });
+  }
   return out;
 }
+
+test('package.json build : astro build, headers.mjs, not-found.mjs puis noindex.mjs, dans cet ordre', () => {
+  assert.deepEqual(BUILD_STEPS, [
+    'astro build',
+    'node scripts/postbuild/headers.mjs',
+    'node scripts/postbuild/not-found.mjs',
+    'node scripts/checks/noindex.mjs',
+  ]);
+});
 
 function indexFiles(dir) {
   return readdirSync(dir, { withFileTypes: true, recursive: true })
@@ -212,6 +234,18 @@ function assertLayout(html, id, lang, out, site = '', indexable = false) {
   const alts = [...html.matchAll(/<link rel="alternate" hreflang="([^"]*)" href="([^"]*)">/g)].map((m) => [m[1], m[2]]);
   assert.deepEqual(alts, [...LANGS.map((l) => [l, site + hrefs[l]]), ['x-default', site + hrefs.he]], `${where} : hreflang`);
   assert.ok(!/[?]/.test([...canon, ...alts.map((a) => a[1])].join('')), `${where} : paramètre d'URL`);
+  assertIcons(html, where);
+}
+
+/** Story 1.9 (FR39) : les 3 liens d'icônes dans le <head>. */
+const ICONS = [
+  '<link rel="icon" type="image/png" sizes="32x32" href="/rs-icon-32.png">',
+  '<link rel="apple-touch-icon" sizes="180x180" href="/rs-icon-180.png">',
+  '<link rel="manifest" href="/manifest.webmanifest">',
+];
+function assertIcons(html, where) {
+  const head = html.slice(0, html.indexOf('</head>'));
+  for (const icon of ICONS) assert.equal(head.split(icon).length - 1, 1, `${where} : ${icon}`);
 }
 
 /** Story 1.8 : attributs d'une balise ouvrante `tag` (chaîne). */
@@ -322,6 +356,88 @@ function assertHome(html, lang, out) {
   assert.ok(!band.includes('data-placeholder'), `${where} : placeholder dans le bloc`);
 }
 
+/** Texte HTML échappé par Astro (apostrophe, esperluette). */
+const escaped = (text) => text.replaceAll('&', '&amp;').replaceAll("'", '&#39;');
+const NOT_FOUND_FILES = ['404.html', ...LANGS.map((lang) => `${lang}/404.html`)];
+
+/** Story 1.9 (FR15, UX-DR15, AD-3, AD-10, AD-13) : une page 404 en `lang`. */
+function assertNotFound(html, lang, where) {
+  const dict = I18N[lang];
+  assert.match(html, new RegExp(`<html lang="${lang}" dir="${lang === 'he' ? 'rtl' : 'ltr'}" data-page-id="not-found"[\\s>]`), `${where} : <html>`);
+  const head = html.slice(0, html.indexOf('</head>'));
+  assert.ok(head.includes('<meta name="robots" content="noindex">'), `${where} : noindex`);
+  assert.equal(head.match(/<title>(.*?)<\/title>/)?.[1], escaped(dict['not-found.meta-title']), `${where} : <title>`);
+  assert.ok(!head.includes('name="description"'), `${where} : description`);
+  assert.ok(!head.includes('rel="canonical"'), `${where} : canonique`);
+  assert.ok(!head.includes('hreflang'), `${where} : hreflang`);
+  assert.ok(!/http-equiv="refresh"/i.test(html), `${where} : meta refresh`);
+  assertIcons(html, where);
+  // Un seul h1, le titre de la 404.
+  assert.equal(html.match(/<h1[\s>]/g)?.length, 1, `${where} : <h1>`);
+  assert.equal(html.match(/<h1 id="page-title"[^>]*>([^<]*)<\/h1>/)?.[1], escaped(dict['not-found.title']), `${where} : h1`);
+  // Héros typographique : arcs décoratifs.
+  const main = html.match(/<main id="content"[^>]*>([\s\S]*?)<\/main>/)?.[1] ?? '';
+  assert.match(main, /^<section class="hero-typo" aria-labelledby="page-title" data-surface="navy"[\s>]/, `${where} : héros typographique`);
+  const svgs = main.match(/<svg\b[^>]*>[\s\S]*?<\/svg>/g) ?? [];
+  assert.equal(svgs.length, 1, `${where} : <svg>`);
+  assert.match(svgs[0], /^<svg aria-hidden="true"/, `${where} : svg aria-hidden`);
+  assert.equal(svgs[0].match(/<path\b[^>]*\spathLength="1"/g)?.length, 3, `${where} : 3 arcs`);
+  // Numéro, Appeler, WhatsApp (404), puis Accueil ; rien d'autre (areas, contact inactifs).
+  const links = [...main.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)];
+  assert.equal(links.length, 4, `${where} : liens de la 404`);
+  assert.equal(attr(`<a${links[0][1]}>`, 'href'), 'tel:+972509565669', `${where} : numéro`);
+  assert.equal(attr(`<a${links[0][1]}>`, 'data-track'), 'call_click', `${where} : numéro data-track`);
+  assert.equal(attr(`<a${links[0][1]}>`, 'data-placement'), '404', `${where} : numéro data-placement`);
+  assert.equal(links[0][2], PHONE_BDI, `${where} : numéro`);
+  assertTextLink(links[1], 'tel:+972509565669', dict['action.call'], 'call_click', '404', `${where} : Appeler`);
+  assertTextLink(links[2], waHref(), dict['action.whatsapp'], 'whatsapp_click', '404', `${where} : WhatsApp`);
+  assertTextLink(links[3], `/${lang}/`, escaped(dict['not-found.home']), undefined, undefined, `${where} : Accueil`);
+  for (const [, attrs] of links.slice(1)) assert.match(attrs, /\sclass="text-link night"/, `${where} : ton nuit`);
+  // Aucun lien de header actif, pas de bloc contact.
+  assert.ok(!html.includes('aria-current="page"'), `${where} : aria-current="page"`);
+  assert.ok(!html.includes('class="band"'), `${where} : bloc contact`);
+  // Sélecteurs : 8 liens vers les accueils, aria-current="true" sur la langue de la page.
+  const switcher = [...html.matchAll(/<a\b([^>]*\shreflang="[^"]*"[^>]*)>([^<]*)<\/a>/g)];
+  assert.equal(switcher.length, 8, `${where} : liens des sélecteurs`);
+  switcher.forEach(([, attrs], i) => {
+    const l = LANGS[i % 4];
+    assert.match(attrs, new RegExp(`^ href="/${l}/"\\s`), `${where} : sélecteur ${l}`);
+    assert.equal(/\saria-current="true"/.test(attrs), l === lang, `${where} : aria-current ${l}`);
+  });
+  const footer = html.match(/<footer[\s>][\s\S]*?<\/footer>/)?.[0] ?? '';
+  assertFooter(footer, lang, where);
+  const json = html.match(/<script type="application\/json" id="rs-data">([\s\S]*?)<\/script>/)?.[1];
+  assert.deepEqual(JSON.parse(json), { context: { id: 'not-found', lang, indexable: false } }, `${where} : #rs-data`);
+}
+
+/** Story 1.9 : les 5 pages 404 (racine en hébreu), plus de dossier {lang}/404/. */
+function assertNotFoundPages(out) {
+  for (const file of NOT_FOUND_FILES) {
+    assert.ok(existsSync(join(out, file)), `${file} absent`);
+    const lang = file === '404.html' ? 'he' : file.split('/')[0];
+    assertNotFound(readFileSync(join(out, file), 'utf8'), lang, file);
+  }
+  for (const lang of LANGS) assert.ok(!existsSync(join(out, lang, '404')), `${lang}/404/ présent`);
+}
+
+/** Story 1.9 (FR39) : sitemap (4 <url> de l'accueil, 5 xhtml:link chacun), robots.txt, icônes et manifeste. */
+function assertSeoFiles(out, site, indexable) {
+  const xml = readFileSync(join(out, 'sitemap.xml'), 'utf8');
+  const blocks = [...xml.matchAll(/<url>([\s\S]*?)<\/url>/g)].map((m) => m[1]);
+  assert.equal(blocks.length, 4, 'sitemap : <url>');
+  blocks.forEach((block, i) => {
+    assert.equal(block.match(/<loc>([^<]*)<\/loc>/)?.[1], `${site}/${LANGS[i]}/`, `sitemap : loc ${LANGS[i]}`);
+    const links = [...block.matchAll(/<xhtml:link rel="alternate" hreflang="([^"]*)" href="([^"]*)"\/>/g)].map((m) => [m[1], m[2]]);
+    assert.deepEqual(links, [...LANGS.map((l) => [l, `${site}/${l}/`]), ['x-default', `${site}/he/`]], `sitemap : xhtml:link ${LANGS[i]}`);
+  });
+  assert.ok(!xml.includes('404') && !/path-probe|%D7%91|%D0%BF/.test(xml), 'sitemap : 404 ou path-probe');
+  const robots = readFileSync(join(out, 'robots.txt'), 'utf8');
+  assert.equal(robots, `User-agent: *\n${indexable ? 'Allow: /' : 'Disallow: /'}\n\nSitemap: ${site}/sitemap.xml\n`, 'robots.txt');
+  for (const icon of ['rs-icon-32.png', 'rs-icon-180.png', 'rs-icon-512.png']) assert.ok(existsSync(join(out, icon)), `${icon} absent`);
+  const manifest = JSON.parse(readFileSync(join(out, 'manifest.webmanifest'), 'utf8'));
+  assert.deepEqual(manifest.icons, [{ src: '/rs-icon-512.png', sizes: '512x512', type: 'image/png' }], 'manifeste : icône 512');
+}
+
 test('build de branche : 4 accueils + 4 path-probe, layout Base (lang/dir, #rs-data, évitement, repères, hreflang relatifs), _redirects', { timeout: 120_000 }, () => {
   const out = build({});
   assert.deepEqual(indexFiles(out), [...HOMES, ...PROBES].sort());
@@ -337,6 +453,8 @@ test('build de branche : 4 accueils + 4 path-probe, layout Base (lang/dir, #rs-d
   for (const file of PROBES) {
     assertLayout(readFileSync(join(out, file), 'utf8'), 'path-probe', file.split('/')[0], out);
   }
+  assertNotFoundPages(out);
+  assertSeoFiles(out, '', false);
 });
 
 test('build de main indexable avec SITE_URL : seulement les 4 accueils, sans noindex, canonique et hreflang absolus', { timeout: 120_000 }, () => {
@@ -346,4 +464,7 @@ test('build de main indexable avec SITE_URL : seulement les 4 accueils, sans noi
   for (const lang of LANGS) {
     assertLayout(readFileSync(join(out, lang, 'index.html'), 'utf8'), 'home', lang, out, 'https://rs.example', true);
   }
+  // Story 1.9 : les 5 404 restent en noindex sur un build indexable ; sitemap et robots absolus.
+  assertNotFoundPages(out);
+  assertSeoFiles(out, 'https://rs.example', true);
 });

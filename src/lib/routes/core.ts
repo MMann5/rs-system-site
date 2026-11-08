@@ -14,6 +14,17 @@ const HASH_RE = /^[a-z0-9-]+$/;
 /** Seul id dont les slugs sont vides (`/{lang}/`). */
 const ROOT_ID = 'home';
 
+/** AD-2, AD-3 : id du contexte de page de la 404. Réservé : jamais une entrée du registre. */
+export const NOT_FOUND_ID = 'not-found';
+
+/** Segment de `/{lang}/404/`, chemin généré pour la 404 de chaque langue puis déplacé en `/{lang}/404.html`. */
+export const NOT_FOUND_SEGMENT = '404';
+
+/** Page dont le sélecteur de langues lit les alternates : l'accueil pour la 404, la page elle-même sinon. */
+export function switcherTargetId(id: string): string {
+  return id === NOT_FOUND_ID ? ROOT_ID : id;
+}
+
 export interface RouteSource {
   id: string;
   /** Un slug brut par langue ; la complétude est vérifiée ici, pas seulement par Zod. */
@@ -71,6 +82,10 @@ export function buildRegistry(sources: readonly RouteSource[], options: Registry
   for (const source of sources) {
     const { id } = source;
     if (!ID_RE.test(id)) errors.push(`id « ${id} » hors kebab-case`);
+    if (id === NOT_FOUND_ID) {
+      errors.push(`id « ${id} » réservé (404, hors registre)`);
+      continue;
+    }
     if (byId.has(id)) {
       errors.push(`id « ${id} » déclaré deux fois`);
       continue;
@@ -137,7 +152,8 @@ export function buildRegistry(sources: readonly RouteSource[], options: Registry
   for (const id of byId.keys()) resolve(id);
 
   // 4. Doublons (lang, chemin), toutes entrées confondues : une page activée plus tard ne doit pas en masquer une autre.
-  const owners = new Map<string, string>();
+  // `/{lang}/404/` est réservé à la 404 (AD-3) : aucune page ne peut s'y loger.
+  const owners = new Map<string, string>(LANGS.map((lang) => [hrefOf(lang, [NOT_FOUND_SEGMENT]), NOT_FOUND_ID]));
   for (const { source, segments } of resolved.values()) {
     for (const lang of LANGS) {
       const href = hrefOf(lang, segments[lang]);

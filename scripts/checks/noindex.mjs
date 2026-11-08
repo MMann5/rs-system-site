@@ -1,8 +1,10 @@
 // AD-10 / AD-11 : si le build n'est pas indexable, chaque page porte la meta noindex et _headers
 // l'en-tête X-Robots-Tag ; s'il est indexable, ni l'une ni l'autre. Aucun code Worker (AD-1).
+// Story 1.9 : tout 404.html porte la meta noindex, même indexable ; robots.txt existe, en Disallow: /
+// si et seulement si le build n'est pas indexable.
 // Usage : node scripts/checks/noindex.mjs [dossier]  (défaut : dist/ du dépôt).
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { join, relative, resolve } from 'node:path';
+import { join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { INDEXABLE } from '../../src/lib/env.ts';
 
@@ -37,6 +39,17 @@ const headersPath = join(dist, '_headers');
 const headers = existsSync(headersPath) ? readFileSync(headersPath, 'utf8') : null;
 if (pages.length === 0) failures.push(`${label} : aucune page HTML`);
 
+const isNotFound = (page) => page.endsWith(`${sep}404.html`);
+const DISALLOW = /^Disallow:\s*\/\s*$/m;
+const robotsPath = join(dist, 'robots.txt');
+if (!existsSync(robotsPath)) {
+  failures.push(`${at(robotsPath)} : absent`);
+} else {
+  const robots = readFileSync(robotsPath, 'utf8');
+  if (!INDEXABLE && !DISALLOW.test(robots)) failures.push(`${at(robotsPath)} : ligne Disallow: / absente`);
+  if (INDEXABLE && DISALLOW.test(robots)) failures.push(`${at(robotsPath)} : Disallow: / sur un build indexable`);
+}
+
 if (!INDEXABLE) {
   for (const page of pages) {
     if (!META.test(readFileSync(page, 'utf8'))) failures.push(`${at(page)} : meta robots noindex absente`);
@@ -46,7 +59,9 @@ if (!INDEXABLE) {
   }
 } else {
   for (const page of pages) {
-    if (META.test(readFileSync(page, 'utf8'))) failures.push(`${at(page)} : meta noindex sur un build indexable`);
+    const hasMeta = META.test(readFileSync(page, 'utf8'));
+    if (isNotFound(page) && !hasMeta) failures.push(`${at(page)} : meta robots noindex absente (404)`);
+    if (!isNotFound(page) && hasMeta) failures.push(`${at(page)} : meta noindex sur un build indexable`);
   }
   if (headers !== null && ANY_HEADER.test(headers)) {
     failures.push(`${at(headersPath)} : X-Robots-Tag: noindex sur un build indexable`);

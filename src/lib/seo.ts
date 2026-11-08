@@ -21,3 +21,15 @@ export function hreflangLinks(alternates: readonly { lang: Lang; href: string }[
     { hreflang: 'x-default', href: absoluteUrl(he.href, siteUrl) },
   ];
 }
+
+/** FR39 : liens d'icônes du <head> de chaque page (fichiers tirés de brand/logo-final/, dans public/). */
+export const ICON_LINKS: readonly { rel: string; type?: string; sizes?: string; href: string }[] = [
+  { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/rs-icon-32.png' },
+  { rel: 'apple-touch-icon', sizes: '180x180', href: '/rs-icon-180.png' },
+  { rel: 'manifest', href: '/manifest.webmanifest' },
+];
+
+/** AD-10 : un build indexable exige SITE_URL (canonique, hreflang et sitemap absolus). */
+export function assertSiteUrl(indexable: boolean, siteUrl?: string): void {
+  if (indexable && !siteUrl) throw new Error('seo : SITE_URL requis pour un build indexable (URL absolues du sitemap, de la canonique et des hreflang)');
+}

@@ -309,4 +309,20 @@
   --scrim-hold-extend: 96px;
   /* EXPERIENCE.md › Accessibility Floor : h2 du bloc contact masqué visuellement (utilitaire .visually-hidden) */
   --visually-hidden-size: 1px;
+  /* UX-DR15 : arcs de signal du héros typographique (canvas About.dc.html : svg 560 × 560, inset-inline-end -60px, bottom -80px) */
+  --arcs-size: 560px;
+  --arcs-offset-inline: -60px;
+  --arcs-offset-block: -80px;
+  /* UX-DR15 : arcs « réduits à 60 % sur mobile » */
+  --arcs-scale-mobile: 0.6;
+  /* UX-DR15 : « trait de 22px » (canvas About.dc.html : stroke-width 22, dans le viewBox 480) */
+  --arc-stroke-width: 22;
+  /* UX-DR15 : « opacités 1 / 0,55 / 0,25 » */
+  --arc-opacity-2: 0.55;
+  --arc-opacity-3: 0.25;
+  /* UX-DR38 : tracé unique des arcs (canvas About.dc.html : animation arc 1.4s, délais .3s / .5s / .7s) */
+  --arc-duration: 1.4s;
+  --arc-delay-1: 0.3s;
+  --arc-delay-2: 0.5s;
+  --arc-delay-3: 0.7s;
 }

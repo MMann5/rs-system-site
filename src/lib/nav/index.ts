@@ -11,6 +11,7 @@ import {
   buildNav,
   HEADER_NAV_IDS,
   LEGAL_NAV,
+  NOT_FOUND_NAV,
   routeDeps,
   type FooterColumn,
   type NavItem,
@@ -34,4 +35,9 @@ export function footerColumns(lang: Lang): FooterColumn[] {
 /** Liens légaux du footer en `lang` (accessibilité, confidentialité), ids désactivés omis. */
 export function legalNav(lang: Lang): NavLink[] {
   return buildLinks(LEGAL_NAV, lang, deps);
+}
+
+/** Liens de la 404 en `lang` (Accueil, Zones, Contact), ids désactivés omis. */
+export function notFoundNav(lang: Lang): NavLink[] {
+  return buildLinks(NOT_FOUND_NAV, lang, deps);
 }

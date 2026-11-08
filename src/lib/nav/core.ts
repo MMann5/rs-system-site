@@ -79,6 +79,13 @@ export const LEGAL_NAV: readonly LinkDef[] = [
   { id: 'privacy', label: 'nav.privacy' },
 ];
 
+/** FR15, UX-DR15 : liens de la 404 (Accueil, puis Zones et Contact s'ils sont actifs). */
+export const NOT_FOUND_NAV: readonly LinkDef[] = [
+  { id: 'home', label: 'not-found.home' },
+  { id: 'areas', label: 'nav.areas' },
+  { id: 'contact', label: 'nav.contact' },
+];
+
 export interface NavDeps {
   isEnabled(id: string): boolean;
   url(id: string, lang: Lang, params?: { hash?: string }): string;

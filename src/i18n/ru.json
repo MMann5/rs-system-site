@@ -44,5 +44,8 @@
   "contact-band.title": "Связаться с нами",
   "contact-band.midrag": "Рейтинг на Midrag",
   "contact-band.reviews": "отзывов: {n}",
-  "contact-band.leave-details": "Оставить контакты"
+  "contact-band.leave-details": "Оставить контакты",
+  "not-found.meta-title": "Страница не найдена · RS SYSTEM",
+  "not-found.title": "Страница не найдена.",
+  "not-found.home": "На главную"
 }
