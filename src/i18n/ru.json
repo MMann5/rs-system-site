@@ -13,5 +13,10 @@
   "nav.areas": "Районы",
   "nav.blog": "Блог",
   "nav.about": "О нас",
-  "nav.contact": "Контакты"
+  "nav.contact": "Контакты",
+  "menu.label": "Меню",
+  "lang-switcher.label": "Язык",
+  "lang.name": "Русский",
+  "mobile-bar.call": "Позвонить",
+  "mobile-bar.whatsapp": "WhatsApp"
 }

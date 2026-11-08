@@ -13,5 +13,10 @@
   "nav.areas": "Zones",
   "nav.blog": "Blog",
   "nav.about": "À propos",
-  "nav.contact": "Contact"
+  "nav.contact": "Contact",
+  "menu.label": "Menu",
+  "lang-switcher.label": "Langue",
+  "lang.name": "Français",
+  "mobile-bar.call": "Appeler",
+  "mobile-bar.whatsapp": "WhatsApp"
 }

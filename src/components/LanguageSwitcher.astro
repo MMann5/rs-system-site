@@ -1,0 +1,52 @@
+---
+// FR20 (partiel), UX-DR30, AD-2, AD-14 : sélecteur de langues, variante sombre (bas du menu mobile,
+// sur navy-deep). 4 liens vers la même page (registre de routes), dans l'ordre he, en, ru, fr, chacun
+// libellé dans sa langue avec `lang` et `hreflang` ; la langue de la page porte aria-current="true".
+// Repris par le footer en 1.7 (variante claire), avec la recopie de location.search (îlot nav.ts).
+import { t } from '../lib/i18n';
+import type { PageContext } from '../lib/page-context';
+import { alternates } from '../lib/routes';
+
+interface Props {
+  ctx: PageContext;
+}
+
+const { ctx } = Astro.props;
+const links = alternates(ctx.id);
+---
+<nav aria-label={t(ctx.lang, 'lang-switcher.label')} class="switcher">
+  <ul class="list">
+    {links.map(({ lang, href }) => (
+      <li><a href={href} lang={lang} hreflang={lang} class="link" aria-current={lang === ctx.lang ? 'true' : undefined}>{t(lang, 'lang.name')}</a></li>
+    ))}
+  </ul>
+</nav>
+
+<style>
+  .list {
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: var(--space-6);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* Corps 16px ; cible ≥ 44px de haut (min-block-size 48px, texte centré). */
+  .link {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: var(--space-12);
+    font-size: var(--type-body-size);
+    font-weight: var(--type-body-weight);
+    line-height: var(--type-body-leading);
+    color: var(--color-nav-idle);
+  }
+
+  /* Langue de la page : blanc 700, sans soulignement (sur fond navy-deep). */
+  .link[aria-current="true"] {
+    color: var(--color-white);
+    font-weight: var(--type-phone-inline-weight);
+    text-decoration: none;
+  }
+</style>

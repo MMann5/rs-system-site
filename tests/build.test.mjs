@@ -1,4 +1,4 @@
-// Stories 1.3, 1.4 et 1.5 : sortie réelle du build, sur une branche puis sur main (registre, layout Base.astro).
+// Stories 1.3 à 1.6 : sortie réelle du build, sur une branche puis sur main (registre, layout Base.astro).
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
@@ -6,6 +6,7 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node
 import { tmpdir } from 'node:os';
 import { join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { waHref } from '../src/lib/contact/core.ts';
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
 const LANGS = ['he', 'en', 'ru', 'fr'];
@@ -56,10 +57,18 @@ const PAGE_HREFS = {
     PROBES.map((file) => [file.split('/')[0], `/${file.split('/')[0]}/${encodeURIComponent(file.split('/')[1])}/`]),
   ),
 };
+// Story 1.6 : chaînes i18n du menu, du sélecteur et de la barre mobile.
+const MENU_LABEL = { he: 'תפריט', en: 'Menu', ru: 'Меню', fr: 'Menu' };
+const SWITCHER_LABEL = { he: 'שפה', en: 'Language', ru: 'Язык', fr: 'Langue' };
+const LANG_NAME = { he: 'עברית', en: 'English', ru: 'Русский', fr: 'Français' };
+const CALL_LABEL = { he: 'התקשרו', en: 'Call', ru: 'Позвонить', fr: 'Appeler' };
+const WA_LABEL = { he: 'וואטסאפ', en: 'WhatsApp', ru: 'WhatsApp', fr: 'WhatsApp' };
+/** Liens du sélecteur de langues (seuls `<a>` porteurs de hreflang dans le <body>). */
+const SWITCHER_LINK = /<a\b[^>]*\shreflang="[^"]*"[^>]*>/g;
 const FOCUSABLE = /<(?:a\b[^>]*\shref=|button\b|input\b|select\b|textarea\b|[a-z][\w-]*\b[^>]*\stabindex=)[^>]*>/i;
 
-/** Story 1.4 : sortie du layout unique pour la page `id` en `lang` ; `site` = SITE_URL du build. */
-function assertLayout(html, id, lang, site = '', indexable = false) {
+/** Story 1.4 : sortie du layout unique pour la page `id` en `lang` ; `out` = dossier du build, `site` = SITE_URL. */
+function assertLayout(html, id, lang, out, site = '', indexable = false) {
   const where = `${id} (${lang})`;
   // Titre et description depuis le YAML de la page ; noindex si et seulement si non indexable.
   assert.deepEqual(Object.keys(META[id].title), LANGS, `${where} : meta.title`);
@@ -67,8 +76,9 @@ function assertLayout(html, id, lang, site = '', indexable = false) {
   assert.equal(html.match(/<title>(.*?)<\/title>/)?.[1], META[id].title[lang], `${where} : <title>`);
   assert.equal(html.match(/<meta name="description" content="([^"]*)">/)?.[1], META[id].description[lang], `${where} : description`);
   assert.equal(html.includes('<meta name="robots" content="noindex">'), !indexable, `${where} : noindex`);
-  // AD-7 : un seul lang= et un seul dir=, sur <html>, avec data-page-id (hors <bdi dir="ltr"> du numéro).
-  assert.equal(html.match(/\slang=/g)?.length, 1, `${where} : lang= en double`);
+  // AD-7 : un seul lang= et un seul dir=, sur <html>, avec data-page-id (hors <bdi dir="ltr"> du numéro
+  // et hors liens du sélecteur de langues, qui portent chacun lang + hreflang).
+  assert.equal(html.replace(SWITCHER_LINK, '').match(/\slang=/g)?.length, 1, `${where} : lang= en double`);
   assert.equal(html.replaceAll(PHONE_BDI, '').match(/\sdir=/g)?.length, 1, `${where} : dir= en double`);
   assert.match(html, new RegExp(`<html lang="${lang}" dir="${lang === 'he' ? 'rtl' : 'ltr'}" data-page-id="${id}"[\\s>]`), where);
   // AD-13 : un seul #rs-data, qui vaut { context }.
@@ -97,11 +107,58 @@ function assertLayout(html, id, lang, site = '', indexable = false) {
   assert.match(calls[0][1], /\sdata-track="call_click"/, `${where} : data-track`);
   assert.match(calls[0][1], /\sdata-placement="header"/, `${where} : data-placement`);
   assert.equal(calls[0][2], PHONE_BDI, `${where} : contenu du lien d'appel`);
-  // Aucun id de nav actif pendant l'epic : pas de <nav> vide.
-  assert.ok(!/<nav[\s>]/.test(header), `${where} : <nav> dans le header`);
+  // Story 1.6 (FR17, D4) : bouton menu après le numéro, même sans lien actif.
+  const buttons = header.match(/<button\b[^>]*>/g) ?? [];
+  assert.equal(buttons.length, 1, `${where} : bouton menu`);
+  for (const attr of ['type="button"', 'aria-expanded="false"', 'aria-controls="mobile-menu"', `aria-label="${MENU_LABEL[lang]}"`]) {
+    assert.ok(buttons[0].includes(` ${attr}`), `${where} : ${attr} absent de ${buttons[0]}`);
+  }
+  assert.ok(header.indexOf('<button') > header.indexOf('href="tel:'), `${where} : bouton pas après le numéro`);
+  // Panneau #mobile-menu après la barre ; aucun id de nav actif pendant l'epic : un seul <nav> dans le
+  // header, celui du sélecteur de langues, dans le panneau.
+  assert.equal(header.match(/\sid="mobile-menu"/g)?.length, 1, `${where} : #mobile-menu`);
+  const menu = header.slice(header.indexOf(' id="mobile-menu"'));
+  assert.ok(header.indexOf(' id="mobile-menu"') > header.indexOf('<button'), `${where} : panneau pas après le bouton`);
+  assert.equal(header.match(/<nav[\s>]/g)?.length, 1, `${where} : <nav> du header`);
+  assert.equal(menu.match(/<nav[\s>]/g)?.length, 1, `${where} : <nav> hors du panneau`);
+  assert.match(menu, new RegExp(`<nav aria-label="${SWITCHER_LABEL[lang]}"[\\s>]`), `${where} : <nav> du sélecteur`);
+  // Sélecteur : 4 liens vers la même page, ordre he, en, ru, fr, lang + hreflang, libellé dans sa langue,
+  // aria-current="true" sur la seule langue de la page.
+  const switcher = [...html.matchAll(/<a\b([^>]*\shreflang="[^"]*"[^>]*)>([^<]*)<\/a>/g)];
+  assert.equal(switcher.length, 4, `${where} : liens du sélecteur`);
+  switcher.forEach(([, attrs, label], i) => {
+    const l = LANGS[i];
+    assert.match(attrs, new RegExp(`^ href="${PAGE_HREFS[id][l]}"\\s`), `${where} : href ${l}`);
+    assert.match(attrs, new RegExp(`\\slang="${l}"\\s`), `${where} : lang ${l}`);
+    assert.match(attrs, new RegExp(`\\shreflang="${l}"\\s`), `${where} : hreflang ${l}`);
+    assert.equal(label, LANG_NAME[l], `${where} : libellé ${l}`);
+    assert.equal(/\saria-current="true"/.test(attrs), l === lang, `${where} : aria-current ${l}`);
+    assert.ok(menu.includes(`<a${attrs}>`), `${where} : lien ${l} hors du panneau`);
+  });
   assert.equal(html.match(/<main[\s>]/g)?.length, 1, `${where} : <main>`);
   assert.match(html, /<main id="content"[\s>]/, `${where} : main#content`);
   assert.equal(html.match(/<footer[\s>]/g)?.length, 1, `${where} : <footer>`);
+  // Story 1.6 (FR18, FR31, AD-6) : barre mobile unique, après </footer> ; Appeler puis WhatsApp
+  // (salutation seule : aucune page de l'epic n'a de service ni de ville).
+  assert.equal(html.match(/\sclass="mobile-bar"/g)?.length, 1, `${where} : barre mobile`);
+  const bar = html.slice(html.indexOf(' class="mobile-bar"'));
+  assert.ok(html.indexOf(' class="mobile-bar"') > html.indexOf('</footer>'), `${where} : barre pas après </footer>`);
+  const actions = [...bar.matchAll(/<a href="([^"]*)"([^>]*)>([\s\S]*?)<\/a>/g)].slice(0, 2);
+  assert.equal(actions[0]?.[1], 'tel:+972509565669', `${where} : lien Appeler`);
+  assert.equal(actions[1]?.[1], waHref().replaceAll('&', '&amp;'), `${where} : lien WhatsApp`);
+  for (const [[, , attrs, inner], event, label] of [[actions[0], 'call_click', CALL_LABEL[lang]], [actions[1], 'whatsapp_click', WA_LABEL[lang]]]) {
+    assert.match(attrs, new RegExp(`\\sdata-track="${event}"`), `${where} : data-track ${event}`);
+    assert.match(attrs, /\sdata-placement="mobile_bar"/, `${where} : data-placement ${event}`);
+    assert.match(inner, /<svg\b[^>]*\saria-hidden="true"/, `${where} : icône ${event}`);
+    assert.equal(inner.replace(/<[^>]*>/g, ''), label, `${where} : libellé ${event}`);
+  }
+  // AD-14 : îlot du menu embarqué (<script type="module"> inline ou src) qui vise #mobile-menu.
+  const modules = [...html.matchAll(/<script type="module"(?:\s+src="([^"]+)")?[^>]*>([\s\S]*?)<\/script>/g)];
+  assert.ok(modules.length > 0, `${where} : aucun <script type="module">`);
+  const code = modules.map(([, src, inline]) => (src ? readFileSync(join(out, src), 'utf8') : inline)).join('\n');
+  assert.match(code, /mobile-menu/, `${where} : îlot du menu absent`);
+  assert.match(actions[0][2], /\sdata-surface="navy"/, `${where} : surface Appeler`);
+  assert.match(actions[1][2], /\sdata-surface="accent"/, `${where} : surface WhatsApp`);
   // FR39 : canonique et 5 hreflang (he, en, ru, fr, x-default → he de la même page).
   const hrefs = PAGE_HREFS[id];
   const canon = [...html.matchAll(/<link rel="canonical" href="([^"]*)">/g)].map((m) => m[1]);
@@ -120,10 +177,10 @@ test('build de branche : 4 accueils + 4 path-probe, layout Base (lang/dir, #rs-d
   for (const lang of LANGS) {
     const html = readFileSync(join(out, lang, 'index.html'), 'utf8');
     assert.equal(html.match(/<title>(.*?)<\/title>/)?.[1], titles[lang]);
-    assertLayout(html, 'home', lang);
+    assertLayout(html, 'home', lang, out);
   }
   for (const file of PROBES) {
-    assertLayout(readFileSync(join(out, file), 'utf8'), 'path-probe', file.split('/')[0]);
+    assertLayout(readFileSync(join(out, file), 'utf8'), 'path-probe', file.split('/')[0], out);
   }
 });
 
@@ -132,6 +189,6 @@ test('build de main indexable avec SITE_URL : seulement les 4 accueils, sans noi
   assert.deepEqual(indexFiles(out), [...HOMES].sort());
   assert.ok(!existsSync(join(out, 'index.html')));
   for (const lang of LANGS) {
-    assertLayout(readFileSync(join(out, lang, 'index.html'), 'utf8'), 'home', lang, 'https://rs.example', true);
+    assertLayout(readFileSync(join(out, lang, 'index.html'), 'utf8'), 'home', lang, out, 'https://rs.example', true);
   }
 });

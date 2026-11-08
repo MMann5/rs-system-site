@@ -1,9 +1,10 @@
-// Story 1.5 (AD-5, FR31) : noyau des liens Appeler / WhatsApp et table des services.
+// Stories 1.5 et 1.6 (AD-5, AD-13, FR31) : noyau des liens Appeler / WhatsApp, table des services,
+// entrée WhatsApp d'une page (pageWaInput).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { PHONE_DISPLAY, telHref, waHref } from '../src/lib/contact/core.ts';
-import { buildServiceTable, SERVICE_CODES } from '../src/lib/contact/table.ts';
+import { buildServiceTable, pageWaInput, SERVICE_CODES } from '../src/lib/contact/table.ts';
 
 const PREFIX = 'https://wa.me/972509565669?text=';
 const GREETING = 'שלום RS SYSTEM, הגעתי מהאתר.';
@@ -118,4 +119,34 @@ test('services.yaml : 7 ids dans l’ordre, 4 langues, libellés attendus, pages
     { cameras: 'cameras', 'smoke-detectors': 'smoke-detectors', 'smart-home': 'smart-home', networks: 'networks', intercom: 'intercom', 'crane-cameras': 'contractors', unsure: undefined },
   );
   assert.equal(Object.keys(buildServiceTable(services, 'ru')).length, 7);
+});
+
+// — pageWaInput (story 1.6, matrice I/O) —
+
+const TABLE = buildServiceTable(ENTRIES, 'fr');
+
+test('pageWaInput : page sans service → {} ; lien = salutation seule', () => {
+  const input = pageWaInput({ id: 'home', lang: 'fr', indexable: false }, TABLE);
+  assert.deepEqual(input, {});
+  assert.equal(waHref(input), waHref());
+  assert.equal(text(waHref(input)), GREETING);
+});
+
+test('pageWaInput : service connu → libellé hébreu, quelle que soit la langue de la table', () => {
+  assert.deepEqual(pageWaInput({ id: 'cameras', lang: 'fr', service: 'cameras', indexable: false }, TABLE), { serviceHe: 'מצלמות אבטחה' });
+  assert.deepEqual(pageWaInput({ service: 'crane-cameras' }, buildServiceTable(ENTRIES, 'ru')), { serviceHe: 'מצלמות לעגורן / אתר בנייה' });
+});
+
+test('pageWaInput : service unsure → {}', () => {
+  assert.deepEqual(pageWaInput({ service: 'unsure' }, TABLE), {});
+});
+
+test('pageWaInput : service inconnu → lève', () => {
+  assert.throws(() => pageWaInput({ service: 'drones' }, TABLE), { message: 'contact : service inconnu « drones »' });
+  assert.throws(() => pageWaInput({ service: 'toString' }, TABLE), { message: 'contact : service inconnu « toString »' });
+});
+
+test('pageWaInput : ville → lève tant que la table des villes est absente (epic 4)', () => {
+  assert.throws(() => pageWaInput({ city: 'modiin' }, TABLE), { message: 'contact : table des villes absente (epic 4)' });
+  assert.throws(() => pageWaInput({ service: 'cameras', city: 'modiin' }, TABLE), { message: 'contact : table des villes absente (epic 4)' });
 });

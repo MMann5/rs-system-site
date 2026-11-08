@@ -13,5 +13,10 @@
   "nav.areas": "אזורים",
   "nav.blog": "בלוג",
   "nav.about": "אודות",
-  "nav.contact": "צור קשר"
+  "nav.contact": "צור קשר",
+  "menu.label": "תפריט",
+  "lang-switcher.label": "שפה",
+  "lang.name": "עברית",
+  "mobile-bar.call": "התקשרו",
+  "mobile-bar.whatsapp": "וואטסאפ"
 }

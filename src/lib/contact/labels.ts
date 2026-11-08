@@ -10,8 +10,8 @@ const entries: ServiceEntry[] = (await getCollection('services')).map(({ id, dat
   page: data.page,
 }));
 
-// Valide les 7 codes au premier import de ce module (stories 1.6+ ; aucun import en 1.5,
-// d'ici là tests/contact.test.mjs garde services.yaml).
+// Valide les 7 codes au premier import de ce module (MobileBar.astro l'importe sur chaque page
+// depuis la story 1.6) : un services.yaml fautif fait échouer le build.
 buildServiceTable(entries, 'he');
 
 export function serviceLabels(lang: Lang): ServiceTable {

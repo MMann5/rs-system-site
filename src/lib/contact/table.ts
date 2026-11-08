@@ -1,8 +1,10 @@
-// AD-4, AD-5 : cœur pur de la table des services. src/lib/contact/labels.ts lui passe les entrées
-// de src/content/services.yaml ; toute anomalie lève. Le build n'échoue que lorsqu'un composant importe
-// labels.ts (stories 1.6+) ; d'ici là, tests/contact.test.mjs garde services.yaml.
+// AD-4, AD-5, AD-13 : cœur pur de la table des services et du message WhatsApp d'une page.
+// src/lib/contact/labels.ts lui passe les entrées de src/content/services.yaml ; toute anomalie lève,
+// donc fait échouer le build (labels.ts est importé par MobileBar.astro depuis la story 1.6).
 // Syntaxe TypeScript effaçable uniquement : Node l'importe directement (tests).
 import type { Lang } from '../langs.ts';
+import type { PageContext } from '../page-context.ts';
+import type { WaInput } from './core.ts';
 
 /** Les 7 codes du formulaire (`?service=`), dans l'ordre du sélecteur. */
 export const SERVICE_CODES = ['cameras', 'smoke-detectors', 'smart-home', 'networks', 'intercom', 'crane-cameras', 'unsure'] as const;
@@ -46,4 +48,20 @@ export function buildServiceTable(entries: readonly ServiceEntry[], lang: Lang):
     table[code] = { label: label[lang], he: label.he };
   }
   return table;
+}
+
+/**
+ * Entrée de `waHref()` pour la page `ctx` (FR31) : service de la page hôte en hébreu, sans service
+ * pour `unsure` ou une page sans service. Lève sur un code inconnu, et sur une ville tant que la table
+ * des villes n'existe pas (epic 4) : mieux vaut un build en échec qu'un message sans sa ville.
+ */
+export function pageWaInput(ctx: Pick<PageContext, 'service' | 'city'>, table: ServiceTable): WaInput {
+  const input: WaInput = {};
+  const { service, city } = ctx;
+  if (service !== undefined && service !== 'unsure') {
+    if (!Object.hasOwn(table, service)) throw new Error(`contact : service inconnu « ${service} »`);
+    input.serviceHe = table[service as ServiceCode].he;
+  }
+  if (city !== undefined) throw new Error('contact : table des villes absente (epic 4)');
+  return input;
 }

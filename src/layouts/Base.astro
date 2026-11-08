@@ -5,6 +5,7 @@ import '../styles/base.css';
 import FontPreload from '../components/FontPreload.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+import MobileBar from '../components/MobileBar.astro';
 import { SITE_URL } from '../lib/env';
 import { t } from '../lib/i18n';
 import { DIR } from '../lib/langs';
@@ -44,6 +45,7 @@ const rsData = serializeRsData(ctx, tables);
       <slot />
     </main>
     <Footer ctx={ctx} />
+    <MobileBar ctx={ctx} />
     <script type="application/json" id="rs-data" is:inline set:html={rsData} />
   </body>
 </html>

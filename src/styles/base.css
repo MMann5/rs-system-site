@@ -32,6 +32,21 @@ body {
   background-color: var(--color-surface);
 }
 
+/* — Barre mobile (FR18) : sous --bp-mobile-bar (700px), le bas de page n'est jamais caché sous la
+ * barre fixe ; sous 500px de hauteur, la barre est en fin de page et ce dégagement disparaît.
+ * Les @media ne lisent pas les tokens. — */
+@media (width < 700px) {
+  body {
+    padding-block-end: calc(var(--mobile-bar-height) + env(safe-area-inset-bottom));
+  }
+}
+
+@media (width < 700px) and (max-height: 500px) {
+  body {
+    padding-block-end: 0;
+  }
+}
+
 /* — Contrôles de formulaire : police du site, pas la police système — */
 button,
 input,

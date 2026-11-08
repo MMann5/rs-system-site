@@ -274,4 +274,15 @@
   --z-skip-link: 1000;
   /* DESIGN.md › Components › Header : barre collante, sous le lien d'évitement (--z-skip-link) */
   --z-header: 100;
+  /* DESIGN.md › Components › Barre mobile : fixée en bas, au-dessus du contenu, sous le header (--z-header) */
+  --z-mobile-bar: 90;
+  /* DESIGN.md › Components › Barre mobile : « 18px/700 » */
+  --type-mobile-bar-size: 18px;
+  --type-mobile-bar-weight: 700;
+  /* DESIGN.md › Components › Barre mobile : « icône trait 20px » (canvas Header.dc.html : width/height 20) */
+  --icon-size: 20px;
+  /* Canvas Header.dc.html › bouton menu : icône 22 × 22 */
+  --icon-size-menu: 22px;
+  /* DESIGN.md › Components › Header : « trait 1,8px » (canvas Header.dc.html : stroke-width 1.8) */
+  --icon-stroke-width: 1.8;
 }
