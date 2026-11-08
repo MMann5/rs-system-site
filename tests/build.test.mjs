@@ -1,4 +1,4 @@
-// Stories 1.3 à 1.6 : sortie réelle du build, sur une branche puis sur main (registre, layout Base.astro).
+// Stories 1.3 à 1.7 : sortie réelle du build, sur une branche puis sur main (registre, layout Base.astro).
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
@@ -65,7 +65,41 @@ const CALL_LABEL = { he: 'התקשרו', en: 'Call', ru: 'Позвонить', f
 const WA_LABEL = { he: 'וואטסאפ', en: 'WhatsApp', ru: 'WhatsApp', fr: 'WhatsApp' };
 /** Liens du sélecteur de langues (seuls `<a>` porteurs de hreflang dans le <body>). */
 const SWITCHER_LINK = /<a\b[^>]*\shreflang="[^"]*"[^>]*>/g;
+// Story 1.7 : chaînes i18n du footer, lues dans src/i18n (mêmes clés dans les 4 fichiers).
+const I18N = Object.fromEntries(LANGS.map((lang) => [lang, JSON.parse(readFileSync(join(ROOT, `src/i18n/${lang}.json`), 'utf8'))]));
+/** Baseline hébraïque isolée en RTL dans la ligne basse du footer hors hébreu (seul autre lang=/dir=). */
+const BASELINE_BDI = /<bdi lang="he" dir="rtl"[^>]*>/g;
 const FOCUSABLE = /<(?:a\b[^>]*\shref=|button\b|input\b|select\b|textarea\b|[a-z][\w-]*\b[^>]*\stabindex=)[^>]*>/i;
+
+/** Story 1.7 (FR19, UX-DR33, D1) : footer pendant l'epic 1 (aucune page de colonne ni légale active). */
+function assertFooter(footer, lang, where) {
+  const dict = I18N[lang];
+  const contact = dict['footer.col.contact'];
+  // Deux <nav> : la colonne Contact (seule colonne rendue) et le sélecteur ; aucun <nav> légal.
+  const navs = footer.match(/<nav\b[^>]*>/g) ?? [];
+  assert.equal(navs.length, 2, `${where} : <nav> du footer ${navs}`);
+  assert.match(navs[0], new RegExp(`^<nav aria-label="${contact}"[\\s>]`), `${where} : <nav> Contact`);
+  assert.ok(!navs.some((n) => n.includes(`aria-label="${dict['footer.legal-label']}"`)), `${where} : <nav> légal`);
+  const col = footer.slice(footer.indexOf(navs[0]), footer.indexOf('</nav>'));
+  assert.equal(col.match(/<h2\b[^>]*>([^<]*)<\/h2>/)?.[1], contact, `${where} : <h2> Contact`);
+  assert.equal(footer.match(/<h2[\s>]/g)?.length, 1, `${where} : <h2> du footer`);
+  // Numéro : lien d'appel mesuré (AD-5, AD-6), isolé en LTR.
+  const calls = [...col.matchAll(/<a href="tel:\+972509565669"([^>]*)>([\s\S]*?)<\/a>/g)];
+  assert.equal(calls.length, 1, `${where} : lien d'appel du footer`);
+  assert.match(calls[0][1], /\sdata-track="call_click"/, `${where} : data-track footer`);
+  assert.match(calls[0][1], /\sdata-placement="footer"/, `${where} : data-placement footer`);
+  assert.equal(calls[0][2], PHONE_BDI, `${where} : contenu du lien d'appel du footer`);
+  // E-mail en placeholder (D1), sans mailto: ; phrase de zone en texte simple.
+  assert.equal(col.match(/<span data-placeholder(?:="")?>([^<]*)<\/span>/)?.[1], `[${dict['placeholder.email']}]`, `${where} : placeholder e-mail`);
+  assert.ok(!footer.includes('mailto:'), `${where} : mailto:`);
+  assert.match(col, new RegExp(`>${dict['contact.zone']}</li>`), `${where} : phrase de zone`);
+  // Ligne basse : © · baseline hébraïque (isolée en RTL hors hébreu).
+  const baseline = I18N.he['site.tagline'];
+  const tagline = lang === 'he' ? baseline : `<bdi lang="he" dir="rtl"[^>]*>${baseline}</bdi>`;
+  assert.match(footer, new RegExp(`<p\\b[^>]*>${dict['footer.copyright']} · ${tagline}</p>`), `${where} : ligne basse`);
+  // Ordre de lecture : colonne, puis ligne basse, puis sélecteur.
+  assert.ok(footer.indexOf(navs[0]) < footer.indexOf('<p') && footer.indexOf('<p') < footer.indexOf(navs[1]), `${where} : ordre du footer`);
+}
 
 /** Story 1.4 : sortie du layout unique pour la page `id` en `lang` ; `out` = dossier du build, `site` = SITE_URL. */
 function assertLayout(html, id, lang, out, site = '', indexable = false) {
@@ -76,10 +110,11 @@ function assertLayout(html, id, lang, out, site = '', indexable = false) {
   assert.equal(html.match(/<title>(.*?)<\/title>/)?.[1], META[id].title[lang], `${where} : <title>`);
   assert.equal(html.match(/<meta name="description" content="([^"]*)">/)?.[1], META[id].description[lang], `${where} : description`);
   assert.equal(html.includes('<meta name="robots" content="noindex">'), !indexable, `${where} : noindex`);
-  // AD-7 : un seul lang= et un seul dir=, sur <html>, avec data-page-id (hors <bdi dir="ltr"> du numéro
-  // et hors liens du sélecteur de langues, qui portent chacun lang + hreflang).
-  assert.equal(html.replace(SWITCHER_LINK, '').match(/\slang=/g)?.length, 1, `${where} : lang= en double`);
-  assert.equal(html.replaceAll(PHONE_BDI, '').match(/\sdir=/g)?.length, 1, `${where} : dir= en double`);
+  // AD-7 : un seul lang= et un seul dir=, sur <html>, avec data-page-id (hors <bdi dir="ltr"> du numéro,
+  // liens du sélecteur de langues, qui portent chacun lang + hreflang, et baseline du footer hors hébreu).
+  assert.equal(html.match(BASELINE_BDI)?.length ?? 0, lang === 'he' ? 0 : 1, `${where} : bdi de la baseline`);
+  assert.equal(html.replace(SWITCHER_LINK, '').replace(BASELINE_BDI, '').match(/\slang=/g)?.length, 1, `${where} : lang= en double`);
+  assert.equal(html.replaceAll(PHONE_BDI, '').replace(BASELINE_BDI, '').match(/\sdir=/g)?.length, 1, `${where} : dir= en double`);
   assert.match(html, new RegExp(`<html lang="${lang}" dir="${lang === 'he' ? 'rtl' : 'ltr'}" data-page-id="${id}"[\\s>]`), where);
   // AD-13 : un seul #rs-data, qui vaut { context }.
   assert.equal(html.match(/\sid="rs-data"/g)?.length, 1, `${where} : #rs-data absent ou en double`);
@@ -121,20 +156,29 @@ function assertLayout(html, id, lang, out, site = '', indexable = false) {
   assert.ok(header.indexOf(' id="mobile-menu"') > header.indexOf('<button'), `${where} : panneau pas après le bouton`);
   assert.equal(header.match(/<nav[\s>]/g)?.length, 1, `${where} : <nav> du header`);
   assert.equal(menu.match(/<nav[\s>]/g)?.length, 1, `${where} : <nav> hors du panneau`);
-  assert.match(menu, new RegExp(`<nav aria-label="${SWITCHER_LABEL[lang]}"[\\s>]`), `${where} : <nav> du sélecteur`);
-  // Sélecteur : 4 liens vers la même page, ordre he, en, ru, fr, lang + hreflang, libellé dans sa langue,
-  // aria-current="true" sur la seule langue de la page.
+  assert.match(menu, new RegExp(`<nav aria-label="${SWITCHER_LABEL[lang]}"[^>]*\\sdata-lang-switcher[\\s>]`), `${where} : <nav> du sélecteur`);
+  // Story 1.7 : deux sélecteurs (menu, footer), chacun <nav aria-label data-lang-switcher>.
+  const switcherNavs = html.match(new RegExp(`<nav aria-label="${SWITCHER_LABEL[lang]}"[^>]*\\sdata-lang-switcher[\\s>]`, 'g')) ?? [];
+  assert.equal(switcherNavs.length, 2, `${where} : <nav> de sélecteur`);
+  const footer = html.match(/<footer[\s>][\s\S]*?<\/footer>/)?.[0] ?? '';
+  // Sélecteurs : 8 liens (4 dans #mobile-menu, puis 4 dans <footer>), chaque série vers la même page,
+  // ordre he, en, ru, fr, lang + hreflang, libellé dans sa langue, aria-current="true" sur la seule
+  // langue de la page.
   const switcher = [...html.matchAll(/<a\b([^>]*\shreflang="[^"]*"[^>]*)>([^<]*)<\/a>/g)];
-  assert.equal(switcher.length, 4, `${where} : liens du sélecteur`);
+  assert.equal(switcher.length, 8, `${where} : liens des sélecteurs`);
   switcher.forEach(([, attrs, label], i) => {
-    const l = LANGS[i];
+    const l = LANGS[i % 4];
+    const scope = i < 4 ? menu : footer;
     assert.match(attrs, new RegExp(`^ href="${PAGE_HREFS[id][l]}"\\s`), `${where} : href ${l}`);
     assert.match(attrs, new RegExp(`\\slang="${l}"\\s`), `${where} : lang ${l}`);
     assert.match(attrs, new RegExp(`\\shreflang="${l}"\\s`), `${where} : hreflang ${l}`);
     assert.equal(label, LANG_NAME[l], `${where} : libellé ${l}`);
     assert.equal(/\saria-current="true"/.test(attrs), l === lang, `${where} : aria-current ${l}`);
-    assert.ok(menu.includes(`<a${attrs}>`), `${where} : lien ${l} hors du panneau`);
+    assert.ok(scope.includes(`<a${attrs}>`), `${where} : lien ${l} n° ${i} hors de ${i < 4 ? '#mobile-menu' : '<footer>'}`);
   });
+  assert.equal(menu.match(SWITCHER_LINK)?.length, 4, `${where} : liens du sélecteur du menu`);
+  assert.equal(footer.match(SWITCHER_LINK)?.length, 4, `${where} : liens du sélecteur du footer`);
+  assertFooter(footer, lang, where);
   assert.equal(html.match(/<main[\s>]/g)?.length, 1, `${where} : <main>`);
   assert.match(html, /<main id="content"[\s>]/, `${where} : main#content`);
   assert.equal(html.match(/<footer[\s>]/g)?.length, 1, `${where} : <footer>`);

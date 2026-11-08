@@ -18,5 +18,22 @@
   "lang-switcher.label": "Язык",
   "lang.name": "Русский",
   "mobile-bar.call": "Позвонить",
-  "mobile-bar.whatsapp": "WhatsApp"
+  "mobile-bar.whatsapp": "WhatsApp",
+  "footer.col.services": "Услуги",
+  "footer.col.business": "Для бизнеса",
+  "footer.col.areas": "Зоны обслуживания",
+  "footer.col.company": "RS SYSTEM",
+  "footer.col.contact": "Связаться с нами",
+  "footer.legal-label": "Правовая информация",
+  "footer.copyright": "© RS SYSTEM",
+  "nav.footer.crane-cameras": "Камеры для кранов",
+  "nav.footer.management": "Для управляющих компаний и домовых комитетов",
+  "nav.region.jerusalem-area": "Иерусалим и окрестности",
+  "nav.region.center-shfela": "Центр и Шфела",
+  "nav.region.south": "Беэр-Шева и юг",
+  "nav.region.judea-samaria": "Иудея и Самария",
+  "nav.accessibility": "Заявление о доступности",
+  "nav.privacy": "Политика конфиденциальности",
+  "contact.zone": "От Беэр-Шевы до Иерусалима, включая поселения",
+  "placeholder.email": "эл. почта"
 }

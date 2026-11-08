@@ -18,5 +18,22 @@
   "lang-switcher.label": "שפה",
   "lang.name": "עברית",
   "mobile-bar.call": "התקשרו",
-  "mobile-bar.whatsapp": "וואטסאפ"
+  "mobile-bar.whatsapp": "וואטסאפ",
+  "footer.col.services": "שירותים",
+  "footer.col.business": "לעסקים",
+  "footer.col.areas": "אזורי שירות",
+  "footer.col.company": "RS SYSTEM",
+  "footer.col.contact": "דברו איתנו",
+  "footer.legal-label": "מידע משפטי",
+  "footer.copyright": "© RS SYSTEM",
+  "nav.footer.crane-cameras": "מצלמות לעגורנים",
+  "nav.footer.management": "לחברות ניהול ולוועדי בית",
+  "nav.region.jerusalem-area": "ירושלים והסביבה",
+  "nav.region.center-shfela": "המרכז והשפלה",
+  "nav.region.south": "באר שבע והדרום",
+  "nav.region.judea-samaria": "יהודה ושומרון",
+  "nav.accessibility": "הצהרת נגישות",
+  "nav.privacy": "מדיניות פרטיות",
+  "contact.zone": "מבאר שבע ועד ירושלים, כולל היישובים",
+  "placeholder.email": "אימייל"
 }

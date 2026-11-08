@@ -5,7 +5,14 @@
 // bouton), sur un lien du panneau, sur un clic hors du panneau et du bouton, ou quand le focus quitte
 // le panneau pour un élément autre que le bouton.
 // Le défilement de la page n'est jamais verrouillé (aucune écriture sur le style du body).
-// Recopie de location.search sur le sélecteur de langues : story 1.7.
+// Story 1.7 (AD-14) : recopie de location.search (?service=, utm_*…) sur les liens des sélecteurs de
+// langues ([data-lang-switcher], menu et footer), indépendamment du menu. Sans JS : liens sans paramètre.
+
+if (location.search) {
+  for (const link of document.querySelectorAll<HTMLAnchorElement>('[data-lang-switcher] a[hreflang]')) {
+    link.search = location.search;
+  }
+}
 
 const button = document.querySelector<HTMLButtonElement>('button[aria-controls="mobile-menu"]');
 const panel = document.getElementById('mobile-menu');

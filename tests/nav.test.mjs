@@ -1,8 +1,9 @@
-// Story 1.5 (AD-14) : listes de navigation du header.
+// Stories 1.5 et 1.7 (AD-14) : listes de navigation du header et du footer.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { buildNav, HEADER_NAV_IDS } from '../src/lib/nav/core.ts';
+import { buildFooterColumns, buildLinks, buildNav, FOOTER_COLUMNS, HEADER_NAV_IDS, LEGAL_NAV, routeDeps } from '../src/lib/nav/core.ts';
+import { buildRegistry } from '../src/lib/routes/core.ts';
 
 const LANGS = ['he', 'en', 'ru', 'fr'];
 
@@ -10,9 +11,9 @@ const LANGS = ['he', 'en', 'ru', 'fr'];
 function deps(active) {
   return {
     isEnabled: (id) => active.includes(id),
-    url: (id, lang) => {
+    url: (id, lang, params) => {
       if (!active.includes(id)) throw new Error(`routes : « ${id} » inactif`);
-      return `/${lang}/${id}/`;
+      return `/${lang}/${id}/${params?.hash ? `#${params.hash}` : ''}`;
     },
     label: (lang, key) => `${lang}:${key}`,
   };
@@ -42,5 +43,92 @@ test('clés nav.{id}, nav.main-label et header.home-label présentes dans les 4 
     for (const key of [...HEADER_NAV_IDS.map((id) => `nav.${id}`), 'nav.main-label', 'header.home-label']) {
       assert.ok(typeof dict[key] === 'string' && dict[key].trim() !== '', `${lang} : ${key}`);
     }
+  }
+});
+
+// — Story 1.7 : colonnes et liens légaux du footer —
+
+test('FOOTER_COLUMNS et LEGAL_NAV : ordre, ids, libellés et titres', () => {
+  assert.deepEqual(
+    FOOTER_COLUMNS.map(({ key, heading }) => [key, heading]),
+    [['services', 'footer.col.services'], ['business', 'footer.col.business'], ['areas', 'footer.col.areas'], ['company', 'footer.col.company']],
+  );
+  const [services, business, areas, company] = FOOTER_COLUMNS;
+  assert.deepEqual(services.links, ['cameras', 'smoke-detectors', 'smart-home', 'networks', 'intercom'].map((id) => ({ id, label: `nav.${id}` })));
+  assert.deepEqual(business.links, [
+    { id: 'contractors', label: 'nav.footer.crane-cameras' },
+    { id: 'intercom', label: 'nav.footer.management' },
+  ]);
+  assert.deepEqual(areas.links, ['jerusalem-area', 'center-shfela', 'south', 'judea-samaria'].map((hash) => ({ id: 'areas', label: `nav.region.${hash}`, hash })));
+  assert.deepEqual(company.links, ['about', 'blog', 'contact'].map((id) => ({ id, label: `nav.${id}` })));
+  assert.deepEqual(LEGAL_NAV, [
+    { id: 'accessibility', label: 'nav.accessibility' },
+    { id: 'privacy', label: 'nav.privacy' },
+  ]);
+});
+
+test('footer, epic 1 (seul home actif) : aucune colonne, aucun lien légal', () => {
+  for (const lang of LANGS) {
+    assert.deepEqual(buildFooterColumns(lang, deps(['home'])), []);
+    assert.deepEqual(buildLinks(LEGAL_NAV, lang, deps(['home'])), []);
+  }
+});
+
+test('footer : cameras et blog actifs → services = [cameras], company = [blog], business et areas omises', () => {
+  assert.deepEqual(buildFooterColumns('fr', deps(['home', 'cameras', 'blog'])), [
+    { key: 'services', heading: 'fr:footer.col.services', links: [{ href: '/fr/cameras/', label: 'fr:nav.cameras' }] },
+    { key: 'company', heading: 'fr:footer.col.company', links: [{ href: '/fr/blog/', label: 'fr:nav.blog' }] },
+  ]);
+});
+
+test('footer : areas actif → 4 liens d’ancre de région, dans l’ordre', () => {
+  assert.deepEqual(buildFooterColumns('ru', deps(['areas'])), [
+    {
+      key: 'areas',
+      heading: 'ru:footer.col.areas',
+      links: ['jerusalem-area', 'center-shfela', 'south', 'judea-samaria'].map((hash) => ({ href: `/ru/areas/#${hash}`, label: `ru:nav.region.${hash}` })),
+    },
+  ]);
+});
+
+test('routeDeps + vrai registre (home, areas actifs) : 4 ancres de région en fr, titre traduit', () => {
+  const routes = buildRegistry(
+    [
+      { id: 'home', slugs: { he: '', en: '', ru: '', fr: '' }, enabled: true },
+      { id: 'areas', slugs: { he: 'אזורים', en: 'areas', ru: 'zony', fr: 'zones' }, enabled: true },
+    ],
+    { isMainBranch: false },
+  );
+  const cols = buildFooterColumns('fr', routeDeps(routes, (lang, key) => `${lang}:${key}`));
+  assert.deepEqual(cols, [
+    {
+      key: 'areas',
+      heading: 'fr:footer.col.areas',
+      links: ['jerusalem-area', 'center-shfela', 'south', 'judea-samaria'].map((hash) => ({ href: `/fr/zones/#${hash}`, label: `fr:nav.region.${hash}` })),
+    },
+  ]);
+});
+
+test('buildLinks : id inactif ou inconnu omis, url et label jamais appelés pour lui', () => {
+  const calls = [];
+  const spy = {
+    isEnabled: (id) => id === 'privacy',
+    url: (id, lang, params) => (calls.push(['url', id, params]), `/${lang}/${id}/`),
+    label: (lang, key) => (calls.push(['label', key]), key),
+  };
+  assert.deepEqual(buildLinks([...LEGAL_NAV, { id: 'nope', label: 'nav.nope' }], 'he', spy), [{ href: '/he/privacy/', label: 'nav.privacy' }]);
+  assert.deepEqual(calls, [['url', 'privacy', undefined], ['label', 'nav.privacy']]);
+});
+
+test('clés des libellés et titres du footer présentes dans les 4 fichiers i18n', () => {
+  const keys = [
+    ...FOOTER_COLUMNS.flatMap(({ heading, links }) => [heading, ...links.map(({ label }) => label)]),
+    ...LEGAL_NAV.map(({ label }) => label),
+    'footer.col.contact', 'footer.legal-label', 'footer.copyright', 'contact.zone', 'placeholder.email',
+  ];
+  for (const lang of LANGS) {
+    const dict = JSON.parse(readFileSync(new URL(`../src/i18n/${lang}.json`, import.meta.url), 'utf8'));
+    for (const key of keys) assert.ok(typeof dict[key] === 'string' && dict[key].trim() !== '', `${lang} : ${key}`);
+    assert.ok(!/[[\]]/.test(dict['placeholder.email']), `${lang} : crochets dans placeholder.email`);
   }
 });

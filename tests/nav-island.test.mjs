@@ -97,7 +97,7 @@ class FakeElement extends FakeNode {
 
 let round = 0;
 
-async function mountIsland() {
+async function mountIsland(search = '', initialSearch = '') {
   const listeners = {};
   const button = new FakeElement('button', { type: 'button', 'aria-expanded': 'false', 'aria-controls': 'mobile-menu' });
   const link = new FakeElement('a', { href: '/fr/' });
@@ -111,15 +111,19 @@ async function mountIsland() {
     el.style = {};
     el.classList = new Set();
   }
+  // Liens des deux sélecteurs de langues (menu et footer), cibles de la recopie de location.search.
+  const switcherLinks = ['he', 'en', 'ru', 'fr', 'he', 'en', 'ru', 'fr'].map((l) => new FakeElement('a', { href: `/${l}/`, hreflang: l }));
+  for (const el of switcherLinks) el.search = initialSearch;
   const document = {
     activeElement: body,
     body,
     documentElement: html,
     querySelector: (sel) => (sel === 'button[aria-controls="mobile-menu"]' ? button : null),
     getElementById: (id) => (id === 'mobile-menu' ? panel : null),
+    querySelectorAll: (sel) => (sel === '[data-lang-switcher] a[hreflang]' ? switcherLinks : []),
     addEventListener: (type, fn) => (listeners[type] ??= []).push(fn),
   };
-  Object.assign(globalThis, { document, Node: FakeNode, Element: FakeElement });
+  Object.assign(globalThis, { document, location: { search }, Node: FakeNode, Element: FakeElement });
   await import(`${ISLAND_URL}?case=${++round}`);
   // Clic : écouteurs de l'élément puis remontée jusqu'au document (comme le navigateur).
   const click = (target) => {
@@ -136,7 +140,7 @@ async function mountIsland() {
     for (let n = from; n instanceof FakeElement; n = n.parent) for (const fn of n.listeners.focusout ?? []) fn(event);
   };
   const open = () => button.getAttribute('aria-expanded') === 'true';
-  return { button, link, panel, header, main, body, html, document, click, key, blur, open };
+  return { button, link, panel, header, main, body, html, document, switcherLinks, click, key, blur, open };
 }
 
 const ISLAND_URL = new URL('../src/scripts/nav.ts', import.meta.url).href;
@@ -205,4 +209,17 @@ test('îlot : n’écrit jamais sur le body ni sur <html> (défilement non verro
   dom.click(dom.button);
   dom.blur(dom.link, dom.main);
   assert.deepEqual(snapshot(), before);
+});
+
+// — Story 1.7 (AD-14) : recopie de location.search sur les 8 liens des sélecteurs —
+
+test('îlot : ?service=cameras&utm_source=van recopié sur les 8 liens de sélecteur', async () => {
+  const dom = await mountIsland('?service=cameras&utm_source=van');
+  assert.equal(dom.switcherLinks.length, 8);
+  for (const link of dom.switcherLinks) assert.equal(link.search, '?service=cameras&utm_source=van');
+});
+
+test('îlot : sans paramètre, liens de sélecteur inchangés', async () => {
+  const dom = await mountIsland('', '?keep');
+  for (const link of dom.switcherLinks) assert.equal(link.search, '?keep');
 });

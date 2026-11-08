@@ -285,4 +285,6 @@
   --icon-size-menu: 22px;
   /* DESIGN.md › Components › Header : « trait 1,8px » (canvas Header.dc.html : stroke-width 1.8) */
   --icon-stroke-width: 1.8;
+  /* DESIGN.md › Layout › Footer : « auto-fit minmax(min(100%, 200px), 1fr) » (largeur min. d'une colonne) */
+  --footer-col-min: 200px;
 }

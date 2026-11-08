@@ -1,20 +1,22 @@
 ---
-// FR20 (partiel), UX-DR30, AD-2, AD-14 : sélecteur de langues, variante sombre (bas du menu mobile,
-// sur navy-deep). 4 liens vers la même page (registre de routes), dans l'ordre he, en, ru, fr, chacun
-// libellé dans sa langue avec `lang` et `hreflang` ; la langue de la page porte aria-current="true".
-// Repris par le footer en 1.7 (variante claire), avec la recopie de location.search (îlot nav.ts).
+// FR20, UX-DR30, AD-2, AD-14 : sélecteur de langues. 4 liens vers la même page (registre de routes),
+// dans l'ordre he, en, ru, fr, chacun libellé dans sa langue avec `lang` et `hreflang` ; la langue de
+// la page porte aria-current="true". Deux variantes : `dark` (défaut, bas du menu mobile, sur
+// navy-deep) et `light` (ligne basse du footer : liens `link`, actif navy 700 non souligné).
+// `data-lang-switcher` : l'îlot src/scripts/nav.ts y recopie location.search (?service=, utm_*).
 import { t } from '../lib/i18n';
 import type { PageContext } from '../lib/page-context';
 import { alternates } from '../lib/routes';
 
 interface Props {
   ctx: PageContext;
+  tone?: 'dark' | 'light';
 }
 
-const { ctx } = Astro.props;
+const { ctx, tone = 'dark' } = Astro.props;
 const links = alternates(ctx.id);
 ---
-<nav aria-label={t(ctx.lang, 'lang-switcher.label')} class="switcher">
+<nav aria-label={t(ctx.lang, 'lang-switcher.label')} class:list={['switcher', tone]} data-lang-switcher>
   <ul class="list">
     {links.map(({ lang, href }) => (
       <li><a href={href} lang={lang} hreflang={lang} class="link" aria-current={lang === ctx.lang ? 'true' : undefined}>{t(lang, 'lang.name')}</a></li>
@@ -48,5 +50,14 @@ const links = alternates(ctx.id);
     color: var(--color-white);
     font-weight: var(--type-phone-inline-weight);
     text-decoration: none;
+  }
+
+  /* Variante claire (footer, fond surface-alt) : liens `link`, langue de la page navy 700. */
+  .light .link {
+    color: var(--color-link);
+  }
+
+  .light .link[aria-current="true"] {
+    color: var(--color-ink);
   }
 </style>

@@ -18,5 +18,22 @@
   "lang-switcher.label": "Langue",
   "lang.name": "Français",
   "mobile-bar.call": "Appeler",
-  "mobile-bar.whatsapp": "WhatsApp"
+  "mobile-bar.whatsapp": "WhatsApp",
+  "footer.col.services": "Services",
+  "footer.col.business": "Pour les entreprises",
+  "footer.col.areas": "Zones d'intervention",
+  "footer.col.company": "RS SYSTEM",
+  "footer.col.contact": "Nous contacter",
+  "footer.legal-label": "Informations légales",
+  "footer.copyright": "© RS SYSTEM",
+  "nav.footer.crane-cameras": "Caméras de grue",
+  "nav.footer.management": "Sociétés de gestion et comités d'immeuble",
+  "nav.region.jerusalem-area": "Jérusalem et environs",
+  "nav.region.center-shfela": "Centre et Shfela",
+  "nav.region.south": "Beer-Sheva et le Sud",
+  "nav.region.judea-samaria": "Judée-Samarie",
+  "nav.accessibility": "Déclaration d'accessibilité",
+  "nav.privacy": "Politique de confidentialité",
+  "contact.zone": "De Beer-Sheva à Jérusalem, yishouvim compris",
+  "placeholder.email": "e-mail"
 }

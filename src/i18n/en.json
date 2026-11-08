@@ -18,5 +18,22 @@
   "lang-switcher.label": "Language",
   "lang.name": "English",
   "mobile-bar.call": "Call",
-  "mobile-bar.whatsapp": "WhatsApp"
+  "mobile-bar.whatsapp": "WhatsApp",
+  "footer.col.services": "Services",
+  "footer.col.business": "For businesses",
+  "footer.col.areas": "Service areas",
+  "footer.col.company": "RS SYSTEM",
+  "footer.col.contact": "Contact us",
+  "footer.legal-label": "Legal information",
+  "footer.copyright": "© RS SYSTEM",
+  "nav.footer.crane-cameras": "Crane cameras",
+  "nav.footer.management": "For management companies and building committees",
+  "nav.region.jerusalem-area": "Jerusalem area",
+  "nav.region.center-shfela": "Center and Shfela",
+  "nav.region.south": "Beer Sheva and the South",
+  "nav.region.judea-samaria": "Judea and Samaria",
+  "nav.accessibility": "Accessibility statement",
+  "nav.privacy": "Privacy policy",
+  "contact.zone": "From Beer Sheva to Jerusalem, including the settlements",
+  "placeholder.email": "email"
 }
