@@ -1,5 +1,17 @@
 {
   "site.name": "RS SYSTEM",
   "site.tagline": "Системы защиты и безопасности",
-  "layout.skip-link": "Перейти к содержимому"
+  "layout.skip-link": "Перейти к содержимому",
+  "header.home-label": "RS SYSTEM, главная",
+  "nav.main-label": "Основная навигация",
+  "nav.cameras": "Камеры",
+  "nav.smoke-detectors": "Датчики дыма",
+  "nav.smart-home": "Умный дом",
+  "nav.networks": "Сети",
+  "nav.intercom": "Домофон",
+  "nav.contractors": "Застройщикам",
+  "nav.areas": "Районы",
+  "nav.blog": "Блог",
+  "nav.about": "О нас",
+  "nav.contact": "Контакты"
 }

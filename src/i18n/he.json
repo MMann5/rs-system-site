@@ -1,5 +1,17 @@
 {
   "site.name": "RS SYSTEM",
   "site.tagline": "מערכת מיגון ואבטחה",
-  "layout.skip-link": "דלגו לתוכן"
+  "layout.skip-link": "דלגו לתוכן",
+  "header.home-label": "RS SYSTEM, דף הבית",
+  "nav.main-label": "ניווט ראשי",
+  "nav.cameras": "מצלמות",
+  "nav.smoke-detectors": "גלאי עשן",
+  "nav.smart-home": "בית חכם",
+  "nav.networks": "רשתות",
+  "nav.intercom": "אינטרקום",
+  "nav.contractors": "לקבלנים",
+  "nav.areas": "אזורים",
+  "nav.blog": "בלוג",
+  "nav.about": "אודות",
+  "nav.contact": "צור קשר"
 }

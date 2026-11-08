@@ -2,7 +2,7 @@ _bmad/
 _bmad-output/
 .claude/
 .bmad-loop/
-brand/
+/brand/
 archive-ancien-handoff/
 node_modules/
 dist/

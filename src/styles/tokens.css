@@ -272,4 +272,6 @@
   --skip-link-pad-block: 12px;
   /* DESIGN.md › Components › Lien d'évitement : « au-dessus du header » */
   --z-skip-link: 1000;
+  /* DESIGN.md › Components › Header : barre collante, sous le lien d'évitement (--z-skip-link) */
+  --z-header: 100;
 }

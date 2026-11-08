@@ -8,6 +8,7 @@
     "check": "astro check",
     "check:dist": "node scripts/checks/noindex.mjs",
     "test": "node --test",
+    "lint": "node scripts/checks/contact-literals.mjs",
     "preview": "npm run build && wrangler dev"
   },
   "dependencies": {

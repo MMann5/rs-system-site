@@ -1,7 +1,7 @@
 // AD-4 : schémas Zod des contenus. Zod ne voit qu'une entrée à la fois : la complétude entre
 // fichiers (doublons de chemin, mêmes clés i18n) est vérifiée par src/lib/routes et src/lib/i18n.
 import { defineCollection } from 'astro:content';
-import { glob } from 'astro/loaders';
+import { file, glob } from 'astro/loaders';
 import { z } from 'astro/zod';
 import { KEY_RE } from './lib/i18n/core.ts';
 
@@ -31,4 +31,15 @@ const i18n = defineCollection({
   schema: z.record(z.string().regex(KEY_RE), text),
 });
 
-export const collections = { pages, i18n };
+// Services : src/content/services.yaml, liste d'entrées dont l'id est le code (AD-4, AD-5).
+// Le loader file() garde le champ `id` dans les données. Codes attendus : src/lib/contact/table.ts.
+const services = defineCollection({
+  loader: file('src/content/services.yaml'),
+  schema: z.strictObject({
+    id: z.string(),
+    label: perLang(text),
+    page: z.string().optional(),
+  }),
+});
+
+export const collections = { pages, i18n, services };

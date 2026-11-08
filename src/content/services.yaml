@@ -1,0 +1,52 @@
+# AD-4 : les 7 codes de service du formulaire, dans l'ordre du sélecteur. Id = code (`?service=`).
+# `label` : libellé × 4 ; l'hébreu sert aussi au message WhatsApp (AD-5). `page` : id de la page liée
+# (registre de routes), aucune pour `unsure`. Libellés hébreux = options du canvas Contact.
+# Textes en/ru/fr traduits par l'agent : relecture humaine recommandée.
+- id: cameras
+  label:
+    he: 'מצלמות אבטחה'
+    en: 'Security cameras'
+    ru: 'Камеры видеонаблюдения'
+    fr: 'Caméras de surveillance'
+  page: cameras
+- id: smoke-detectors
+  label:
+    he: 'גלאי עשן'
+    en: 'Smoke detectors'
+    ru: 'Датчики дыма'
+    fr: 'Détecteurs de fumée'
+  page: smoke-detectors
+- id: smart-home
+  label:
+    he: 'בית חכם'
+    en: 'Smart home'
+    ru: 'Умный дом'
+    fr: 'Maison connectée'
+  page: smart-home
+- id: networks
+  label:
+    he: 'תקשורת ורשתות'
+    en: 'Networks and communications'
+    ru: 'Сети и связь'
+    fr: 'Réseaux et communication'
+  page: networks
+- id: intercom
+  label:
+    he: 'אינטרקום'
+    en: 'Intercom'
+    ru: 'Домофон'
+    fr: 'Interphone'
+  page: intercom
+- id: crane-cameras
+  label:
+    he: 'מצלמות לעגורן / אתר בנייה'
+    en: 'Crane and site cameras'
+    ru: 'Камеры для крана и стройплощадки'
+    fr: 'Caméras de grue et de chantier'
+  page: contractors
+- id: unsure
+  label:
+    he: 'עוד לא בטוח'
+    en: 'Not sure yet'
+    ru: 'Пока не знаю'
+    fr: 'Pas encore sûr'

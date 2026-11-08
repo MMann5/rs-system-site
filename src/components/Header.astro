@@ -1,15 +1,120 @@
 ---
-// Repère <header> minimal (story 1.4) : logo, navigation et numéro complétés en 1.5.
+// FR16, FR32, UX-DR7, UX-DR10, AD-5, AD-14 : header collant (DESIGN.md › Components › Header).
+// Logo vers l'accueil de la langue, liens de src/lib/nav (omis tant qu'aucune page n'est active),
+// numéro en lien d'appel généré par src/lib/contact/core.ts. Menu mobile : story 1.6.
+import { Image } from 'astro:assets';
+import logo from '../assets/brand/rs-logo-compact-white-header@2x.png';
+import { telHref } from '../lib/contact/core';
 import { t } from '../lib/i18n';
+import { headerNav } from '../lib/nav';
 import type { PageContext } from '../lib/page-context';
 import { url } from '../lib/routes';
+import PhoneNumber from './PhoneNumber.astro';
 
 interface Props {
   ctx: PageContext;
 }
 
 const { ctx } = Astro.props;
+const items = headerNav(ctx);
 ---
-<header>
-  <a href={url('home', ctx.lang)}>{t(ctx.lang, 'site.name')}</a>
+<header data-surface="navy" class="header">
+  <div class="bar">
+    <a href={url('home', ctx.lang)} class="home">
+      <Image src={logo} height={50} densities={[1, 2]} format="png" alt={t(ctx.lang, 'header.home-label')} class="logo" />
+    </a>
+    {items.length > 0 && (
+      <nav aria-label={t(ctx.lang, 'nav.main-label')} class="nav">
+        <ul class="nav-list">
+          {items.map(({ href, label, current }) => (
+            <li><a href={href} class="nav-link" aria-current={current ? 'page' : undefined}>{label}</a></li>
+          ))}
+        </ul>
+      </nav>
+    )}
+    <a href={telHref()} class="phone" data-track="call_click" data-placement="header"><PhoneNumber /></a>
+  </div>
 </header>
+
+<style>
+  .header {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: var(--z-header);
+    background-color: var(--color-header-glass);
+  }
+
+  /* Contenu dans la colonne --container, gouttière --page-gutter. Cibles ≥ 44px : logo 50px,
+   * liens texte 24px + 2 × 16px ; centrées, l'anneau de focus (offset 3px) reste dans la barre. */
+  .bar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-6);
+    min-block-size: var(--header-height);
+    max-inline-size: var(--container);
+    margin-inline: auto;
+    padding-inline: var(--page-gutter);
+  }
+
+  .home {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  /* Logo jamais retourné ni recoloré : aucune transformation, aucun filtre. Taille = attributs
+   * width/height de <Image> (50px de haut, components.header.logoHeight). */
+  .logo {
+    display: block;
+  }
+
+  .nav {
+    display: flex;
+  }
+
+  .nav-list {
+    display: flex;
+    align-items: center;
+    gap: var(--space-6);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .nav-link {
+    display: block;
+    padding-block: var(--space-4);
+    font-size: var(--type-nav-size);
+    font-weight: var(--type-nav-weight);
+    color: var(--color-nav-idle);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  /* Actif : blanc 700 (graisse du numéro du header, même token). */
+  .nav-link[aria-current="page"] {
+    color: var(--color-white);
+    font-weight: var(--type-phone-inline-weight);
+  }
+
+  /* Numéro à l'extrémité de fin, chiffres en family-sans même en hébreu. */
+  .phone {
+    display: block;
+    flex-shrink: 0;
+    padding-block: var(--space-4);
+    margin-inline-start: auto;
+    font-family: var(--type-phone-inline-family);
+    font-size: var(--type-phone-inline-size);
+    font-weight: var(--type-phone-inline-weight);
+    color: var(--color-white);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  /* EXPERIENCE.md › Header : plus collant sous 500px de hauteur (les @media ne lisent pas les tokens). */
+  @media (max-height: 500px) {
+    .header {
+      position: static;
+    }
+  }
+</style>

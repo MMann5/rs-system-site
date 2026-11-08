@@ -1,5 +1,17 @@
 {
   "site.name": "RS SYSTEM",
   "site.tagline": "Systèmes de protection et de sécurité",
-  "layout.skip-link": "Aller au contenu"
+  "layout.skip-link": "Aller au contenu",
+  "header.home-label": "RS SYSTEM, accueil",
+  "nav.main-label": "Navigation principale",
+  "nav.cameras": "Caméras",
+  "nav.smoke-detectors": "Détecteurs de fumée",
+  "nav.smart-home": "Maison connectée",
+  "nav.networks": "Réseaux",
+  "nav.intercom": "Interphone",
+  "nav.contractors": "Entrepreneurs",
+  "nav.areas": "Zones",
+  "nav.blog": "Blog",
+  "nav.about": "À propos",
+  "nav.contact": "Contact"
 }

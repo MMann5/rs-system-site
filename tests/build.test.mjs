@@ -1,4 +1,4 @@
-// Stories 1.3 et 1.4 : sortie réelle du build, sur une branche puis sur main (registre, layout Base.astro).
+// Stories 1.3, 1.4 et 1.5 : sortie réelle du build, sur une branche puis sur main (registre, layout Base.astro).
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
@@ -47,6 +47,8 @@ const META = Object.fromEntries(
 );
 const titles = META.home.title;
 
+const HOME_LABEL = { he: 'RS SYSTEM, דף הבית', en: 'RS SYSTEM, home', ru: 'RS SYSTEM, главная', fr: 'RS SYSTEM, accueil' };
+const PHONE_BDI = '<bdi dir="ltr">050-956-5669</bdi>';
 const SKIP_LINK = { he: 'דלגו לתוכן', en: 'Skip to content', ru: 'Перейти к содержимому', fr: 'Aller au contenu' };
 const PAGE_HREFS = {
   home: Object.fromEntries(LANGS.map((lang) => [lang, `/${lang}/`])),
@@ -65,9 +67,9 @@ function assertLayout(html, id, lang, site = '', indexable = false) {
   assert.equal(html.match(/<title>(.*?)<\/title>/)?.[1], META[id].title[lang], `${where} : <title>`);
   assert.equal(html.match(/<meta name="description" content="([^"]*)">/)?.[1], META[id].description[lang], `${where} : description`);
   assert.equal(html.includes('<meta name="robots" content="noindex">'), !indexable, `${where} : noindex`);
-  // AD-7 : un seul lang= et un seul dir=, sur <html>, avec data-page-id.
+  // AD-7 : un seul lang= et un seul dir=, sur <html>, avec data-page-id (hors <bdi dir="ltr"> du numéro).
   assert.equal(html.match(/\slang=/g)?.length, 1, `${where} : lang= en double`);
-  assert.equal(html.match(/\sdir=/g)?.length, 1, `${where} : dir= en double`);
+  assert.equal(html.replaceAll(PHONE_BDI, '').match(/\sdir=/g)?.length, 1, `${where} : dir= en double`);
   assert.match(html, new RegExp(`<html lang="${lang}" dir="${lang === 'he' ? 'rtl' : 'ltr'}" data-page-id="${id}"[\\s>]`), where);
   // AD-13 : un seul #rs-data, qui vaut { context }.
   assert.equal(html.match(/\sid="rs-data"/g)?.length, 1, `${where} : #rs-data absent ou en double`);
@@ -84,6 +86,19 @@ function assertLayout(html, id, lang, site = '', indexable = false) {
   assert.equal(html.match(/<header[\s>]/g)?.length, 1, `${where} : <header>`);
   const header = html.match(/<header[\s>][\s\S]*?<\/header>/)?.[0] ?? '';
   assert.ok(header.includes(`<a href="${PAGE_HREFS.home[lang]}"`), `${where} : lien d'accueil du header`);
+  // Story 1.5 : logo 50px dans le lien d'accueil, alt traduit.
+  const home = header.match(new RegExp(`<a href="${PAGE_HREFS.home[lang]}"[^>]*>([\\s\\S]*?)</a>`))?.[1] ?? '';
+  const img = home.match(/<img\b[^>]*>/)?.[0] ?? '';
+  assert.match(img, /\sheight="50"[\s>]/, `${where} : logo à 50px`);
+  assert.ok(img.includes(` alt="${HOME_LABEL[lang]}"`), `${where} : alt du logo ${img}`);
+  // FR32, AD-5 : un seul lien d'appel, mesuré, numéro isolé en LTR sans espace.
+  const calls = [...header.matchAll(/<a href="tel:\+972509565669"([^>]*)>([\s\S]*?)<\/a>/g)];
+  assert.equal(calls.length, 1, `${where} : lien d'appel du header`);
+  assert.match(calls[0][1], /\sdata-track="call_click"/, `${where} : data-track`);
+  assert.match(calls[0][1], /\sdata-placement="header"/, `${where} : data-placement`);
+  assert.equal(calls[0][2], PHONE_BDI, `${where} : contenu du lien d'appel`);
+  // Aucun id de nav actif pendant l'epic : pas de <nav> vide.
+  assert.ok(!/<nav[\s>]/.test(header), `${where} : <nav> dans le header`);
   assert.equal(html.match(/<main[\s>]/g)?.length, 1, `${where} : <main>`);
   assert.match(html, /<main id="content"[\s>]/, `${where} : main#content`);
   assert.equal(html.match(/<footer[\s>]/g)?.length, 1, `${where} : <footer>`);
