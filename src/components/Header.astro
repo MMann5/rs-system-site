@@ -1,0 +1,15 @@
+---
+// Repère <header> minimal (story 1.4) : logo, navigation et numéro complétés en 1.5.
+import { t } from '../lib/i18n';
+import type { PageContext } from '../lib/page-context';
+import { url } from '../lib/routes';
+
+interface Props {
+  ctx: PageContext;
+}
+
+const { ctx } = Astro.props;
+---
+<header>
+  <a href={url('home', ctx.lang)}>{t(ctx.lang, 'site.name')}</a>
+</header>

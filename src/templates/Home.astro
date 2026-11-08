@@ -1,13 +1,22 @@
 ---
 // Accueil minimal (story 1.3) : héros et bloc contact en 1.8. Textes depuis src/i18n.
-import type { Lang } from '../lib/langs';
+// AD-13 : construit son contexte de page et rend le layout unique.
+import Base from '../layouts/Base.astro';
 import { t } from '../lib/i18n';
+import type { Lang } from '../lib/langs';
+import { createPageContext } from '../lib/page-context';
+import { page } from '../lib/pages';
 
 interface Props {
+  id: string;
   lang: Lang;
 }
 
-const { lang } = Astro.props;
+const { id, lang } = Astro.props;
+const ctx = createPageContext({ id, lang });
+const { meta } = page(id);
 ---
-<h1>{t(lang, 'site.name')}</h1>
-<p>{t(lang, 'site.tagline')}</p>
+<Base ctx={ctx} title={meta.title[lang]} description={meta.description[lang]}>
+  <h1>{t(lang, 'site.name')}</h1>
+  <p>{t(lang, 'site.tagline')}</p>
+</Base>

@@ -1,12 +1,20 @@
 ---
 // D6 : page de test des chemins (previewOnly), aucun lien vers elle. Texte depuis son YAML.
+// AD-13 : construit son contexte de page et rend le layout unique.
+import Base from '../layouts/Base.astro';
 import type { Lang } from '../lib/langs';
+import { createPageContext } from '../lib/page-context';
 import { page } from '../lib/pages';
 
 interface Props {
+  id: string;
   lang: Lang;
 }
 
-const { lang } = Astro.props;
+const { id, lang } = Astro.props;
+const ctx = createPageContext({ id, lang });
+const { meta } = page(id);
 ---
-<h1>{page('path-probe').meta.title[lang]}</h1>
+<Base ctx={ctx} title={meta.title[lang]} description={meta.description[lang]}>
+  <h1>{meta.title[lang]}</h1>
+</Base>

@@ -12,7 +12,7 @@ const TOKENS = fileURLToPath(new URL('../src/styles/tokens.css', import.meta.url
 const SKIP = existsSync(DESIGN) ? false : 'DESIGN.md absent (hors dépôt)';
 
 // Valeurs ajoutées hors frontmatter, chacune commentée avec sa source dans tokens.css.
-const ADDED = { '--focus-ring-width': '2px', '--focus-offset-accent': '-4px', '--scroll-padding-start': '80px' };
+const ADDED = { '--focus-ring-width': '2px', '--focus-offset-accent': '-4px', '--scroll-padding-start': '80px', '--skip-link-pad-block': '12px', '--z-skip-link': '1000' };
 const TYPE_FIELDS = { fontFamily: 'family', fontSize: 'size', fontWeight: 'weight', lineHeight: 'leading', letterSpacing: 'tracking' };
 
 /** Lecteur YAML minimal, limité à ce frontmatter : maps indentées, `clé: valeur`, guillemets, commentaires, listes ignorées. */
@@ -115,7 +115,7 @@ test('chaque token du frontmatter existe dans tokens.css avec la valeur exacte',
   assert.ok(Object.keys(expected).length > 150, 'frontmatter lu en entier');
 });
 
-test('tokens.css ne définit rien hors frontmatter, courbe et 3 valeurs ajoutées', { skip: SKIP }, () => {
+test('tokens.css ne définit rien hors frontmatter, courbe et 5 valeurs ajoutées', { skip: SKIP }, () => {
   const expected = expectedTokens(parseFrontmatter(readFileSync(DESIGN, 'utf8')));
   const actual = readTokens(readFileSync(TOKENS, 'utf8'));
   const extra = Object.keys(actual).filter((k) => !(k in expected) && !(k in ADDED) && k !== '--ease');

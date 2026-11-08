@@ -186,8 +186,8 @@ function findBadPreloads(preload, fileExists) {
   return errors;
 }
 
-/** NFR5 : FontPreload rend le bon <link rel="preload"> et la route attrape-tout l'utilise dans son <head>. */
-function findBadPreloadMarkup(component, page) {
+/** NFR5 : FontPreload rend le bon <link rel="preload"> et le layout Base l'utilise dans son <head>. */
+function findBadPreloadMarkup(component, layout) {
   const errors = [];
   const link = component.match(/<link\b[^>]*>/)?.[0];
   if (!link) errors.push('FontPreload.astro : <link> absent');
@@ -197,8 +197,8 @@ function findBadPreloadMarkup(component, page) {
     }
     if (!/\scrossorigin(?=[\s/>=])/.test(link)) errors.push('FontPreload.astro : crossorigin absent du <link>');
   }
-  const head = page.match(/<head>([\s\S]*?)<\/head>/)?.[1] ?? '';
-  if (!head.includes('<FontPreload lang={lang} />')) errors.push('[...path].astro : <FontPreload lang={lang} /> absent du <head>');
+  const head = layout.match(/<head>([\s\S]*?)<\/head>/)?.[1] ?? '';
+  if (!head.includes('<FontPreload lang={ctx.lang} />')) errors.push('Base.astro : <FontPreload lang={ctx.lang} /> absent du <head>');
   return errors;
 }
 
@@ -246,11 +246,10 @@ test('FONT_PRELOAD : 700 existante, hébreu pour he, cyrillique pour ru', () => 
   assert.deepEqual(findBadPreloads(FONT_PRELOAD, publicFileExists), []);
 });
 
-// Shell provisoire de la route attrape-tout : à déplacer vers le layout en 1.4.
-test('FontPreload rend le preload et la route attrape-tout l\'utilise dans son <head>', () => {
+test('FontPreload rend le preload et le layout Base l\'utilise dans son <head>', () => {
   const component = readFileSync(join(SRC, 'components', 'FontPreload.astro'), 'utf8');
-  const page = readFileSync(join(SRC, 'pages', '[lang]', '[...path].astro'), 'utf8');
-  assert.deepEqual(findBadPreloadMarkup(component, page), []);
+  const layout = readFileSync(join(SRC, 'layouts', 'Base.astro'), 'utf8');
+  assert.deepEqual(findBadPreloadMarkup(component, layout), []);
 });
 
 // — Chaque contrôle échoue sur une entrée fautive —
@@ -367,11 +366,11 @@ test('contrôle chiffres : une face hébraïque qui couvre U+0030-0039 est déte
 test('contrôle balisage preload : as, crossorigin et FontPreload absents détectés', () => {
   const errors = findBadPreloadMarkup(
     '<link rel="preload" href={FONT_PRELOAD[lang]} as="style" type="font/woff2" />',
-    '<html><head><title>x</title></head><body><FontPreload lang={lang} /></body></html>',
+    '<html><head><title>x</title></head><body><FontPreload lang={ctx.lang} /></body></html>',
   );
   assert.deepEqual(errors, [
     'FontPreload.astro : as="font" absent du <link>',
     'FontPreload.astro : crossorigin absent du <link>',
-    '[...path].astro : <FontPreload lang={lang} /> absent du <head>',
+    'Base.astro : <FontPreload lang={ctx.lang} /> absent du <head>',
   ]);
 });

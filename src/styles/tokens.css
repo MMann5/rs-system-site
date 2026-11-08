@@ -268,4 +268,8 @@
   --focus-offset-accent: -4px;
   /* EXPERIENCE.md › Accessibility Floor : « scroll-padding-block: 80px … » */
   --scroll-padding-start: 80px;
+  /* DESIGN.md › Components › Lien d'évitement : « padding 12px 16px » (16px = --space-4) */
+  --skip-link-pad-block: 12px;
+  /* DESIGN.md › Components › Lien d'évitement : « au-dessus du header » */
+  --z-skip-link: 1000;
 }

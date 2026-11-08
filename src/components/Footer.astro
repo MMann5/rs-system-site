@@ -1,0 +1,14 @@
+---
+// Repère <footer> minimal (story 1.4) : colonnes, liens légaux et sélecteur complétés en 1.7.
+import { t } from '../lib/i18n';
+import type { PageContext } from '../lib/page-context';
+
+interface Props {
+  ctx: PageContext;
+}
+
+const { ctx } = Astro.props;
+---
+<footer>
+  <p>{t(ctx.lang, 'site.name')} · {t(ctx.lang, 'site.tagline')}</p>
+</footer>
