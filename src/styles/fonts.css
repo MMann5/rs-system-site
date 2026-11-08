@@ -1,0 +1,122 @@
+/*
+ * Polices auto-hébergées (NFR5, UX-DR2) : Noto Sans + Noto Sans Hebrew, 400 / 600 / 700, sans italique.
+ * Provenance : sous-ensembles Google Fonts publiés par Fontsource, licence OFL-1.1 (public/fonts/OFL.txt)
+ *   - @fontsource/noto-sans@5.3.0        : latin, cyrillic (fichiers repris tels quels)
+ *   - @fontsource/noto-sans-hebrew@5.3.0 : hebrew (fichiers repris tels quels)
+ *   - latin-ext re-découpé (Latin Extended-A + symboles monétaires) depuis noto-sans-latin-ext-*-normal.woff2 :
+ *       python3 -m fontTools.subset <latin-ext.woff2> --unicodes="U+0100-017F,U+20A0-20C0" \
+ *         --flavor=woff2 --layout-features='*'
+ *     unicode-range déclarée : U+0100-017F, U+20A0-20AB, U+20AD-20C0 (sans U+20AC : l'euro reste
+ *     servi par le sous-ensemble latin, sans télécharger latin-ext).
+ * unicode-range = celle du CSS Fontsource de chaque sous-ensemble : le navigateur ne télécharge
+ * que les fichiers dont la page utilise un caractère. Noto Sans Hebrew n'a pas de sous-ensemble latin :
+ * chiffres et lettres latines d'une page hébraïque tombent sur Noto Sans.
+ */
+
+@font-face {
+  font-family: "Noto Sans";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/noto-sans-latin-400.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Noto Sans";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/noto-sans-latin-600.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Noto Sans";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/noto-sans-latin-700.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Noto Sans";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/noto-sans-latin-ext-400.woff2') format('woff2');
+  unicode-range: U+0100-017F, U+20A0-20AB, U+20AD-20C0;
+}
+
+@font-face {
+  font-family: "Noto Sans";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/noto-sans-latin-ext-600.woff2') format('woff2');
+  unicode-range: U+0100-017F, U+20A0-20AB, U+20AD-20C0;
+}
+
+@font-face {
+  font-family: "Noto Sans";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/noto-sans-latin-ext-700.woff2') format('woff2');
+  unicode-range: U+0100-017F, U+20A0-20AB, U+20AD-20C0;
+}
+
+@font-face {
+  font-family: "Noto Sans";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/noto-sans-cyrillic-400.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+@font-face {
+  font-family: "Noto Sans";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/noto-sans-cyrillic-600.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+@font-face {
+  font-family: "Noto Sans";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/noto-sans-cyrillic-700.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+@font-face {
+  font-family: "Noto Sans Hebrew";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/noto-sans-hebrew-400.woff2') format('woff2');
+  unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
+}
+
+@font-face {
+  font-family: "Noto Sans Hebrew";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/noto-sans-hebrew-600.woff2') format('woff2');
+  unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
+}
+
+@font-face {
+  font-family: "Noto Sans Hebrew";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/noto-sans-hebrew-700.woff2') format('woff2');
+  unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
+}

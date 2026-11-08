@@ -1,0 +1,271 @@
+/*
+ * Tokens visuels — seule source de valeurs du site (AD-8, UX-DR1).
+ * Recopiés à l'identique du frontmatter de DESIGN.md (spine UX 2026-11-04, mis à jour 2026-11-05).
+ * Aucune couleur ni taille littérale ailleurs dans src/ : les composants lisent ces custom properties.
+ * Contrôlé par tests/tokens.test.mjs (valeur par valeur, en local) et tests/styles.test.mjs (CI).
+ */
+:root {
+  /* — Couleurs : charte (design system Claude « RS SYSTEM Site ») — */
+  --color-navy: #092747;
+  --color-navy-deep: #0b2142;
+  --color-signal-blue: #079bff;
+  --color-signal-arc: #08a8ff;
+  --color-white: #ffffff;
+
+  /* — Couleurs : rôles, thème Clair / thème Navy — */
+  --color-surface: #ffffff;
+  --color-surface-dark: #0b2142;
+  --color-surface-alt: #f2f6fb;
+  --color-surface-alt-dark: #092747;
+  --color-ink: #092747;
+  --color-ink-dark: #ffffff;
+  --color-ink-muted: #4a6280;
+  --color-ink-muted-dark: #9db3cc;
+  --color-link: #0068b3;
+  --color-link-dark: #079bff;
+  --color-line: #d5e1ee;
+  --color-line-dark: #1e3a5f;
+  --color-on-accent: #092747;
+
+  /* — Couleurs : ajouts du canvas validé — */
+  --color-link-on-night: #4fbaff;
+  --color-link-on-photo: #ffffff;
+  --color-tile-night: #050d1a;
+  --color-nav-idle: #c9d8e8;
+  --color-subhead-on-photo: #e7f0fa;
+  --color-header-glass: #0b2142f5;
+  --color-scrim: #061020;
+  --color-field-border: #7a8fa8;
+  --color-detector-shell: #fbfcfe;
+  --color-detector-grille: #e9eff6;
+  --color-detector-grille-light: #f4f7fb;
+  --color-detector-rim: #e3ebf4;
+  --color-led-ok: #2fd27a;
+
+  /* — Couleurs : états du formulaire — */
+  --color-error: #b3261e;
+  --color-success: #17703a;
+
+  /* — Couleurs : anneaux de focus, un par type de fond — */
+  --color-focus-ring: #0068b3;
+  --color-focus-ring-dark: #4fbaff;
+  --color-focus-ring-on-photo: #ffffff;
+  --color-focus-ring-on-accent: #092747;
+
+  /* — Typographie : familles (piles du design system) — */
+  --family-sans: "Noto Sans", "Noto Sans Hebrew", system-ui, sans-serif;
+  --family-he: "Noto Sans Hebrew", "Noto Sans", system-ui, sans-serif;
+
+  /* — Typographie : échelle du design system (petits niveaux) — */
+  --type-display-family: var(--family-he);
+  --type-display-size: 48px;
+  --type-display-weight: 700;
+  --type-display-leading: 1.1;
+
+  --type-h1-size: 36px;
+  --type-h1-weight: 700;
+  --type-h1-leading: 1.15;
+
+  --type-h2-size: 28px;
+  --type-h2-weight: 700;
+  --type-h2-leading: 1.2;
+
+  --type-h3-size: 22px;
+  --type-h3-weight: 600;
+  --type-h3-leading: 1.3;
+
+  --type-body-lg-size: 18px;
+  --type-body-lg-weight: 400;
+  --type-body-lg-leading: 1.6;
+
+  --type-body-size: 16px;
+  --type-body-weight: 400;
+  --type-body-leading: 1.6;
+
+  --type-label-size: 13px;
+  --type-label-weight: 600;
+  --type-label-leading: 1.4;
+  --type-label-tracking: 0.04em;
+
+  /* — Typographie : échelle « apple.com » du canvas validé — */
+  --type-hero-title-size: clamp(44px, 6vw, 80px);
+  --type-hero-title-weight: 700;
+  --type-hero-title-leading: 1.05;
+
+  --type-page-title-size: clamp(48px, 6.5vw, 88px);
+  --type-page-title-weight: 700;
+  --type-page-title-leading: 1.04;
+
+  --type-contact-title-size: clamp(44px, 5.5vw, 72px);
+  --type-contact-title-weight: 700;
+  --type-contact-title-leading: 1.05;
+
+  --type-city-title-size: clamp(40px, 13vw, 128px);
+  --type-city-title-weight: 700;
+  --type-city-title-leading: 1;
+
+  --type-tile-title-size: clamp(40px, 5vw, 64px);
+  --type-tile-title-weight: 700;
+  --type-tile-title-leading: 1.08;
+
+  --type-grid-tile-title-size: clamp(32px, 3.4vw, 44px);
+  --type-grid-tile-title-weight: 700;
+  --type-grid-tile-title-leading: 1.1;
+
+  --type-section-title-size: clamp(36px, 4.4vw, 56px);
+  --type-section-title-weight: 700;
+  --type-section-title-leading: 1.1;
+
+  --type-city-section-title-size: clamp(34px, 4vw, 52px);
+  --type-city-section-title-weight: 700;
+  --type-city-section-title-leading: 1.1;
+
+  --type-region-title-size: clamp(30px, 3vw, 40px);
+  --type-region-title-weight: 700;
+  --type-region-title-leading: 1.15;
+
+  --type-featured-title-size: clamp(28px, 3vw, 40px);
+  --type-featured-title-weight: 700;
+  --type-featured-title-leading: 1.15;
+
+  --type-article-title-size: clamp(36px, 5vw, 60px);
+  --type-article-title-weight: 700;
+  --type-article-title-leading: 1.08;
+
+  --type-article-lede-size: clamp(19px, 2vw, 23px);
+  --type-article-lede-weight: 400;
+  --type-article-lede-leading: 1.5;
+
+  --type-subhead-size: clamp(19px, 2vw, 26px);
+  --type-subhead-weight: 400;
+  --type-subhead-leading: 1.4;
+
+  --type-service-subhead-size: clamp(20px, 2.2vw, 28px);
+  --type-service-subhead-weight: 400;
+  --type-service-subhead-leading: 1.4;
+
+  --type-section-subhead-size: clamp(20px, 2.2vw, 26px);
+  --type-section-subhead-weight: 400;
+  --type-section-subhead-leading: 1.4;
+
+  --type-trio-title-size: 26px;
+  --type-trio-title-weight: 700;
+  --type-trio-title-leading: 1.25;
+
+  --type-text-link-size: 20px;
+  --type-text-link-weight: 400;
+  --type-text-link-leading: 1.4;
+
+  --type-text-link-on-photo-size: 20px;
+  --type-text-link-on-photo-weight: 600;
+  --type-text-link-on-photo-leading: 1.4;
+
+  --type-card-title-size: 22px;
+  --type-card-title-weight: 700;
+  --type-card-title-leading: 1.3;
+
+  --type-article-body-size: 19px;
+  --type-article-body-weight: 400;
+  --type-article-body-leading: 1.8;
+
+  --type-field-label-size: 15px;
+  --type-field-label-weight: 600;
+  --type-field-label-leading: 1.4;
+
+  --type-field-text-size: 17px;
+  --type-field-text-weight: 400;
+  --type-field-text-leading: 1.4;
+
+  --type-small-size: 15px;
+  --type-small-weight: 400;
+  --type-small-leading: 1.5;
+
+  --type-nav-size: 13px;
+  --type-nav-weight: 400;
+
+  /* Chiffres : toujours en family-sans, même en page hébraïque */
+  --type-phone-giant-family: var(--family-sans);
+  --type-phone-giant-size: clamp(36px, 11vw, 128px);
+  --type-phone-giant-weight: 700;
+  --type-phone-giant-leading: 1;
+  --type-phone-giant-tracking: -0.02em;
+
+  --type-phone-band-family: var(--family-sans);
+  --type-phone-band-size: clamp(32px, 9vw, 72px);
+  --type-phone-band-weight: 700;
+  --type-phone-band-tracking: -0.01em;
+
+  --type-phone-inline-family: var(--family-sans);
+  --type-phone-inline-size: 15px;
+  --type-phone-inline-weight: 700;
+
+  --type-score-giant-family: var(--family-sans);
+  --type-score-giant-size: clamp(56px, 9vw, 112px);
+  --type-score-giant-weight: 700;
+  --type-score-giant-leading: 1;
+
+  --type-stat-number-family: var(--family-sans);
+  --type-stat-number-size: clamp(40px, 5vw, 64px);
+  --type-stat-number-weight: 700;
+  --type-stat-number-leading: 1;
+
+  --type-step-number-family: var(--family-sans);
+  --type-step-number-size: 56px;
+  --type-step-number-weight: 700;
+  --type-step-number-leading: 1;
+
+  /* — Rayons : angles droits partout ; seuls 0, 2px et full (UX-DR3) — */
+  --radius-none: 0px;
+  --radius-xs: 2px;
+  --radius-full: 9999px;
+
+  /* — Espacements : échelle — */
+  --space-2: 8px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-12: 48px;
+
+  /* — Espacements : ajouts du canvas — */
+  --tile-gutter: 12px;
+  --page-gutter: 22px;
+  --link-gap: 32px;
+  --section-y: 96px;
+  --section-y-lg: 104px;
+  --section-y-tablet: 72px;
+  --section-y-mobile: 56px;
+  --hero-pad-top: 72px;
+  --hero-pad-top-tablet: 56px;
+  --hero-pad-top-mobile: 40px;
+  --header-height: 64px;
+  --mobile-bar-height: 64px;
+  --focus-offset: 3px;
+
+  /* — Largeurs de conteneur — */
+  --container: 1180px;
+  --container-article: 680px;
+  --container-article-header: 760px;
+
+  /* — Points de rupture (référence : les @media ne lisent pas les custom properties) — */
+  --bp-menu: 960px;
+  --bp-menu-ltr: 1200px;
+  --bp-mobile-bar: 700px;
+  --bp-min: 320px;
+
+  /* — Scrims (components.scrim-*), opacité minimale sous le texte : 0.62 — */
+  --scrim-hero: linear-gradient(to bottom, rgba(6,16,32,.85) 0%, rgba(6,16,32,.6) 40%, rgba(6,16,32,0) 72%);
+  --scrim-tile: linear-gradient(to bottom, rgba(6,16,32,.82) 0%, rgba(6,16,32,.55) 40%, rgba(6,16,32,0) 70%);
+  --scrim-network: linear-gradient(to bottom, rgba(5,13,26,.88) 0%, rgba(5,13,26,.6) 45%, rgba(5,13,26,0) 72%);
+  --scrim-crane: linear-gradient(to bottom, rgba(5,13,26,.82) 0%, rgba(5,13,26,.55) 40%, rgba(5,13,26,0) 70%);
+  --scrim-min-opacity: 0.62;
+
+  /* — Mouvement : courbe commune (EXPERIENCE.md › Interaction Primitives › Mouvement) — */
+  --ease: cubic-bezier(.2,.7,.2,1);
+
+  /* — Valeurs ajoutées hors frontmatter — */
+  /* DESIGN.md › Components › Focus : « outline: 2px solid <anneau> » */
+  --focus-ring-width: 2px;
+  /* DESIGN.md › Components › Focus : « outline-offset: -4px » sur signal-blue */
+  --focus-offset-accent: -4px;
+  /* EXPERIENCE.md › Accessibility Floor : « scroll-padding-block: 80px … » */
+  --scroll-padding-start: 80px;
+}
