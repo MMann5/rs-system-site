@@ -40,9 +40,12 @@ const { title } = Astro.props;
     }
   }
 
+  /* Sous 700px, le texte occupe toute la largeur : on réserve sous lui la hauteur visible des arcs
+     (taille réduite moins le débord bas), pour qu'aucun arc ne passe derrière le titre, le numéro ou les liens. */
   @media (width < 700px) {
     .hero-typo {
-      padding-block: var(--section-y-mobile);
+      padding-block: var(--section-y-mobile)
+        calc(var(--section-y-mobile) + (var(--arcs-size) + var(--arcs-offset-block)) * var(--arcs-scale-mobile));
     }
   }
 
