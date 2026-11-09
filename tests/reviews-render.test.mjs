@@ -30,6 +30,12 @@ function buildCopy() {
     cpSync(join(ROOT, entry), join(work, entry), { recursive: true });
   }
   symlinkSync(join(ROOT, 'node_modules'), join(work, 'node_modules'), 'dir');
+  // Cache Astro propre à la copie : le cache par défaut (node_modules/.astro, partagé par le lien) contient le magasin
+  // de contenus ; des builds parallèles (autres tests de rendu, build.test) se le disputeraient.
+  const config = join(work, 'astro.config.mjs');
+  const source = readFileSync(config, 'utf8');
+  assert.match(source, /^  output: 'static',$/m, 'astro.config.mjs : output attendu');
+  writeFileSync(config, source.replace(/^  output: 'static',$/m, "  cacheDir: './.astro-cache',\n  output: 'static',"));
   for (const r of REVIEWS) {
     const lines = [`quote: '${r.quote}'`, "lang: 'he'", `author: '${r.author}'`, `locality: '${MODIIN.he}'`, "city: 'modiin'"];
     if (r.translation) lines.push(`translations: { fr: '${r.translation}' }`);

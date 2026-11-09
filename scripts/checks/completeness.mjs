@@ -8,14 +8,19 @@
 // - story 4.3 : les avis de src/content/reviews/*.yaml et leurs références dans les villes passent buildReviews
 //   (≤ 2 avis par ville, avis connu et unique, avis de la ville, localité = la ville ou une voisine).
 //   Dossier absent = aucun avis.
-// Les messages de buildDictionary, buildRegistry, buildAreas et buildReviews sont repris tels quels.
+// - story 5.2 : les pages légales de src/content/legal/{id}/ (meta.yaml + {he,en,ru,fr}.md) passent buildLegal (page active
+//   avec ses 4 .md, `pending` ⇔ corps vide, .md rangé sous un meta.yaml) et entrent au registre après les pages fixes,
+//   comme src/lib/routes/index.ts. Dossier absent = aucune page légale.
+// Les messages de buildDictionary, buildRegistry, buildAreas, buildReviews et buildLegal sont repris tels quels.
 // Usage : node scripts/checks/completeness.mjs [racine]  (défaut : racine du dépôt).
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse } from 'yaml';
 import { buildAreas, buildReviews, citySources } from '../../src/lib/areas/core.ts';
 import { buildDictionary } from '../../src/lib/i18n/core.ts';
+import { buildLegal, LEGAL_DIR } from '../../src/lib/legal/core.ts';
 import { LANGS } from '../../src/lib/langs.ts';
+import { legalDocSchema, legalMetaSchema } from '../../src/lib/page-schema.ts';
 import { buildRegistry } from '../../src/lib/routes/core.ts';
 import { isMain, report, REPO_ROOT, rootArg } from './report.mjs';
 
@@ -82,7 +87,55 @@ function checkAreas(root, failures) {
   return cities.map(({ id, data }) => ({ id, slugs: data.slugs }));
 }
 
-function checkRoutes(root, failures, cities) {
+/** Frontmatter YAML (`---` … `---`) et corps d'un .md ; sans frontmatter : `{}` et le texte entier. */
+function splitFrontmatter(text) {
+  const m = text.match(/^---\r?\n([\s\S]*?)\r?\n?---(?:\r?\n|$)([\s\S]*)$/);
+  return m ? { data: parse(m[1]) ?? {}, body: m[2] } : { data: {}, body: text };
+}
+
+const zodLines = (error) => error.issues.map((i) => `${i.path.join('.') || '(racine)'} : ${i.message}`).join(' ; ');
+
+/** Pages légales pour le registre ; complétude (buildLegal) et schémas des meta.yaml et frontmatters vérifiés au passage. */
+function checkLegal(root, failures) {
+  const abs = join(root, LEGAL_DIR);
+  if (!existsSync(abs)) return [];
+  const metas = [];
+  const docs = [];
+  for (const entry of readdirSync(abs, { withFileTypes: true }).filter((e) => e.isDirectory()).sort((a, b) => (a.name < b.name ? -1 : 1))) {
+    const id = entry.name;
+    for (const name of readdirSync(join(abs, id)).sort()) {
+      const file = `${LEGAL_DIR}/${id}/${name}`;
+      let text;
+      try {
+        text = readFileSync(join(abs, id, name), 'utf8');
+      } catch {
+        continue;
+      }
+      try {
+        if (name === 'meta.yaml') {
+          const result = legalMetaSchema.safeParse(parse(text) ?? {});
+          if (result.success) metas.push({ id, data: result.data });
+          else failures.push(`${file} : schéma invalide (${zodLines(result.error)})`);
+        } else if (name.endsWith('.md')) {
+          const { data, body } = splitFrontmatter(text);
+          const result = legalDocSchema.safeParse(data);
+          if (result.success) docs.push({ id: `${id}/${name.replace(/\.md$/, '')}`, pending: result.data.pending, body });
+          else failures.push(`${file} : frontmatter invalide (${zodLines(result.error)})`);
+        }
+      } catch (error) {
+        failures.push(`${file} : YAML invalide (${messages(error)[0]})`);
+      }
+    }
+  }
+  try {
+    buildLegal(metas, docs);
+  } catch (error) {
+    for (const line of messages(error)) failures.push(line);
+  }
+  return metas.map(({ id, data }) => ({ id, slugs: data.slugs, enabled: data.enabled }));
+}
+
+function checkRoutes(root, failures, cities, legal) {
   const dir = join(root, PAGES);
   if (!existsSync(dir)) return failures.push(`${PAGES}/ : dossier absent`);
   const sources = readYamlDir(root, PAGES, failures).map(({ id, data }) => ({
@@ -91,7 +144,9 @@ function checkRoutes(root, failures, cities) {
     enabled: data.enabled,
     previewOnly: data.previewOnly,
   }));
-  sources.push(...citySources(cities));
+  sources.push(...legal, ...citySources(cities));
+  const legalIds = legal.map(({ id }) => `« ${id} »`);
+  const dirOf = (line) => (line.includes('« city:') ? CITIES : legalIds.some((id) => line.includes(id)) ? LEGAL_DIR : PAGES);
   const seen = new Set();
   for (const isMainBranch of [false, true]) {
     try {
@@ -100,7 +155,7 @@ function checkRoutes(root, failures, cities) {
       for (const line of messages(error)) {
         if (seen.has(line)) continue;
         seen.add(line);
-        failures.push(`${line.includes('« city:') ? CITIES : PAGES}/ : ${line}`);
+        failures.push(`${dirOf(line)}/ : ${line}`);
       }
     }
   }
@@ -110,7 +165,8 @@ function checkRoutes(root, failures, cities) {
 export function findCompletenessErrors(root) {
   const failures = [];
   checkI18n(root, failures);
-  checkRoutes(root, failures, checkAreas(root, failures));
+  const cities = checkAreas(root, failures);
+  checkRoutes(root, failures, cities, checkLegal(root, failures));
   return failures;
 }
 

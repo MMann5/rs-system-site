@@ -105,5 +105,6 @@
   "areas.subtitle": "De Beer-Sheva à Jérusalem, yishouvim compris.",
   "areas.tiles-label": "Zones",
   "areas.missing": "Votre localité n'y est pas ?",
-  "placeholder.other-settlements": "autres yishouvim"
+  "placeholder.other-settlements": "autres yishouvim",
+  "legal.placeholder": "texte juridique — fourni par l'avocat"
 }

@@ -560,4 +560,18 @@
   --stat-col-min: 240px;
   --stat-grid-gap: 48px;
   --stat-gap: 6px;
+  /* — Story 5.2 : prose d'article (DESIGN.md › Components › Prose d'article), page texte légale — */
+  /* DESIGN.md › Prose d'article : « listes à puces / numérotées avec indentation logique 1,2em » */
+  --prose-list-indent: 1.2em;
+  /* DESIGN.md › Prose d'article : citation « filet 3px {colors.signal-blue} à l'extrémité de début » */
+  --prose-quote-rule: 3px;
+  /* Story 5.2 : espacements de la prose (non chiffrés par DESIGN.md, échelle du site) : entre blocs, avant un h2, avant
+   * un h3, sous un titre, entre deux éléments de liste, retrait du texte d'une citation, entre une image et sa légende */
+  --prose-block-gap: 24px;
+  --prose-section-gap: 48px;
+  --prose-subsection-gap: 32px;
+  --prose-heading-gap: 16px;
+  --prose-item-gap: 8px;
+  --prose-quote-pad: 24px;
+  --prose-caption-gap: 8px;
 }

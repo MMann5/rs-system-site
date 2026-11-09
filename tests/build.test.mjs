@@ -1,4 +1,4 @@
-// Stories 1.3 à 1.9, 2.1 à 2.4, 3.1 à 3.5, 4.1, 4.2, 4.4, 5.1 : sortie réelle du build, sur une branche puis sur main (registre, layout Base.astro).
+// Stories 1.3 à 1.9, 2.1 à 2.4, 3.1 à 3.5, 4.1, 4.2, 4.4, 5.1, 5.2 : sortie réelle du build, sur une branche puis sur main (registre, layout Base.astro).
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
@@ -57,6 +57,14 @@ const AREAS_FILES = LANGS.map((lang) => `${lang}/${AREAS_SLUGS[lang]}/index.html
 // Story 5.1 : page À propos dans les 4 langues, slugs A1 des décisions de l'epic 5.
 const ABOUT_SLUGS = { he: 'אודות', en: 'about', ru: 'о-нас', fr: 'a-propos' };
 const ABOUT_FILES = LANGS.map((lang) => `${lang}/${ABOUT_SLUGS[lang]}/index.html`);
+// Story 5.2 : pages légales actives (accessibilité, confidentialité) dans les 4 langues, slugs A1 ; `terms` désactivée.
+const LEGAL_SLUGS = {
+  accessibility: { he: 'הצהרת-נגישות', en: 'accessibility', ru: 'доступность', fr: 'accessibilite' },
+  privacy: { he: 'מדיניות-פרטיות', en: 'privacy', ru: 'конфиденциальность', fr: 'confidentialite' },
+};
+const TERMS_SLUGS = { he: 'תנאי-שימוש', en: 'terms', ru: 'условия', fr: 'conditions' };
+const LEGAL_IDS = Object.keys(LEGAL_SLUGS);
+const LEGAL_FILES = LEGAL_IDS.flatMap((lid) => LANGS.map((lang) => `${lang}/${LEGAL_SLUGS[lid][lang]}/index.html`));
 const CITY_FILES = CITY_IDS.flatMap((cid) => LANGS.map((lang) => `${lang}/${AREAS_SLUGS[lang]}/${CITY_DATA[cid].slugs[lang]}/index.html`));
 /** Table des villes en hébreu (message WhatsApp), comme src/lib/contact/labels.ts. */
 const HE_CITIES = buildCityTable(CITY_IDS.map((cid) => ({ id: cid, name: CITY_DATA[cid].name })), 'he');
@@ -136,6 +144,9 @@ const PAGE_HREFS = {
   areas: Object.fromEntries(LANGS.map((lang) => [lang, `/${lang}/${encodeURIComponent(AREAS_SLUGS[lang])}/`])),
   about: Object.fromEntries(LANGS.map((lang) => [lang, `/${lang}/${encodeURIComponent(ABOUT_SLUGS[lang])}/`])),
   ...Object.fromEntries(
+    LEGAL_IDS.map((lid) => [lid, Object.fromEntries(LANGS.map((lang) => [lang, `/${lang}/${encodeURIComponent(LEGAL_SLUGS[lid][lang])}/`]))]),
+  ),
+  ...Object.fromEntries(
     CITY_IDS.map((cid) => [
       `city:${cid}`,
       Object.fromEntries(LANGS.map((lang) => [lang, `/${lang}/${encodeURIComponent(AREAS_SLUGS[lang])}/${encodeURIComponent(CITY_DATA[cid].slugs[lang])}/`])),
@@ -170,16 +181,16 @@ function assertFooter(footer, lang, where) {
   const services = dict['footer.col.services'];
   const business = dict['footer.col.business'];
   const areas = dict['footer.col.areas'];
-  // Six <nav> : Services, Pour les entreprises (Entrepreneurs puis Interphone), Zones (story 4.4 : 4 régions), RS SYSTEM
-  // (story 5.1 : À propos puis Contact ; Blog inactif), la colonne Contact, puis le sélecteur ; aucun <nav> légal.
+  // Sept <nav> : Services, Pour les entreprises (Entrepreneurs puis Interphone), Zones (story 4.4 : 4 régions), RS SYSTEM
+  // (story 5.1 : À propos puis Contact ; Blog inactif), la colonne Contact, la ligne légale (story 5.2), puis le sélecteur.
   const navs = footer.match(/<nav\b[^>]*>/g) ?? [];
-  assert.equal(navs.length, 6, `${where} : <nav> du footer ${navs}`);
+  assert.equal(navs.length, 7, `${where} : <nav> du footer ${navs}`);
   assert.match(navs[0], new RegExp(`^<nav aria-label="${services}"[\\s>]`), `${where} : <nav> Services`);
   assert.match(navs[1], new RegExp(`^<nav aria-label="${business}"[\\s>]`), `${where} : <nav> Pour les entreprises`);
   assert.match(navs[2], new RegExp(`^<nav aria-label="${areas}"[\\s>]`), `${where} : <nav> Zones`);
   assert.match(navs[3], new RegExp(`^<nav aria-label="${company}"[\\s>]`), `${where} : <nav> RS SYSTEM`);
   assert.match(navs[4], new RegExp(`^<nav aria-label="${contact}"[\\s>]`), `${where} : <nav> Contact`);
-  assert.ok(!navs.some((n) => n.includes(`aria-label="${dict['footer.legal-label']}"`)), `${where} : <nav> légal`);
+  assert.match(navs[5], new RegExp(`^<nav aria-label="${escaped(dict['footer.legal-label'])}"[\\s>]`), `${where} : <nav> légal`);
   const column = (nav) => footer.slice(footer.indexOf(nav), footer.indexOf('</nav>', footer.indexOf(nav)));
   const linksOf = (col) => [...col.matchAll(/<a href="([^"]*)"[^>]*>([^<]*)<\/a>/g)].map((m) => [m[1], m[2]]);
   const servicesCol = column(navs[0]);
@@ -221,8 +232,18 @@ function assertFooter(footer, lang, where) {
   const baseline = I18N.he['site.tagline'];
   const tagline = lang === 'he' ? baseline : `<bdi lang="he" dir="rtl"[^>]*>${baseline}</bdi>`;
   assert.match(footer, new RegExp(`<p\\b[^>]*>${dict['footer.copyright']} · ${tagline}</p>`), `${where} : ligne basse`);
-  // Ordre de lecture : colonnes, puis ligne basse, puis sélecteur.
-  assert.ok(footer.indexOf(navs[4]) < footer.indexOf('<p') && footer.indexOf('<p') < footer.indexOf(navs[5]), `${where} : ordre du footer`);
+  // Story 5.2 (FR14) : ligne légale, Déclaration d'accessibilité puis Politique de confidentialité ; `terms` absente.
+  const legalCol = column(navs[5]);
+  assert.deepEqual(
+    linksOf(legalCol),
+    LEGAL_IDS.map((lid) => [PAGE_HREFS[lid][lang], escaped(dict[`nav.${lid}`])]),
+    `${where} : liens légaux`,
+  );
+  // Ordre de lecture : colonnes, puis ligne basse (©, liens légaux), puis sélecteur.
+  assert.ok(
+    footer.indexOf(navs[4]) < footer.indexOf('<p') && footer.indexOf('<p') < footer.indexOf(navs[5]) && footer.indexOf(navs[5]) < footer.indexOf(navs[6]),
+    `${where} : ordre du footer`,
+  );
 }
 
 /** Story 1.4 : sortie du layout unique pour la page `id` en `lang` ; `out` = dossier du build, `site` = SITE_URL. */
@@ -894,7 +915,8 @@ function assertContact(html, lang, out) {
   assert.deepEqual(options.map(([, a]) => attr(`<option${a}>`, 'value')), SERVICE_ORDER, `${where} : options`);
   assert.deepEqual(options.map(([, , label]) => label), SERVICE_ORDER.map((code) => escaped(serviceLabel(code, lang))), `${where} : libellés des options`);
   options.forEach(([, a], i) => assert.equal(/\sselected[\s=>]|\sselected$/.test(a), SERVICE_ORDER[i] === 'unsure', `${where} : selected ${SERVICE_ORDER[i]}`));
-  // Bouton : submit, surface accent, icône aria-hidden puis libellé (D2) ; note dessous, sans lien (privacy inactif).
+  // Bouton : submit, surface accent, icône aria-hidden puis libellé (D2) ; note dessous, story 5.2 : avec le lien vers la
+  // politique de confidentialité (privacy active).
   const button = form.match(/<button\b([^>]*)>([\s\S]*?)<\/button>/);
   assert.ok(button, `${where} : bouton`);
   assert.equal(attr(`<button${button[1]}>`, 'type'), 'submit', `${where} : type du bouton`);
@@ -902,8 +924,8 @@ function assertContact(html, lang, out) {
   // Icône et libellé (D2) dans .submit-idle : vérifiés par assertContactStates (story 2.4).
   assert.ok(!/\sdisabled[\s=>]/.test(`<button${button[1]}>`), `${where} : bouton disabled`);
   assert.ok(form.indexOf('<button') > controls.at(-1).index, `${where} : bouton après les champs`);
-  const note = form.slice(form.indexOf('</button>')).match(/<p class="note"[^>]*>([\s\S]*?)<\/p>/)?.[1];
-  assert.equal(note, escaped(dict['form.note']), `${where} : note`);
+  const note = form.slice(form.indexOf('</button>')).match(/<p class="note"[^>]*>([\s\S]*?)<\/p>/)?.[1]?.replace(/ data-astro-cid-[\w-]+(?:="[^"]*")?/g, '');
+  assert.equal(note, `${escaped(dict['form.note'])} <a href="${PAGE_HREFS.privacy[lang]}">${escaped(dict['nav.privacy'])}</a>`, `${where} : note`);
   // <noscript> juste après le bloc formulaire : Appeler › WhatsApp ›.
   const afterBlock = rest.slice(rest.indexOf('</form></div>') + '</form></div>'.length);
   assert.match(afterBlock, /^<noscript>/, `${where} : <noscript> après le bloc formulaire`);
@@ -1725,9 +1747,59 @@ function assertAbout(html, lang, out) {
   assert.match(flat, /\.stats-grid\{[^}]*grid-template-columns:repeat\(auto-fit,minmax\(min\(100%,var\(--stat-col-min\)\),1fr\)\)/, `${where} : grille des chiffres`);
 }
 
-/** Story 1.9 (FR39), stories 2.1, 3.1 à 3.4, 4.1, 4.4, 5.1 : sitemap dans l'ordre du registre (SITEMAP_IDS : pages
- * fixes triées par id, puis villes ; 4 <url> chacun, 100 au total = 10 pages fixes et 15 villes × 4 langues,
- * 5 xhtml:link chacun), robots.txt, icônes et manifeste. */
+/** Story 5.2 : métas des pages légales (src/content/legal/{id}/meta.yaml). */
+const LEGAL_META = Object.fromEntries(
+  [...LEGAL_IDS, 'terms'].map((lid) => [lid, parse(readFileSync(join(ROOT, `src/content/legal/${lid}/meta.yaml`), 'utf8'))]),
+);
+/**
+ * Story 5.2 (FR14, FR40, UX-DR26, UX-DR32, D4 de l'epic 5) : page texte légale `id` en `lang`. <main> = une section : un
+ * h1 contact-title, puis la prose (colonne 680px) avec le placeholder juridique ; accessibilité seulement : h2 référent et
+ * 3 placeholders (nom, téléphone, e-mail). Pas de bloc contact ; aucun lien du header actif (assertLayout).
+ */
+function assertLegal(html, id, lang, out) {
+  const where = `${id} (${lang})`;
+  const dict = I18N[lang];
+  const data = LEGAL_META[id];
+  const main = (html.match(/<main id="content"[^>]*>([\s\S]*?)<\/main>/)?.[1] ?? '').replace(/ data-astro-cid-[\w-]+(?:="[^"]*")?/g, '');
+  assert.equal(main.match(/<section[\s>]/g)?.length, 1, `${where} : une seule section`);
+  assert.ok(!html.includes('class="band"'), `${where} : bloc contact`);
+  assert.equal(html.match(/<h1[\s>]/g)?.length, 1, `${where} : <h1>`);
+  const header = html.match(/<header[\s>][\s\S]*?<\/header>/)?.[0] ?? '';
+  assert.ok(!header.includes('aria-current="page"'), `${where} : lien actif dans le header`);
+  const placeholder = `<p><span data-placeholder>[${escaped(dict['legal.placeholder'])}]</span></p>`;
+  const coordinator = data.coordinator
+    ? `<h2>${escaped(data.coordinator.title[lang])}</h2><ul class="coordinator">` +
+      ['name', 'phone', 'email'].map((k) => `<li><span data-placeholder>[${data.coordinator[k].placeholder[lang].replaceAll('"', '&quot;')}]</span></li>`).join('') +
+      '</ul>'
+    : '';
+  assert.equal(
+    main,
+    `<section class="legal" aria-labelledby="legal-title"><div class="column"><h1 id="legal-title" class="title">${escaped(data.title[lang])}</h1>` +
+      `<div class="prose">${placeholder}${coordinator}</div></div></section>`,
+    `${where} : <main>`,
+  );
+  assert.equal(main.match(/data-placeholder/g)?.length, id === 'accessibility' ? 4 : 1, `${where} : placeholders de <main>`);
+  if (id === 'accessibility' && lang === 'he') {
+    assert.ok(main.includes('<h2>רכז/ת נגישות</h2>'), `${where} : référent`);
+    for (const p of ['[שם]', '[טלפון]', '[דוא&quot;ל]']) assert.ok(main.includes(`<span data-placeholder>${p}</span>`), `${where} : ${p}`);
+    assert.ok(main.includes('[טקסט משפטי — יסופק על ידי עורך הדין]'), `${where} : placeholder juridique`);
+  }
+  // CSS servie : h1 contact-title aligné au début, colonne 680px centrée, gouttière de page, prose sans numérotation.
+  const flat = servedCss(html, out).replace(/\s+/g, '').replace(/\[data-astro-cid-[\w-]+\]/g, '');
+  const titleRules = [...flat.matchAll(/\.title\{([^}]*)\}/g)].map((m) => m[1].split(';'));
+  assert.ok(
+    titleRules.some((r) => r.includes('font-size:var(--type-contact-title-size)') && r.includes('text-align:start')),
+    `${where} : h1 contact-title aligné au début`,
+  );
+  assert.match(flat, /\.column\{[^}]*max-inline-size:var\(--container-article\)/, `${where} : colonne 680px`);
+  assert.match(flat, /\.column\{[^}]*margin-inline:auto/, `${where} : colonne centrée`);
+  assert.ok([...flat.matchAll(/\.legal\{([^}]*)\}/g)].some((m) => m[1].split(';').includes('padding-inline:var(--page-gutter)')), `${where} : gouttière`);
+  assert.ok(!main.includes('numbered'), `${where} : numérotation`);
+}
+
+/** Story 1.9 (FR39), stories 2.1, 3.1 à 3.4, 4.1, 4.4, 5.1, 5.2 : sitemap dans l'ordre du registre (SITEMAP_IDS : pages
+ * fixes triées par id, puis pages légales actives, puis villes ; 4 <url> chacun, 108 au total = 10 pages fixes, 2 pages
+ * légales et 15 villes × 4 langues, 5 xhtml:link chacun), robots.txt, icônes et manifeste. */
 // Story 4.4 : Zones, lue par le parseur YAML (titre fr entre guillemets doubles) ; <title> échappé, description en
 // attribut entre guillemets doubles (apostrophe non échappée).
 const AREAS_META = parse(readFileSync(join(ROOT, 'src/content/pages/areas.yaml'), 'utf8')).meta;
@@ -1747,12 +1819,30 @@ for (const cid of CITY_IDS) {
 // Story 4.1 : puis les pages ville, dans l'ordre région puis ville (registre : pages fixes, puis villes). Story 4.4 :
 // Zones (`areas`, première des pages fixes triées par id).
 // Story 5.1 : À propos (`about`, première des pages fixes triées par id).
-const SITEMAP_IDS = ['about', 'areas', 'cameras', 'contact', 'contractors', 'home', 'intercom', 'networks', 'smart-home', 'smoke-detectors', ...CITY_IDS.map((cid) => `city:${cid}`)];
+// Story 5.2 : puis les pages légales actives (`accessibility`, `privacy` ; `terms` désactivée), avant les villes.
+const SITEMAP_IDS = ['about', 'areas', 'cameras', 'contact', 'contractors', 'home', 'intercom', 'networks', 'smart-home', 'smoke-detectors', ...LEGAL_IDS, ...CITY_IDS.map((cid) => `city:${cid}`)];
+for (const lid of LEGAL_IDS) {
+  META[lid] = {
+    title: Object.fromEntries(LANGS.map((lang) => [lang, escaped(LEGAL_META[lid].meta.title[lang])])),
+    description: Object.fromEntries(LANGS.map((lang) => [lang, LEGAL_META[lid].meta.description[lang]])),
+  };
+}
+/** Story 5.2 : `terms` n'est ni générée, ni liée, ni au sitemap (aucune page du build ne pointe vers ses slugs). */
+function assertNoTerms(out) {
+  const hrefs = LANGS.map((lang) => `/${lang}/${encodeURIComponent(TERMS_SLUGS[lang])}/`);
+  for (const file of indexFiles(out)) {
+    const html = readFileSync(join(out, file), 'utf8');
+    for (const href of hrefs) assert.ok(!html.includes(`"${href}`) && !html.includes(`${href}"`), `${file} : lien vers ${href}`);
+  }
+  const xml = readFileSync(join(out, 'sitemap.xml'), 'utf8');
+  for (const href of hrefs) assert.ok(!xml.includes(href), `sitemap : ${href}`);
+}
 function assertSeoFiles(out, site, indexable) {
   const xml = readFileSync(join(out, 'sitemap.xml'), 'utf8');
   const blocks = [...xml.matchAll(/<url>([\s\S]*?)<\/url>/g)].map((m) => m[1]);
   assert.equal(blocks.length, SITEMAP_IDS.length * 4, 'sitemap : <url>');
-  assert.equal(blocks.length, 100, 'sitemap : <url> (10 pages fixes et 15 villes × 4 langues)');
+  assert.equal(blocks.length, 108, 'sitemap : <url> (10 pages fixes, 2 pages légales et 15 villes × 4 langues)');
+  for (const lid of LEGAL_IDS) assert.ok(LANGS.every((l) => xml.includes(`/${encodeURIComponent(LEGAL_SLUGS[lid][l])}/<`)), `sitemap : ${lid}`);
   assert.ok(LANGS.every((l) => xml.includes(`/${encodeURIComponent(AREAS_SLUGS[l])}/<`)), 'sitemap : Zones');
   assert.ok(LANGS.every((l) => xml.includes(`/${encodeURIComponent(ABOUT_SLUGS[l])}/<`)), 'sitemap : À propos');
   blocks.forEach((block, i) => {
@@ -1772,9 +1862,9 @@ function assertSeoFiles(out, site, indexable) {
   assert.deepEqual(manifest.icons, [{ src: '/rs-icon-512.png', sizes: '512x512', type: 'image/png' }], 'manifeste : icône 512');
 }
 
-test('build de branche : 4 accueils complets (tuiles de services) + 4 Contact + 4 Caméras + 4 Détecteurs + 4 Maison connectée + 4 Réseaux + 4 Interphone + 4 Entrepreneurs + 4 Zones + 4 À propos + 60 pages ville + 4 path-probe, layout Base (lang/dir, #rs-data, évitement, repères, hreflang relatifs), _redirects', { timeout: 120_000 }, () => {
+test('build de branche : 4 accueils complets (tuiles de services) + 4 Contact + 4 Caméras + 4 Détecteurs + 4 Maison connectée + 4 Réseaux + 4 Interphone + 4 Entrepreneurs + 4 Zones + 4 À propos + 8 pages légales + 60 pages ville + 4 path-probe, layout Base (lang/dir, #rs-data, évitement, repères, hreflang relatifs), _redirects', { timeout: 120_000 }, () => {
   const out = build({});
-  assert.deepEqual(indexFiles(out), [...HOMES, ...CONTACTS, ...CAMERAS, ...SMOKES, ...SMARTS, ...NETWORKS, ...INTERCOMS, ...CONTRACTORS, ...AREAS_FILES, ...ABOUT_FILES, ...CITY_FILES, ...PROBES].sort());
+  assert.deepEqual(indexFiles(out), [...HOMES, ...CONTACTS, ...CAMERAS, ...SMOKES, ...SMARTS, ...NETWORKS, ...INTERCOMS, ...CONTRACTORS, ...AREAS_FILES, ...ABOUT_FILES, ...LEGAL_FILES, ...CITY_FILES, ...PROBES].sort());
   assert.ok(existsSync(join(out, '_redirects')), '_redirects absent');
   assert.ok(!existsSync(join(out, 'index.html')), 'index.html racine présent');
   assert.deepEqual(Object.keys(titles), LANGS);
@@ -1835,6 +1925,15 @@ test('build de branche : 4 accueils complets (tuiles de services) + 4 Contact + 
     assertLayout(html, 'about', LANGS[i], out);
     assertAbout(html, LANGS[i], out);
   }
+  // Story 5.2 : pages légales actives dans les 4 langues ; `terms` absente partout.
+  for (const lid of LEGAL_IDS) {
+    for (const lang of LANGS) {
+      const html = readFileSync(join(out, lang, LEGAL_SLUGS[lid][lang], 'index.html'), 'utf8');
+      assertLayout(html, lid, lang, out);
+      assertLegal(html, lid, lang, out);
+    }
+  }
+  assertNoTerms(out);
   // Stories 4.1, 4.2 : 15 villes × 4 langues sous le slug de `areas`.
   for (const cid of CITY_IDS) {
     for (const lang of LANGS) {
@@ -1847,9 +1946,9 @@ test('build de branche : 4 accueils complets (tuiles de services) + 4 Contact + 
   assertSeoFiles(out, '', false);
 });
 
-test('build de main indexable avec SITE_URL : 4 accueils complets (tuiles de services) + 4 Contact + 4 Caméras + 4 Détecteurs + 4 Maison connectée + 4 Réseaux + 4 Interphone + 4 Entrepreneurs + 4 Zones + 4 À propos + 60 pages ville, sans noindex, canonique et hreflang absolus', { timeout: 120_000 }, () => {
+test('build de main indexable avec SITE_URL : 4 accueils complets (tuiles de services) + 4 Contact + 4 Caméras + 4 Détecteurs + 4 Maison connectée + 4 Réseaux + 4 Interphone + 4 Entrepreneurs + 4 Zones + 4 À propos + 8 pages légales + 60 pages ville, sans noindex, canonique et hreflang absolus', { timeout: 120_000 }, () => {
   const out = build({ WORKERS_CI_BRANCH: 'main', DOMAIN_LIVE: 'true', SITE_URL: 'https://rs.example' });
-  assert.deepEqual(indexFiles(out), [...HOMES, ...CONTACTS, ...CAMERAS, ...SMOKES, ...SMARTS, ...NETWORKS, ...INTERCOMS, ...CONTRACTORS, ...AREAS_FILES, ...ABOUT_FILES, ...CITY_FILES].sort());
+  assert.deepEqual(indexFiles(out), [...HOMES, ...CONTACTS, ...CAMERAS, ...SMOKES, ...SMARTS, ...NETWORKS, ...INTERCOMS, ...CONTRACTORS, ...AREAS_FILES, ...ABOUT_FILES, ...LEGAL_FILES, ...CITY_FILES].sort());
   assert.ok(!existsSync(join(out, 'index.html')));
   for (const lang of LANGS) {
     const html = readFileSync(join(out, lang, 'index.html'), 'utf8');
@@ -1902,6 +2001,14 @@ test('build de main indexable avec SITE_URL : 4 accueils complets (tuiles de ser
     assertLayout(html, 'about', LANGS[i], out, 'https://rs.example', true);
     assertAbout(html, LANGS[i], out);
   }
+  for (const lid of LEGAL_IDS) {
+    for (const lang of LANGS) {
+      const html = readFileSync(join(out, lang, LEGAL_SLUGS[lid][lang], 'index.html'), 'utf8');
+      assertLayout(html, lid, lang, out, 'https://rs.example', true);
+      assertLegal(html, lid, lang, out);
+    }
+  }
+  assertNoTerms(out);
   for (const cid of CITY_IDS) {
     for (const lang of LANGS) {
       const html = readFileSync(join(out, lang, AREAS_SLUGS[lang], CITY_DATA[cid].slugs[lang], 'index.html'), 'utf8');

@@ -88,3 +88,20 @@ export function requireAbout<T>(id: string, about: T | undefined): T {
   if (!about) throw new Error(`About : bloc « about » absent de src/content/pages/${id}.yaml`);
   return about;
 }
+
+// Story 5.2 (FR14, FR40, AD-2, AD-4, décision D4 de l'epic 5) : page légale, src/content/legal/{id}/meta.yaml (id = nom
+// du dossier). `title` = h1 ; `coordinator` (déclaration d'accessibilité seulement) = bloc référent : titre traduit, puis
+// nom, téléphone et e-mail en `fillable` (placeholder tant que RS SYSTEM ne les a pas fournis).
+export const legalMetaSchema = z.strictObject({
+  slugs: perLang(z.string()),
+  enabled: z.boolean(),
+  title: perLang(text),
+  meta: z.strictObject({ title: perLang(text), description: perLang(text) }),
+  coordinator: z
+    .strictObject({ title: perLang(text), name: fillable, phone: fillable, email: fillable })
+    .optional(),
+});
+
+// Story 5.2 : frontmatter d'un texte légal, src/content/legal/{id}/{lang}.md. `pending: true` ⇔ corps vide (texte de
+// l'avocat pas encore fourni, placeholder juridique) ; vérifié entre fichiers par src/lib/legal/core.ts (buildLegal).
+export const legalDocSchema = z.strictObject({ pending: z.boolean().default(false) });

@@ -10,6 +10,7 @@ import Areas from '../../templates/Areas.astro';
 import City from '../../templates/City.astro';
 import Contact from '../../templates/Contact.astro';
 import Home from '../../templates/Home.astro';
+import Legal from '../../templates/Legal.astro';
 import NotFound from '../../templates/NotFound.astro';
 import PathProbe from '../../templates/PathProbe.astro';
 import Service from '../../templates/Service.astro';
@@ -30,7 +31,7 @@ interface Props {
 }
 
 // Modèle par type d'id (préfixe avant « : », ex. `city:modiin` → `city`).
-const TEMPLATES = { home: Home, about: About, areas: Areas, city: City, contact: Contact, cameras: Service, 'smoke-detectors': Service, 'smart-home': Service, networks: Service, intercom: Service, contractors: Service, 'path-probe': PathProbe, 'not-found': NotFound } as const;
+const TEMPLATES = { home: Home, about: About, areas: Areas, city: City, contact: Contact, cameras: Service, 'smoke-detectors': Service, 'smart-home': Service, networks: Service, intercom: Service, contractors: Service, accessibility: Legal, privacy: Legal, terms: Legal, 'path-probe': PathProbe, 'not-found': NotFound } as const;
 
 const { id, lang } = Astro.props;
 const type = id.split(':')[0] as string;

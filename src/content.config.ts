@@ -5,7 +5,7 @@ import { file, glob } from 'astro/loaders';
 import { z } from 'astro/zod';
 import { citySchema, regionSchema, reviewSchema } from './lib/areas/schema.ts';
 import { KEY_RE } from './lib/i18n/core.ts';
-import { pageSchema, perLang, text } from './lib/page-schema.ts';
+import { legalDocSchema, legalMetaSchema, pageSchema, perLang, text } from './lib/page-schema.ts';
 
 // Id = nom de fichier brut : l'id par défaut est slugifié et masquerait les ids invalides ou en double.
 const fileId = ({ entry }: { entry: string }) => entry.replace(/\.(yaml|json)$/, '');
@@ -65,4 +65,17 @@ const reviews = defineCollection({
   schema: reviewSchema,
 });
 
-export const collections = { pages, i18n, services, proof, regions, cities, reviews };
+// Story 5.2 (FR14, AD-2, AD-4, AD-11) : pages légales. Métas : src/content/legal/{id}/meta.yaml, id = nom du dossier ;
+// textes : src/content/legal/{id}/{lang}.md, id `{id}/{lang}` (Markdown sans plugin, rendu par Astro). Complétude
+// (4 .md par page active, `pending` ⇔ corps vide, dossier avec meta.yaml) : src/lib/legal/core.ts (buildLegal).
+const legalMeta = defineCollection({
+  loader: glob({ pattern: '*/meta.yaml', base: './src/content/legal', generateId: ({ entry }) => entry.replace(/\/meta\.yaml$/, '') }),
+  schema: legalMetaSchema,
+});
+
+const legal = defineCollection({
+  loader: glob({ pattern: '*/*.md', base: './src/content/legal', generateId: ({ entry }) => entry.replace(/\.md$/, '') }),
+  schema: legalDocSchema,
+});
+
+export const collections = { pages, i18n, services, proof, regions, cities, reviews, legalMeta, legal };
