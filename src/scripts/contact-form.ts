@@ -185,8 +185,13 @@ if (form instanceof HTMLFormElement) {
       awaiting = false;
       left = false;
       stopSending();
-      if (sent) sent.hidden = false;
-      sentTitle?.focus();
+      if (sent) {
+        sent.hidden = false;
+        // Recette epic 2 (D6) : WebKit iPhone ne fait pas défiler jusqu'au titre focalisé ; le bloc est amené
+        // à l'écran s'il n'y est pas (le scroll-padding du site laisse la place du header collant), puis le focus est posé.
+        sent.scrollIntoView({ block: 'nearest' });
+      }
+      sentTitle?.focus({ preventScroll: true });
     };
 
     document.addEventListener('visibilitychange', () => {

@@ -139,9 +139,13 @@ class FakeElement {
   addEventListener(type, fn) {
     (this.listeners[type] ??= []).push(fn);
   }
-  focus() {
+  focus(options) {
     assert.ok(this.tag !== 'h3' || this.getAttribute('tabindex') === '-1', 'titre focalisable');
+    this.focusOptions = options;
     globalThis.document.activeElement = this;
+  }
+  scrollIntoView(options) {
+    (this.scrolls ??= []).push(options);
   }
 }
 class FakeForm extends FakeElement {}
@@ -614,6 +618,9 @@ test('retour (hidden puis visible) : confirmation visible, focus sur son titre, 
   dom.visibility('visible');
   assert.equal(dom.sent.hidden, false);
   assert.equal(dom.document.activeElement, dom.sentTitle);
+  // Recette epic 2 (D6) : le bloc est amené à l'écran, puis le focus est posé sans second défilement.
+  assert.deepEqual(dom.sent.scrolls, [{ block: 'nearest' }]);
+  assert.deepEqual(dom.sentTitle.focusOptions, { preventScroll: true });
   assert.deepEqual(dom.sending(), IDLE);
   assert.deepEqual(values(dom), [...FILLED_VALUES.slice(0, 4), 'cameras']);
   assert.equal(dom.retry.getAttribute('href'), href);
