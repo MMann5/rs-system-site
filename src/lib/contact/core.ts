@@ -4,6 +4,8 @@
 // Il reçoit des libellés hébreux déjà résolus (src/lib/contact/labels.ts) et ne connaît pas `unsure`.
 // Story 2.2 : règles de validation du formulaire de Contact (Nom, Téléphone), utilisées par l'îlot
 // src/scripts/contact-form.ts.
+// Story 2.3 (FR30) : lignes hébraïques du formulaire (`formLines`) et résolution de la ville en hébreu
+// (`resolveCityHe`) à partir de la table `{ code: { label, he } }` que l'îlot lit dans #rs-data.
 // Syntaxe TypeScript effaçable uniquement : Node l'importe directement (tests).
 
 const PHONE_E164 = '+972509565669';
@@ -14,6 +16,14 @@ export const PHONE_DISPLAY = '050-956-5669';
 
 const GREETING = 'שלום RS SYSTEM, הגעתי מהאתר.';
 const QUOTE = ' אשמח לקבל הצעת מחיר';
+
+/** Entrée d'une table de libellés `{ code: { label, he } }` (AD-5) : libellé dans la langue de la page, et hébreu. */
+export interface LabelEntry {
+  label: string;
+  he: string;
+}
+
+export type LabelTable = Readonly<Record<string, LabelEntry>>;
 
 export interface WaInput {
   /** Libellé hébreu du service de la page hôte. */
@@ -54,6 +64,41 @@ export function waMessage({ serviceHe, cityHe, lines = [] }: WaInput = {}): stri
 
 export function waHref(input: WaInput = {}): string {
   return `${WA_BASE}?text=${encodeURIComponent(waMessage(input))}`;
+}
+
+// — Story 2.3 (FR30) : lignes du formulaire et ville en hébreu —
+
+export interface FormLinesInput {
+  name: string;
+  phone: string;
+  message: string;
+}
+
+/** Lignes ajoutées au message WhatsApp : `שם:`, `טלפון:`, `הודעה:` (« — » si le message est vide). */
+export function formLines({ name, phone, message }: FormLinesInput): string[] {
+  return [`שם: ${name.trim()}`, `טלפון: ${phone.trim()}`, `הודעה: ${message.trim() || '—'}`];
+}
+
+const fold = (value: string): string => value.normalize('NFC').toLowerCase();
+
+/**
+ * Ville en hébreu pour le message : par le code `?city=` si le texte est toujours son libellé, sinon par
+ * correspondance du libellé ou de l'hébreu (sans tenir compte de la casse), sinon le texte saisi tel quel.
+ * Texte vide → `undefined`.
+ */
+export function resolveCityHe(text: string, cities: LabelTable, paramCode?: string): string | undefined {
+  const value = text.trim();
+  if (!value) return undefined;
+  if (paramCode !== undefined && Object.hasOwn(cities, paramCode)) {
+    const entry = cities[paramCode] as LabelEntry;
+    if (value === entry.label) return entry.he;
+  }
+  const folded = fold(value);
+  for (const code of Object.keys(cities)) {
+    const entry = cities[code] as LabelEntry;
+    if (fold(entry.label) === folded || fold(entry.he) === folded) return entry.he;
+  }
+  return value;
 }
 
 // — Story 2.2 (FR28) : validation du formulaire de Contact, à l'envoi seulement —

@@ -1,4 +1,4 @@
-// Stories 1.3 à 1.9, 2.1 et 2.2 : sortie réelle du build, sur une branche puis sur main (registre, layout Base.astro).
+// Stories 1.3 à 1.9, 2.1 à 2.3 : sortie réelle du build, sur une branche puis sur main (registre, layout Base.astro).
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
@@ -154,11 +154,22 @@ function assertLayout(html, id, lang, out, site = '', indexable = false) {
   const phoneField = id === 'contact' ? /<input id="contact-phone"[^>]*>/ : /$^/;
   assert.equal(withoutIsolates.replace(phoneField, '').match(/\sdir=/g)?.length, 1, `${where} : dir= en double`);
   assert.match(html, new RegExp(`<html lang="${lang}" dir="${lang === 'he' ? 'rtl' : 'ltr'}" data-page-id="${id}"[\\s>]`), where);
-  // AD-13 : un seul #rs-data, qui vaut { context } (navSection sur la page Contact, sans tables en 2.1).
+  // AD-13 : un seul #rs-data, qui vaut { context } ; story 2.3 (AD-5) : sur Contact, { context, services, cities },
+  // `services` = les 7 codes dans l'ordre (libellé dans la langue + hébreu), `cities` vide avant l'epic 4.
   assert.equal(html.match(/\sid="rs-data"/g)?.length, 1, `${where} : #rs-data absent ou en double`);
   const json = html.match(/<script type="application\/json" id="rs-data">([\s\S]*?)<\/script>/)?.[1];
-  const context = id === 'contact' ? { id, lang, navSection: 'contact', indexable } : { id, lang, indexable };
-  assert.deepEqual(JSON.parse(json), { context }, where);
+  if (id === 'contact') {
+    const data = JSON.parse(json);
+    assert.deepEqual(Object.keys(data), ['context', 'services', 'cities'], `${where} : clés de #rs-data`);
+    assert.deepEqual(data.context, { id, lang, navSection: 'contact', indexable }, `${where} : context`);
+    assert.deepEqual(Object.keys(data.services), SERVICE_ORDER, `${where} : codes de services`);
+    for (const code of SERVICE_ORDER) {
+      assert.deepEqual(data.services[code], { label: serviceLabel(code, lang), he: serviceLabel(code, 'he') }, `${where} : service ${code}`);
+    }
+    assert.deepEqual(data.cities, {}, `${where} : cities`);
+  } else {
+    assert.deepEqual(JSON.parse(json), { context: { id, lang, indexable } }, where);
+  }
   // FR24 : premier élément focalisable du <body> = lien d'évitement vers #content.
   const body = html.slice(html.indexOf('<body'));
   const first = body.slice(body.indexOf('>') + 1).match(FOCUSABLE);
@@ -604,7 +615,7 @@ function assertContact(html, lang, out) {
   assert.match(hours, new RegExp(`^<span data-placeholder(?:="")?>\\[${escaped(dict['placeholder.hours'])}\\]</span>$`), `${where} : placeholder horaires`);
   assert.equal(dl.match(/data-placeholder/g)?.length, 2, `${where} : placeholders de la colonne`);
   assert.ok(!html.includes('mailto:'), `${where} : mailto:`);
-  // Aucune table dans #rs-data en 2.2 (vérifié par assertLayout) ; aucun data-umami-*.
+  // Tables services / cities de #rs-data vérifiées par assertLayout (story 2.3) ; aucun data-umami-*.
   assert.ok(!html.includes('data-umami'), `${where} : data-umami-*`);
 }
 

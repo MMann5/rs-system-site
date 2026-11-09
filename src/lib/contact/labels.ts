@@ -2,6 +2,7 @@
 // Les services viennent de src/content/services.yaml (collection `services`), validés au chargement.
 import { getCollection } from 'astro:content';
 import type { Lang } from '../langs.ts';
+import type { LabelTable } from './core.ts';
 import { buildServiceTable, type ServiceEntry, type ServiceTable } from './table.ts';
 
 const entries: ServiceEntry[] = (await getCollection('services')).map(({ id, data }) => ({
@@ -16,4 +17,12 @@ buildServiceTable(entries, 'he');
 
 export function serviceLabels(lang: Lang): ServiceTable {
   return buildServiceTable(entries, lang);
+}
+
+/**
+ * Table des villes `{ code: { label, he } }` pour `?city=` et la correspondance de nom du formulaire.
+ * Vide jusqu'à l'epic 4, qui crée la collection des villes.
+ */
+export function cityLabels(_lang: Lang): LabelTable {
+  return {};
 }

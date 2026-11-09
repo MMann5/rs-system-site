@@ -1,9 +1,10 @@
 // Stories 1.5 et 1.6 (AD-5, AD-13, FR31) : noyau des liens Appeler / WhatsApp, table des services,
 // entrée WhatsApp d'une page (pageWaInput). Story 2.2 (FR28) : règles de validation du formulaire.
+// Story 2.3 (FR30) : lignes du formulaire (formLines), ville en hébreu (resolveCityHe), 4 combinaisons du message.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { invalidContactFields, isValidName, isValidPhone, normalizePhone, PHONE_DISPLAY, telHref, waHref } from '../src/lib/contact/core.ts';
+import { formLines, invalidContactFields, isValidName, isValidPhone, normalizePhone, PHONE_DISPLAY, resolveCityHe, telHref, waHref } from '../src/lib/contact/core.ts';
 import { buildServiceTable, pageWaInput, SERVICE_CODES } from '../src/lib/contact/table.ts';
 
 const PREFIX = 'https://wa.me/972509565669?text=';
@@ -182,4 +183,70 @@ test('invalidContactFields : liste ordonnée Nom puis Téléphone', () => {
   assert.deepEqual(invalidContactFields({ name: 'דנה', phone: '' }), ['phone']);
   assert.deepEqual(invalidContactFields({ name: ' ', phone: '050-123-4567' }), ['name']);
   assert.deepEqual(invalidContactFields({ name: 'דנה', phone: '050-123-4567' }), []);
+});
+
+// — Story 2.3 (FR30) : formLines, resolveCityHe, message du formulaire —
+
+const LINES = 'שם: דנה\nטלפון: 050-123-4567\nהודעה: 6 מצלמות';
+const CITIES = Object.freeze({ modiin: { label: 'Modiin', he: 'מודיעין' }, ashkelon: { label: 'Ashkelon', he: 'אשקלון' } });
+const formInput = { name: ' דנה ', phone: ' 050-123-4567 ', message: ' 6 מצלמות ' };
+
+test('formLines : 3 lignes hébraïques, valeurs trimées ; message vide ou espaces → —', () => {
+  assert.deepEqual(formLines(formInput), ['שם: דנה', 'טלפון: 050-123-4567', 'הודעה: 6 מצלמות']);
+  for (const message of ['', '   ', '\n\t']) {
+    assert.deepEqual(formLines({ name: 'Dana', phone: '0501234567', message }), ['שם: Dana', 'טלפון: 0501234567', 'הודעה: —'], JSON.stringify(message));
+  }
+});
+
+test('message du formulaire : service + ville', () => {
+  const href = waHref({ serviceHe: 'מצלמות אבטחה', cityHe: resolveCityHe('מודיעין', {}), lines: formLines(formInput) });
+  assert.equal(text(href), `${GREETING} אשמח לקבל הצעת מחיר למצלמות אבטחה במודיעין.\n${LINES}`);
+});
+
+test('message du formulaire : service seul (ville vide)', () => {
+  const href = waHref({ serviceHe: 'גלאי עשן', cityHe: resolveCityHe('', {}), lines: formLines(formInput) });
+  assert.equal(text(href), `${GREETING} אשמח לקבל הצעת מחיר לגלאי עשן.\n${LINES}`);
+});
+
+test('message du formulaire : ville seule, libre hors liste, insérée telle quelle', () => {
+  const href = waHref({ serviceHe: undefined, cityHe: resolveCityHe(' Ashdod ', CITIES), lines: formLines(formInput) });
+  assert.equal(text(href), `${GREETING} אשמח לקבל הצעת מחיר בAshdod.\n${LINES}`);
+});
+
+test('message du formulaire : ni service ni ville (espaces)', () => {
+  const href = waHref({ serviceHe: undefined, cityHe: resolveCityHe('   ', CITIES), lines: formLines({ name: 'Dana', phone: '0501234567', message: '' }) });
+  assert.equal(text(href), `${GREETING}\nשם: Dana\nטלפון: 0501234567\nהודעה: —`);
+});
+
+test('resolveCityHe : vide ou espaces → undefined', () => {
+  for (const value of ['', '  ', '\t']) assert.equal(resolveCityHe(value, CITIES), undefined, JSON.stringify(value));
+  assert.equal(resolveCityHe(' ', CITIES, 'modiin'), undefined);
+});
+
+test('resolveCityHe : par code ?city= quand le texte est toujours son libellé', () => {
+  assert.equal(resolveCityHe('Modiin', CITIES, 'modiin'), 'מודיעין');
+  assert.equal(text(waHref({ cityHe: resolveCityHe('Modiin', CITIES, 'modiin') })), `${GREETING} אשמח לקבל הצעת מחיר במודיעין.`);
+  // Texte modifié par le visiteur : le code ne s'applique plus, la correspondance de nom prend le relais.
+  assert.equal(resolveCityHe('Ashkelon', CITIES, 'modiin'), 'אשקלון');
+  assert.equal(resolveCityHe('Tel Aviv', CITIES, 'modiin'), 'Tel Aviv');
+});
+
+test('resolveCityHe : par nom (libellé ou hébreu), sans tenir compte de la casse, après NFC', () => {
+  assert.equal(resolveCityHe('modiin', CITIES), 'מודיעין');
+  assert.equal(resolveCityHe('  MODIIN ', CITIES), 'מודיעין');
+  assert.equal(resolveCityHe('מודיעין', CITIES), 'מודיעין');
+  const accented = { lod: { label: 'Lôd', he: 'לוד' } };
+  assert.equal(resolveCityHe('LO\u0302D', accented), 'לוד', 'forme décomposée');
+});
+
+test('resolveCityHe : ville libre hors liste → texte trimé tel quel ; table vide', () => {
+  assert.equal(resolveCityHe(' Ashdod ', CITIES), 'Ashdod');
+  assert.equal(resolveCityHe('Ashdod', {}), 'Ashdod');
+  assert.equal(resolveCityHe('Ashdod', {}, 'ashdod'), 'Ashdod');
+});
+
+test('resolveCityHe : codes hérités (toString, __proto__) jamais résolus', () => {
+  assert.equal(resolveCityHe('toString', CITIES, 'toString'), 'toString');
+  assert.equal(resolveCityHe('x', CITIES, '__proto__'), 'x');
+  assert.equal(resolveCityHe('[object Object]', CITIES, 'constructor'), '[object Object]');
 });

@@ -5,8 +5,10 @@
 // Story 2.2 (FR28, FR33, UX-DR29) : messages d'erreur sous Nom et Téléphone et résumé d'erreurs (dans un
 // <template>), rendus au build et cachés ; l'îlot src/scripts/contact-form.ts valide à l'envoi, montre les
 // messages, clone le résumé dans #contact-errors (role="alert") et pose aria-invalid / aria-describedby.
-// L'envoi vers WhatsApp arrive en 2.3. Pas de bloc contact sur cette page. Sans JS (`scripting: none`),
-// le bloc formulaire est masqué et le <noscript> propose Appeler › WhatsApp ›.
+// Story 2.3 (FR29, FR30, AD-5, AD-13) : #rs-data embarque les tables `services` et `cities` (vide avant
+// l'epic 4) ; l'îlot présélectionne par `?service=` / `?city=`, compose le message et ouvre WhatsApp.
+// Pas de bloc contact sur cette page. Sans JS (`scripting: none`), le bloc formulaire est masqué et le
+// <noscript> propose Appeler › WhatsApp ›.
 // Aucun attribut `name` sur les champs : l'îlot les lit par id, et si le script ne charge pas, rien ne doit
 // partir dans l'URL.
 import PhoneNumber from '../components/PhoneNumber.astro';
@@ -14,7 +16,7 @@ import Placeholder from '../components/Placeholder.astro';
 import TextLink from '../components/TextLink.astro';
 import Base from '../layouts/Base.astro';
 import { telHref, waHref } from '../lib/contact/core';
-import { serviceLabels } from '../lib/contact/labels';
+import { cityLabels, serviceLabels } from '../lib/contact/labels';
 import { pageWaInput, SERVICE_CODES } from '../lib/contact/table';
 import { t } from '../lib/i18n';
 import type { Lang } from '../lib/langs';
@@ -36,7 +38,7 @@ const optional = t(lang, 'form.optional');
 const nameError = t(lang, 'form.name.error');
 const phoneError = t(lang, 'form.phone.error');
 ---
-<Base ctx={ctx} title={meta.title[lang]} description={meta.description[lang]}>
+<Base ctx={ctx} title={meta.title[lang]} description={meta.description[lang]} tables={{ services, cities: cityLabels(lang) }}>
   <section class="hero" aria-labelledby="contact-title">
     <h1 id="contact-title" class="title">{t(lang, 'contact.title')}</h1>
     <a href={telHref()} class="phone" data-track="call_click" data-placement="contact_page"><PhoneNumber /></a>
