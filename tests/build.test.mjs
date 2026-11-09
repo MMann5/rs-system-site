@@ -484,10 +484,74 @@ function assertFormHiddenWithoutJs(html, out, where) {
 /** Story 2.2 : icône d'alerte `aria-hidden` (cercle + « ! »). */
 const ALERT_ICON = /^<svg class="[\w-]+-icon"[^>]*\saria-hidden="true"[^>]*><circle\b[^>]*><\/circle><path\b[^>]*><\/path><\/svg>/;
 
+/** Story 2.4 : bloc de confirmation, juste après le h2 (contenu sans <div> imbriqué au-delà de status-body). */
+const SENT_BLOCK = /^<div id="contact-sent"[^>]*>[\s\S]*?<\/div><\/div>/;
+/** Story 2.4 : icône coche `aria-hidden` (un seul tracé). */
+const CHECK_ICON = /^<svg class="status-icon"[^>]*\saria-hidden="true"[^>]*><path\b[^>]*><\/path><\/svg>/;
+/** Chiffre de délai dans un texte (« 24 h », « 2 heures »…) : interdit dans les textes des états. */
+const DELAY_DIGIT = /\d/;
+
+/** Story 2.4 (FR33, UX-DR29, AD-5, AD-6) : états d'envoi, de retour et hors ligne, rendus au build et cachés. */
+function assertContactStates(block, form, dict, wa, tel, where) {
+  // Confirmation : cachée, juste après le h2 et avant #contact-errors.
+  const afterTitle = block.slice(block.indexOf('</h2>') + '</h2>'.length);
+  const sent = afterTitle.match(SENT_BLOCK)?.[0] ?? '';
+  assert.ok(sent, `${where} : #contact-sent juste après le h2`);
+  assert.match(afterTitle.slice(sent.length), /^<div id="contact-errors"/, `${where} : #contact-sent avant #contact-errors`);
+  const sentTag = sent.match(/^<div\b[^>]*>/)[0];
+  assert.equal(attr(sentTag, 'class'), 'form-status sent', `${where} : classes de #contact-sent`);
+  assert.ok(hasAttr(sentTag, 'hidden', ''), `${where} : #contact-sent caché`);
+  const sentBody = sent.slice(sentTag.length);
+  assert.match(sentBody, CHECK_ICON, `${where} : icône coche`);
+  const h3 = sentBody.match(/<h3\b([^>]*)>([^<]*)<\/h3>/);
+  assert.equal(attr(`<h3${h3?.[1]}>`, 'id'), 'contact-sent-title', `${where} : id du titre`);
+  assert.equal(attr(`<h3${h3?.[1]}>`, 'tabindex'), '-1', `${where} : tabindex du titre`);
+  assert.equal(h3?.[2], escaped(dict['form.sent.title']), `${where} : titre de la confirmation`);
+  const paras = [...sentBody.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/g)].map((m) => m[1]);
+  assert.equal(paras.length, 3, `${where} : paragraphes de la confirmation`);
+  assert.equal(paras[0], escaped(dict['form.sent.text']), `${where} : texte de la confirmation`);
+  const retry = paras[1].match(new RegExp(`^${escaped(dict['form.sent.retry-question']).replace(/[?]/g, '\\$&')} <a\\b([^>]*)>([\\s\\S]*?)</a>$`));
+  assert.ok(retry, `${where} : question puis lien Réessayer ${paras[1]}`);
+  assert.equal(attr(`<a${retry[1]}>`, 'id'), 'contact-sent-retry', `${where} : id de Réessayer`);
+  assertTextLink(retry, wa, escaped(dict['form.sent.retry']), undefined, undefined, `${where} : Réessayer`);
+  const call = paras[2].match(/^<a\b([^>]*)>([\s\S]*?)<\/a>$/);
+  assertTextLink(call, tel, `${escaped(dict['form.sent.call'])} ${PHONE_BDI}`, 'call_click', 'contact_page', `${where} : appel de la confirmation`);
+  // Hors ligne : région role="alert" vide juste avant le <template>, lui-même juste avant le bouton.
+  const offline = form.match(/<div id="contact-offline"([^>]*)><\/div><template id="contact-offline-template"[^>]*>([\s\S]*?)<\/template><button\b/);
+  assert.ok(offline, `${where} : #contact-offline vide puis <template> juste avant le bouton`);
+  assert.equal(attr(`<div${offline[1]}>`, 'role'), 'alert', `${where} : role de #contact-offline`);
+  assert.ok(!hasAttr(`<div${offline[1]}>`, 'hidden', ''), `${where} : #contact-offline jamais caché`);
+  assert.match(offline[2], /^<div class="form-status"[^>]*>/, `${where} : bloc hors ligne form-status`);
+  const offlineBody = offline[2].replace(/^<div class="form-status"[^>]*>/, '');
+  assert.match(offlineBody, ALERT_ICON, `${where} : icône du bloc hors ligne`);
+  assert.equal(offlineBody.match(/<h3 class="status-title"[^>]*>([^<]*)<\/h3>/)?.[1], escaped(dict['form.offline.title']), `${where} : titre hors ligne`);
+  const offlineCall = offlineBody.match(/<p\b[^>]*><a\b([^>]*)>([\s\S]*?)<\/a><\/p>/);
+  assertTextLink(offlineCall, tel, `${escaped(dict['form.offline.call'])} ${PHONE_BDI}`, 'call_click', 'contact_page', `${where} : appel hors ligne`);
+  // Bouton : libellé d'origine (icône + form.submit) puis libellé d'envoi caché (form.sending + trois points).
+  const button = form.match(/<button\b[^>]*>([\s\S]*?)<\/button>/)?.[1] ?? '';
+  const idle = button.match(/^<span class="submit-idle"[^>]*>(<svg\b[^>]*\saria-hidden="true"[^>]*>[\s\S]*?<\/svg>)<span\b[^>]*>([^<]*)<\/span><\/span>/);
+  assert.ok(idle, `${where} : .submit-idle (icône puis libellé)`);
+  assert.equal(idle[2], dict['form.submit'], `${where} : libellé du bouton`);
+  const sending = button.slice(idle[0].length).match(/^<span class="submit-sending"([^>]*)><span\b[^>]*>([^<]*)<\/span>(<svg\b[^>]*>[\s\S]*?<\/svg>)<\/span>$/);
+  assert.ok(sending, `${where} : .submit-sending après .submit-idle`);
+  assert.ok(hasAttr(`<span${sending[1]}>`, 'hidden', ''), `${where} : .submit-sending caché`);
+  assert.equal(sending[2], dict['form.sending'], `${where} : libellé d'envoi`);
+  assert.match(sending[3], /\saria-hidden="true"/, `${where} : points aria-hidden`);
+  assert.equal(sending[3].match(/<circle\b/g)?.length, 3, `${where} : trois points`);
+  assert.ok(!/<animate|animation/.test(sending[3]), `${where} : points animés`);
+  // Région status vide juste après le bouton.
+  assert.match(form, /<\/button><p id="contact-sending" class="visually-hidden" role="status"[^>]*><\/p>/, `${where} : #contact-sending vide après le bouton`);
+  // Aucun délai promis : aucun chiffre dans les textes des états.
+  for (const key of ['form.sending', 'form.sent.title', 'form.sent.text', 'form.sent.retry-question', 'form.sent.retry', 'form.sent.call', 'form.offline.title', 'form.offline.call']) {
+    assert.ok(dict[key], `${where} : clé ${key}`);
+    assert.ok(!DELAY_DIGIT.test(dict[key]), `${where} : chiffre dans ${key}`);
+  }
+}
+
 /** Story 2.2 (FR33, UX-DR29) : résumé d'erreurs, messages sous Nom et Téléphone, îlot du formulaire. */
 function assertContactErrors(html, block, form, dict, out, where) {
-  // #contact-errors (role="alert", vide) puis <template>, entre le h2 et le <form>.
-  const afterTitle = block.slice(block.indexOf('</h2>') + '</h2>'.length);
+  // #contact-errors (role="alert", vide) puis <template>, entre le bloc de confirmation (story 2.4) et le <form>.
+  const afterTitle = block.slice(block.indexOf('</h2>') + '</h2>'.length).replace(SENT_BLOCK, '');
   assert.match(afterTitle, /^<div id="contact-errors" role="alert"(?: data-astro-cid-[\w-]+)?><\/div><template id="contact-errors-template"[^>]*>/, `${where} : #contact-errors puis <template> après le h2`);
   const template = afterTitle.match(/<template id="contact-errors-template"[^>]*>([\s\S]*?)<\/template><form\b/)?.[1] ?? '';
   assert.ok(template, `${where} : <template> juste avant le <form>`);
@@ -556,6 +620,7 @@ function assertContact(html, lang, out) {
   assert.equal(attr(formTag, 'name'), undefined, `${where} : <form> sans name`);
   const form = block.slice(block.indexOf(formTag));
   assertContactErrors(html, block, form, dict, out, where);
+  assertContactStates(block, form, dict, waHref(), tel, where);
   // 5 champs dans l'ordre, label for au-dessus, attributs de FR28, aucun name/value/placeholder.
   const controls = [...form.matchAll(/<(input|select|textarea)\b[^>]*>/g)];
   assert.deepEqual(controls.map((m) => attr(m[0], 'id')), FIELDS.map((f) => f.id), `${where} : ordre des champs`);
@@ -586,8 +651,8 @@ function assertContact(html, lang, out) {
   assert.ok(button, `${where} : bouton`);
   assert.equal(attr(`<button${button[1]}>`, 'type'), 'submit', `${where} : type du bouton`);
   assert.equal(attr(`<button${button[1]}>`, 'data-surface'), 'accent', `${where} : surface du bouton`);
-  assert.match(button[2], /^<svg\b[^>]*\saria-hidden="true"[^>]*>[\s\S]*?<\/svg><span\b[^>]*>([^<]*)<\/span>$/, `${where} : icône puis libellé`);
-  assert.equal(button[2].match(/<span\b[^>]*>([^<]*)<\/span>$/)?.[1], dict['form.submit'], `${where} : libellé du bouton`);
+  // Icône et libellé (D2) dans .submit-idle : vérifiés par assertContactStates (story 2.4).
+  assert.ok(!/\sdisabled[\s=>]/.test(`<button${button[1]}>`), `${where} : bouton disabled`);
   assert.ok(form.indexOf('<button') > controls.at(-1).index, `${where} : bouton après les champs`);
   const note = form.slice(form.indexOf('</button>')).match(/<p class="note"[^>]*>([\s\S]*?)<\/p>/)?.[1];
   assert.equal(note, escaped(dict['form.note']), `${where} : note`);

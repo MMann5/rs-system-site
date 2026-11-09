@@ -2,12 +2,17 @@
 // purs ../lib/contact/core.ts et ../lib/track-events.ts ; comportement (validation à l'envoi, ARIA, focus,
 // résumé, liens) sur un DOM factice minimal. Story 2.3 (FR29, FR30, AD-6) : lecture de #rs-data, présélection
 // par ?service= / ?city=, message WhatsApp, ouverture (nouvel onglet, même onglet), événements rs:track.
+// Story 2.4 (FR33, UX-DR29) : état d'envoi (3 s, double envoi ignoré), retour (visibilitychange, pageshow),
+// Réessayer, hors ligne.
 // L'îlot s'exécute à l'import : chaque cas l'importe à neuf (?case=n) après avoir posé les globaux.
-import { test } from 'node:test';
+import { mock, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { formLines, waHref } from '../src/lib/contact/core.ts';
+
+// Minuteurs simulés (3 s de l'état d'envoi) : avancés par mock.timers.tick().
+mock.timers.enable({ apis: ['setTimeout'] });
 
 const ISLAND_URL = new URL('../src/scripts/contact-form.ts', import.meta.url).href;
 const ISLAND = fileURLToPath(ISLAND_URL);
@@ -44,6 +49,18 @@ test('src/scripts/contact-form.ts n’importe que core.ts et track-events.ts (au
 
 // — DOM factice —
 
+/** Écritures de textContent faites après le montage (l'îlot ne doit poser que #contact-sending). */
+let textWrites = [];
+
+/** Sélecteurs simples utilisés par l'îlot : `.classe`, `tag[attr="valeur"]`, `[attr]`. */
+function matches(el, selector) {
+  if (selector.startsWith('.')) return (el.getAttribute('class') ?? '').split(/\s+/).includes(selector.slice(1));
+  const m = selector.match(/^([a-z]*)\[([\w-]+)(?:="([^"]*)")?\]$/);
+  assert.ok(m, `sélecteur non géré : ${selector}`);
+  const [, tag, attr, value] = m;
+  return (!tag || el.tag === tag) && el.hasAttribute(attr) && (value === undefined || el.getAttribute(attr) === value);
+}
+
 class FakeElement {
   constructor(tag, attrs = {}, children = []) {
     this.tag = tag;
@@ -52,7 +69,15 @@ class FakeElement {
     this.children = [];
     this.listeners = {};
     this.hidden = false;
+    this._text = '';
     this.append(...children);
+  }
+  get textContent() {
+    return this._text;
+  }
+  set textContent(value) {
+    textWrites.push([this.id || this.tag, value]);
+    this._text = value;
   }
   get id() {
     return this.attrs.get('id') ?? '';
@@ -99,10 +124,11 @@ class FakeElement {
       yield* child.descendants();
     }
   }
-  /** Sélecteur utilisé par l'îlot : `[data-field]`. */
   querySelectorAll(selector) {
-    assert.equal(selector, '[data-field]');
-    return [...this.descendants()].filter((el) => el.hasAttribute('data-field'));
+    return [...this.descendants()].filter((el) => matches(el, selector));
+  }
+  querySelector(selector) {
+    return this.querySelectorAll(selector)[0] ?? null;
   }
   /** Sélecteur utilisé par l'îlot : `a[href^="#"]`. */
   closest(selector) {
@@ -114,6 +140,7 @@ class FakeElement {
     (this.listeners[type] ??= []).push(fn);
   }
   focus() {
+    assert.ok(this.tag !== 'h3' || this.getAttribute('tabindex') === '-1', 'titre focalisable');
     globalThis.document.activeElement = this;
   }
 }
@@ -160,6 +187,16 @@ const summaryContent = () => [
   ]),
 ];
 
+const offlineContent = () => [
+  new FakeElement('div', { class: 'form-status' }, [
+    new FakeElement('svg', { 'aria-hidden': 'true' }),
+    new FakeElement('h3', {}),
+    new FakeElement('p', {}, [new FakeElement('a', { href: 'tel-link', 'data-track': 'call_click' })]),
+  ]),
+];
+
+const SENDING_TEXT = 'Ouverture de WhatsApp…';
+
 // Tables de #rs-data en fr (Contact.astro : serviceLabels / cityLabels).
 const SERVICES = {
   cameras: { label: 'Caméras de surveillance', he: 'מצלמות אבטחה' },
@@ -176,8 +213,9 @@ let round = 0;
  * rsData : objet sérialisé dans #rs-data, chaîne brute, ou null (bloc absent). search : `location.search`.
  * coarse : `(pointer: coarse)`. blocked : window.open renvoie null. city : valeur initiale du champ ville.
  */
-async function mountIsland({ withForm = true, rsData = RS_DATA, search = '', coarse = false, blocked = false, city: cityValue = '' } = {}) {
+async function mountIsland({ withForm = true, rsData = RS_DATA, search = '', coarse = false, blocked = false, city: cityValue = '', online = true } = {}) {
   const docListeners = {};
+  const winListeners = {};
   /** Journal ordonné : événements rs:track, window.open, location.assign. */
   const log = [];
   const name = new FakeInput({ id: 'contact-name', required: '' });
@@ -189,24 +227,48 @@ async function mountIsland({ withForm = true, rsData = RS_DATA, search = '', coa
   const nameError = new FakeElement('p', { id: 'contact-name-error', class: 'error' });
   const phoneError = new FakeElement('p', { id: 'contact-phone-error', class: 'error' });
   nameError.hidden = phoneError.hidden = true;
-  const button = new FakeElement('button', { type: 'submit' });
+  const idle = new FakeElement('span', { class: 'submit-idle' }, [new FakeElement('svg', { 'aria-hidden': 'true' }), new FakeElement('span')]);
+  const sendingText = new FakeElement('span');
+  sendingText.textContent = SENDING_TEXT;
+  const sendingLabel = new FakeElement('span', { class: 'submit-sending' }, [sendingText, new FakeElement('svg', { 'aria-hidden': 'true' })]);
+  sendingLabel.hidden = true;
+  // textContent d'un conteneur : texte de ses descendants (les SVG n'en ont pas).
+  Object.defineProperty(sendingLabel, 'textContent', { get: () => `\n  ${SENDING_TEXT}\n  ` });
+  const button = new FakeElement('button', { type: 'submit', class: 'submit' }, [idle, sendingLabel]);
+  const sendingStatus = new FakeElement('p', { id: 'contact-sending', class: 'visually-hidden', role: 'status' });
+  const offline = new FakeElement('div', { id: 'contact-offline', role: 'alert' });
+  const offlineTemplate = new FakeTemplate({ id: 'contact-offline-template' }, offlineContent);
+  const sentTitle = new FakeElement('h3', { id: 'contact-sent-title', class: 'status-title', tabindex: '-1' });
+  const retry = new FakeElement('a', { id: 'contact-sent-retry', href: 'page-wa' });
+  const sentCall = new FakeElement('a', { href: 'tel-link', 'data-track': 'call_click' });
+  const sent = new FakeElement('div', { id: 'contact-sent', class: 'form-status sent' }, [
+    new FakeElement('svg', { 'aria-hidden': 'true' }),
+    sentTitle,
+    new FakeElement('p', {}, [retry]),
+    new FakeElement('p', {}, [sentCall]),
+  ]);
+  sent.hidden = true;
   const form = new FakeForm('form', { id: 'contact-form' }, [
     new FakeElement('div', {}, [name, nameError]),
     new FakeElement('div', {}, [phone, phoneError]),
     new FakeElement('div', {}, [city]),
     new FakeElement('div', {}, [service]),
     new FakeElement('div', {}, [message]),
+    offline,
+    offlineTemplate,
     button,
+    sendingStatus,
   ]);
   form.noValidate = false;
   const summary = new FakeElement('div', { id: 'contact-errors', role: 'alert' });
   const template = new FakeTemplate({ id: 'contact-errors-template' }, summaryContent);
   const dataScript = new FakeElement('script', { id: 'rs-data', type: 'application/json' });
   dataScript.textContent = typeof rsData === 'string' ? rsData : JSON.stringify(rsData);
-  const body = new FakeElement('body', {}, [...(rsData === null ? [] : [dataScript]), summary, template, ...(withForm ? [form] : [])]);
+  const body = new FakeElement('body', {}, [...(rsData === null ? [] : [dataScript]), sent, summary, template, ...(withForm ? [form] : [])]);
   const byId = new Map([...body.descendants()].map((el) => [el.id, el]));
   const document = {
     activeElement: body,
+    visibilityState: 'visible',
     body,
     getElementById: (id) => byId.get(id) ?? null,
     querySelector: () => null,
@@ -225,6 +287,7 @@ async function mountIsland({ withForm = true, rsData = RS_DATA, search = '', coa
     window: {
       open: (...args) => (log.push(['open', ...args]), blocked ? null : popup),
       matchMedia: (query) => (assert.equal(query, '(pointer: coarse)'), { matches: coarse }),
+      addEventListener: (type, fn) => (winListeners[type] ??= []).push(fn),
     },
     CustomEvent: FakeCustomEvent,
     Element: FakeElement,
@@ -235,14 +298,18 @@ async function mountIsland({ withForm = true, rsData = RS_DATA, search = '', coa
     HTMLTextAreaElement: FakeTextArea,
     HTMLTemplateElement: FakeTemplate,
   });
+  const nav = { onLine: online };
+  // Le global `navigator` de Node est un accesseur : redéfini à chaque montage.
+  Object.defineProperty(globalThis, 'navigator', { value: nav, configurable: true, writable: true });
+  textWrites = [];
   await import(`${ISLAND_URL}?case=${++round}`);
   const submit = () => {
     const event = { type: 'submit', target: form, defaultPrevented: false, preventDefault() { this.defaultPrevented = true; } };
     for (const fn of form.listeners.submit ?? []) fn(event);
     return event;
   };
-  const click = (target) => {
-    const event = { type: 'click', target, defaultPrevented: false, preventDefault() { this.defaultPrevented = true; } };
+  const click = (target, init = {}) => {
+    const event = { type: 'click', target, button: 0, ctrlKey: false, metaKey: false, shiftKey: false, altKey: false, ...init, defaultPrevented: false, preventDefault() { this.defaultPrevented = true; } };
     for (let n = target; n; n = n.parent) for (const fn of n.listeners.click ?? []) fn(event);
     for (const fn of docListeners.click ?? []) fn(event);
     return event;
@@ -250,7 +317,20 @@ async function mountIsland({ withForm = true, rsData = RS_DATA, search = '', coa
   const links = () => [...summary.descendants()].filter((el) => el.tag === 'a');
   const events = () => log.filter(([kind]) => kind === 'event').map(([, type, detail]) => (assert.equal(type, 'rs:track'), detail));
   const navigations = () => log.filter(([kind]) => kind !== 'event');
-  return { form, name, phone, city, service, message, nameError, phoneError, summary, button, body, document, docListeners, submit, click, links, log, events, navigations, popup };
+  /** Page cachée ou visible (visibilitychange sur document). */
+  const visibility = (state) => {
+    document.visibilityState = state;
+    for (const fn of docListeners.visibilitychange ?? []) fn({ type: 'visibilitychange' });
+  };
+  const pageshow = (persisted) => {
+    for (const fn of winListeners.pageshow ?? []) fn({ type: 'pageshow', persisted });
+  };
+  /** État d'envoi : [aria-disabled, libellé d'origine visible, libellé d'envoi visible, texte de la région status]. */
+  const sending = () => [button.getAttribute('aria-disabled'), !idle.hidden, !sendingLabel.hidden, sendingStatus.textContent];
+  return {
+    form, name, phone, city, service, message, nameError, phoneError, summary, button, body, document, docListeners, winListeners,
+    submit, click, links, log, events, navigations, popup, nav, sent, sentTitle, retry, offline, sendingStatus, visibility, pageshow, sending,
+  };
 }
 
 /** État d'erreur d'un champ : [aria-invalid, aria-describedby, message visible]. */
@@ -258,13 +338,15 @@ const state = (input, message) => [input.getAttribute('aria-invalid'), input.get
 const ERROR = (id) => ['true', `${id}-error`, true];
 const CLEAN = [null, null, false];
 
-test('îlot : noValidate posé ; seul submit écouté sur le formulaire, rien sur les champs, click sur le résumé', async () => {
+test('îlot : noValidate posé ; seul submit écouté sur le formulaire, rien sur les champs, click sur le résumé et Réessayer', async () => {
   const dom = await mountIsland();
   assert.equal(dom.form.noValidate, true);
   assert.deepEqual(Object.keys(dom.form.listeners), ['submit']);
   for (const el of [dom.name, dom.phone, dom.city, dom.button]) assert.deepEqual(Object.keys(el.listeners), [], el.id || el.tag);
   assert.deepEqual(Object.keys(dom.summary.listeners), ['click']);
-  assert.deepEqual(Object.keys(dom.docListeners), []);
+  assert.deepEqual(Object.keys(dom.retry.listeners), ['click']);
+  assert.deepEqual(Object.keys(dom.docListeners), ['visibilitychange']);
+  assert.deepEqual(Object.keys(dom.winListeners), ['pageshow']);
 });
 
 test('îlot : sans #contact-form, ne fait rien', async () => {
@@ -466,4 +548,216 @@ test('sans #rs-data (absent ou illisible) : validation intacte, rien n’est ouv
     assert.deepEqual(state(dom.name, dom.nameError), CLEAN);
     assert.deepEqual(dom.log, [], String(rsData));
   }
+});
+
+// — Story 2.4 : envoi, retour, Réessayer, hors ligne —
+
+const IDLE = [null, true, false, ''];
+const SENDING = ['true', false, true, SENDING_TEXT];
+const values = (dom) => [dom.name.value, dom.phone.value, dom.city.value, dom.message.value, dom.service.value];
+const FILLED = { name: ' Dana ', phone: '050-123-4567', city: 'Lod', message: 'Deux caméras' };
+const FILLED_VALUES = [' Dana ', '050-123-4567', 'Lod', 'Deux caméras', 'unsure'];
+
+test('envoi valide en ligne : aria-disabled, libellé d’envoi, région status remplie, window.open ; focus inchangé', async () => {
+  const dom = await mountIsland();
+  fill(dom, FILLED);
+  dom.document.activeElement = dom.button;
+  dom.submit();
+  assert.deepEqual(dom.sending(), SENDING);
+  assert.equal(dom.button.hasAttribute('disabled'), false);
+  assert.equal(dom.document.activeElement, dom.button);
+  assert.deepEqual(dom.navigations().map(([kind]) => kind), ['open']);
+  assert.deepEqual(values(dom), FILLED_VALUES);
+  assert.equal(dom.sent.hidden, true);
+  mock.timers.tick(3000);
+});
+
+test('double envoi dans les 3 s : ignoré (1 form_submit, 1 ouverture) ; après 3 s, bouton actif, pas de confirmation', async () => {
+  const dom = await mountIsland();
+  fill(dom);
+  dom.submit();
+  mock.timers.tick(2999);
+  dom.name.value = '';
+  assert.equal(dom.submit().defaultPrevented, true);
+  assert.equal(dom.nameError.hidden, true, 'aucune validation pendant l’envoi');
+  assert.equal(dom.events().length, 1);
+  assert.equal(dom.navigations().length, 1);
+  assert.deepEqual(dom.sending(), SENDING);
+  mock.timers.tick(1);
+  assert.deepEqual(dom.sending(), IDLE);
+  assert.equal(dom.sent.hidden, true);
+  // Bouton de nouveau actif : un envoi est accepté.
+  dom.name.value = 'Dana';
+  dom.submit();
+  assert.equal(dom.navigations().length, 2);
+  mock.timers.tick(3000);
+});
+
+test('retour (hidden puis visible) : confirmation visible, focus sur son titre, bouton actif, saisies intactes, Réessayer = même lien', async () => {
+  const dom = await mountIsland({ search: '?service=cameras' });
+  fill(dom, FILLED);
+  dom.submit();
+  const href = dom.navigations()[0][1];
+  dom.visibility('hidden');
+  assert.equal(dom.sent.hidden, true);
+  dom.visibility('visible');
+  assert.equal(dom.sent.hidden, false);
+  assert.equal(dom.document.activeElement, dom.sentTitle);
+  assert.deepEqual(dom.sending(), IDLE);
+  assert.deepEqual(values(dom), [...FILLED_VALUES.slice(0, 4), 'cameras']);
+  assert.equal(dom.retry.getAttribute('href'), href);
+  // Minuteur annulé : rien ne change à 3 s ; retour suivant sans nouvel envoi sans effet.
+  mock.timers.tick(3000);
+  assert.deepEqual(dom.sending(), IDLE);
+  dom.document.activeElement = dom.body;
+  dom.visibility('hidden');
+  dom.visibility('visible');
+  assert.equal(dom.document.activeElement, dom.body);
+});
+
+test('retour par pageshow persisted : confirmation ; pageshow non persisted sans effet', async () => {
+  const dom = await mountIsland({ coarse: true });
+  fill(dom);
+  dom.submit();
+  dom.pageshow(false);
+  assert.equal(dom.sent.hidden, true);
+  assert.deepEqual(dom.sending(), SENDING);
+  dom.pageshow(true);
+  assert.equal(dom.sent.hidden, false);
+  assert.equal(dom.document.activeElement, dom.sentTitle);
+  assert.deepEqual(dom.sending(), IDLE);
+});
+
+test('visible sans hidden préalable, ou sans envoi : rien', async () => {
+  const dom = await mountIsland();
+  dom.visibility('hidden');
+  dom.visibility('visible');
+  dom.pageshow(true);
+  assert.equal(dom.sent.hidden, true);
+  fill(dom);
+  dom.submit();
+  dom.visibility('visible');
+  assert.equal(dom.sent.hidden, true);
+  assert.notEqual(dom.document.activeElement, dom.sentTitle);
+  mock.timers.tick(3000);
+});
+
+test('Réessayer : clic principal → openWhatsApp(même lien), aucun événement, retour de nouveau attendu ; clic modifié natif', async () => {
+  const dom = await mountIsland();
+  fill(dom);
+  dom.submit();
+  const href = dom.navigations()[0][1];
+  dom.visibility('hidden');
+  dom.visibility('visible');
+  const before = dom.events().length;
+  const event = dom.click(dom.retry);
+  assert.equal(event.defaultPrevented, true);
+  assert.deepEqual(dom.navigations(), [['open', href, '_blank'], ['open', href, '_blank']]);
+  assert.equal(dom.events().length, before);
+  dom.document.activeElement = dom.body;
+  dom.visibility('hidden');
+  dom.visibility('visible');
+  assert.equal(dom.document.activeElement, dom.sentTitle);
+  for (const init of [{ ctrlKey: true }, { metaKey: true }, { shiftKey: true }, { altKey: true }, { button: 1 }]) {
+    assert.equal(dom.click(dom.retry, init).defaultPrevented, false, JSON.stringify(init));
+  }
+  assert.equal(dom.navigations().length, 2);
+});
+
+test('Réessayer sur appareil tactile : même onglet', async () => {
+  const dom = await mountIsland({ coarse: true });
+  fill(dom);
+  dom.submit();
+  dom.pageshow(true);
+  dom.click(dom.retry);
+  const href = dom.navigations()[0][1];
+  assert.deepEqual(dom.navigations(), [['assign', href], ['assign', href]]);
+});
+
+test('hors ligne : bloc alerte dans #contact-offline, rien d’ouvert, aucun form_submit, pas d’état d’envoi ; renvoi en ligne → bloc retiré, WhatsApp ouvert', async () => {
+  const dom = await mountIsland({ online: false });
+  fill(dom, FILLED);
+  dom.document.activeElement = dom.button;
+  dom.submit();
+  assert.equal(dom.offline.children.length, 1);
+  assert.equal(dom.offline.children[0].getAttribute('class'), 'form-status');
+  assert.ok([...dom.offline.descendants()].some((el) => el.tag === 'a' && el.getAttribute('data-track') === 'call_click'));
+  assert.deepEqual(dom.log, []);
+  assert.deepEqual(dom.sending(), IDLE);
+  assert.equal(dom.document.activeElement, dom.button);
+  assert.deepEqual(values(dom), FILLED_VALUES);
+  // Second envoi hors ligne : bloc remplacé, pas empilé.
+  dom.submit();
+  assert.equal(dom.offline.children.length, 1);
+  dom.nav.onLine = true;
+  dom.submit();
+  assert.equal(dom.offline.children.length, 0);
+  assert.deepEqual(dom.navigations().map(([kind]) => kind), ['open']);
+  assert.deepEqual(dom.events().map((d) => d.name), ['form_submit']);
+  mock.timers.tick(3000);
+});
+
+test('hors ligne, formulaire invalide : erreurs 2.2, aucun bloc hors ligne', async () => {
+  const dom = await mountIsland({ online: false });
+  dom.submit();
+  assert.equal(dom.offline.children.length, 0);
+  assert.deepEqual(dom.events().map((d) => d.name), ['form_error']);
+});
+
+test('envoi invalide après une confirmation : confirmation cachée, #contact-offline vide, form_error', async () => {
+  const dom = await mountIsland();
+  fill(dom);
+  dom.submit();
+  dom.visibility('hidden');
+  dom.visibility('visible');
+  assert.equal(dom.sent.hidden, false);
+  dom.phone.value = '12345';
+  dom.submit();
+  assert.equal(dom.sent.hidden, true);
+  assert.equal(dom.offline.children.length, 0);
+  assert.deepEqual(dom.events().map((d) => d.name), ['form_submit', 'form_error']);
+  assert.equal(dom.phone.value, '12345');
+});
+
+test('aucun texte posé par l’îlot hors copie du libellé d’envoi dans #contact-sending', async () => {
+  const dom = await mountIsland();
+  fill(dom);
+  dom.submit();
+  mock.timers.tick(3000);
+  dom.submit();
+  dom.visibility('hidden');
+  dom.visibility('visible');
+  dom.nav.onLine = false;
+  dom.submit();
+  assert.ok(textWrites.length > 0);
+  for (const [id, value] of textWrites) {
+    assert.equal(id, 'contact-sending');
+    assert.ok(value === SENDING_TEXT || value === '', value);
+  }
+});
+
+test('attente expirée : page non cachée dans les 3 s après l’envoi → hidden puis visible plus tard sans confirmation, focus inchangé', async () => {
+  const dom = await mountIsland();
+  fill(dom);
+  dom.submit();
+  mock.timers.tick(3000);
+  dom.document.activeElement = dom.body;
+  dom.visibility('hidden');
+  dom.visibility('visible');
+  assert.equal(dom.sent.hidden, true);
+  assert.equal(dom.document.activeElement, dom.body);
+});
+
+test('attente expirée après Réessayer : même délai de 3 s', async () => {
+  const dom = await mountIsland();
+  fill(dom);
+  dom.submit();
+  dom.visibility('hidden');
+  dom.visibility('visible');
+  dom.click(dom.retry);
+  mock.timers.tick(3000);
+  dom.document.activeElement = dom.body;
+  dom.visibility('hidden');
+  dom.visibility('visible');
+  assert.equal(dom.document.activeElement, dom.body);
 });

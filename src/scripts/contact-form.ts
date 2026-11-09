@@ -7,6 +7,11 @@
 // Story 2.3 : lit #rs-data (contexte, tables `services` et `cities`), présélectionne le service et la ville
 // d'après `?service=` / `?city=`, compose le message hébreu avec waHref() et ouvre WhatsApp (même onglet sur
 // appareil tactile, nouvel onglet sinon) ; émet `form_submit` / `form_error` par CustomEvent('rs:track').
+// Story 2.4 (FR33, UX-DR29) : état d'envoi (bouton aria-disabled, libellé d'envoi annoncé par
+// #contact-sending, nouvel envoi ignoré pendant 3 s), confirmation au retour sur la page (visibilitychange
+// hidden puis visible, ou pageshow persisted ; focus sur son titre, Réessayer = même lien), bloc hors ligne
+// (navigator.onLine faux : template cloné dans #contact-offline, rien n'est ouvert, aucun form_submit).
+// Les blocs et libellés sont rendus au build ; l'îlot ne fait que les montrer, les cacher et les cloner.
 // Les valeurs saisies ne sont jamais modifiées (hors préremplissage de la ville vide au chargement).
 // Sans #rs-data lisible : la validation fonctionne, l'envoi valide n'ouvre rien et aucun événement n'est émis.
 // Sans îlot : le formulaire est masqué sans JS (2.1), et si le script ne charge pas, `required` reste actif.
@@ -84,6 +89,15 @@ if (form instanceof HTMLFormElement) {
     const serviceSelect = document.getElementById('contact-service');
     const messageInput = document.getElementById('contact-message');
     const data = readRsData();
+    const button = form.querySelector<HTMLElement>('button[type="submit"]');
+    const idleLabel = button?.querySelector<HTMLElement>('.submit-idle');
+    const sendingLabel = button?.querySelector<HTMLElement>('.submit-sending');
+    const sendingStatus = document.getElementById('contact-sending');
+    const sent = document.getElementById('contact-sent');
+    const sentTitle = document.getElementById('contact-sent-title');
+    const retry = document.getElementById('contact-sent-retry');
+    const offline = document.getElementById('contact-offline');
+    const offlineTemplate = document.getElementById('contact-offline-template');
     const inputs: Record<ContactField, HTMLInputElement> = { name: nameInput, phone: phoneInput };
     const FIELDS: readonly ContactField[] = ['name', 'phone'];
 
@@ -134,8 +148,71 @@ if (form instanceof HTMLFormElement) {
       summary.append(content);
     };
 
+    // Story 2.4 : état d'envoi. `sendingTimer` défini = envoi en cours (nouvel envoi ignoré).
+    let sendingTimer: ReturnType<typeof setTimeout> | undefined;
+    /** Un retour sur la page est attendu après l'ouverture de WhatsApp ; `left` : la page a été cachée depuis. */
+    let awaiting = false;
+    let left = false;
+    let lastHref: string | undefined;
+
+    const setSending = (on: boolean): void => {
+      if (on) button?.setAttribute('aria-disabled', 'true');
+      else button?.removeAttribute('aria-disabled');
+      if (idleLabel) idleLabel.hidden = on;
+      if (sendingLabel) sendingLabel.hidden = !on;
+      if (sendingStatus) sendingStatus.textContent = on ? (sendingLabel?.textContent ?? '').trim() : '';
+    };
+
+    const stopSending = (): void => {
+      clearTimeout(sendingTimer);
+      sendingTimer = undefined;
+      setSending(false);
+    };
+
+    // L'attente expire si la page n'a pas été cachée dans les 3 s (WhatsApp ouvert hors de la vue, ou pas du
+    // tout) : un changement d'onglet ultérieur sans rapport ne montre pas la confirmation.
+    let returnTimer: ReturnType<typeof setTimeout> | undefined;
+    const awaitReturn = (): void => {
+      awaiting = true;
+      left = false;
+      clearTimeout(returnTimer);
+      returnTimer = setTimeout(() => {
+        if (!left) awaiting = false;
+      }, 3000);
+    };
+
+    const showSent = (): void => {
+      awaiting = false;
+      left = false;
+      stopSending();
+      if (sent) sent.hidden = false;
+      sentTitle?.focus();
+    };
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') {
+        if (awaiting) left = true;
+        return;
+      }
+      if (awaiting && left) showSent();
+    });
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted && awaiting) showSent();
+    });
+
+    // Réessayer : même lien, même ouverture qu'au premier envoi, aucun événement. Clic modifié : natif.
+    retry?.addEventListener('click', (event) => {
+      if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || !lastHref) return;
+      event.preventDefault();
+      openWhatsApp(lastHref);
+      awaitReturn();
+    });
+
     form.addEventListener('submit', (event) => {
       event.preventDefault();
+      if (sendingTimer !== undefined) return;
+      if (sent) sent.hidden = true;
+      offline?.replaceChildren();
       const invalid = invalidContactFields({ name: nameInput.value, phone: phoneInput.value });
       for (const field of FIELDS) setError(field, invalid.includes(field));
       renderSummary(invalid);
@@ -143,6 +220,11 @@ if (form instanceof HTMLFormElement) {
       if (first) {
         inputs[first].focus();
         if (data) track({ name: 'form_error', data: { lang: data.lang, fields: invalid.join(',') } });
+        return;
+      }
+      // Hors ligne : bloc d'alerte avec le lien Appeler ; rien n'est ouvert, aucun form_submit, focus inchangé.
+      if (navigator.onLine === false) {
+        if (offline && offlineTemplate instanceof HTMLTemplateElement) offline.append(offlineTemplate.content.cloneNode(true));
         return;
       }
       if (!data) return;
@@ -156,11 +238,16 @@ if (form instanceof HTMLFormElement) {
         cityHe: resolveCityHe(cityText, data.cities, cityParam),
         lines: formLines({ name: nameInput.value, phone: phoneInput.value, message }),
       });
+      setSending(true);
+      sendingTimer = setTimeout(stopSending, 3000);
+      lastHref = href;
+      retry?.setAttribute('href', href);
       track({
         name: 'form_submit',
         data: { lang: data.lang, service: code, from_service_param: fromServiceParam, city_filled: cityText.trim() !== '' },
       });
       openWhatsApp(href);
+      awaitReturn();
     });
 
     // Liens du résumé : focus sur le champ visé (sans changer l'URL).

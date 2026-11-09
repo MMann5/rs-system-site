@@ -7,6 +7,11 @@
 // messages, clone le résumé dans #contact-errors (role="alert") et pose aria-invalid / aria-describedby.
 // Story 2.3 (FR29, FR30, AD-5, AD-13) : #rs-data embarque les tables `services` et `cities` (vide avant
 // l'epic 4) ; l'îlot présélectionne par `?service=` / `?city=`, compose le message et ouvre WhatsApp.
+// Story 2.4 (FR33, UX-DR29, AD-5, AD-6) : états d'envoi, de retour et hors ligne, rendus au build et cachés :
+// libellé d'envoi du bouton (.submit-sending, trois points statiques) annoncé par #contact-sending
+// (role="status"), bloc de confirmation #contact-sent (filet success, Réessayer = même lien WhatsApp,
+// Appeler), bloc hors ligne (<template>) cloné par l'îlot dans #contact-offline (role="alert"), juste avant
+// le bouton. L'îlot ne connaît aucune chaîne : il montre, cache et clone.
 // Pas de bloc contact sur cette page. Sans JS (`scripting: none`), le bloc formulaire est masqué et le
 // <noscript> propose Appeler › WhatsApp ›.
 // Aucun attribut `name` sur les champs : l'îlot les lit par id, et si le script ne charge pas, rien ne doit
@@ -52,6 +57,15 @@ const phoneError = t(lang, 'form.phone.error');
     <div class="grid">
       <div class="form-block">
         <h2 class="form-title">{t(lang, 'form.title')}</h2>
+        <div id="contact-sent" class="form-status sent" hidden>
+          <svg class="status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+          <div class="status-body">
+            <h3 id="contact-sent-title" class="status-title" tabindex="-1">{t(lang, 'form.sent.title')}</h3>
+            <p class="status-text">{t(lang, 'form.sent.text')}</p>
+            <p class="status-text">{t(lang, 'form.sent.retry-question')} <a id="contact-sent-retry" href={wa} class="status-action">{t(lang, 'form.sent.retry')}<span aria-hidden="true">{' ›'}</span></a></p>
+            <p class="status-text"><a href={telHref()} class="status-action" data-track="call_click" data-placement="contact_page">{t(lang, 'form.sent.call')} <PhoneNumber /><span aria-hidden="true">{' ›'}</span></a></p>
+          </div>
+        </div>
         <div id="contact-errors" role="alert"></div>
         <template id="contact-errors-template">
           <div class="form-status">
@@ -93,10 +107,27 @@ const phoneError = t(lang, 'form.phone.error');
             <label for="contact-message" class="label">{t(lang, 'form.message.label')} <span class="optional">{optional}</span></label>
             <textarea id="contact-message" class="field message" rows="4" maxlength="1000" enterkeyhint="send"></textarea>
           </div>
+          <div id="contact-offline" class="offline" role="alert"></div>
+          <template id="contact-offline-template">
+            <div class="form-status">
+              <svg class="status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7.5v5.5M12 16.5v.01" /></svg>
+              <div class="status-body">
+                <h3 class="status-title">{t(lang, 'form.offline.title')}</h3>
+                <p class="status-text"><a href={telHref()} class="status-action" data-track="call_click" data-placement="contact_page">{t(lang, 'form.offline.call')} <PhoneNumber /><span aria-hidden="true">{' ›'}</span></a></p>
+              </div>
+            </div>
+          </template>
           <button type="submit" class="submit" data-surface="accent">
-            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path d="M4 20l1.3-3.9A8 8 0 1 1 8 19z" /></svg>
-            <span>{t(lang, 'form.submit')}</span>
+            <span class="submit-idle">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path d="M4 20l1.3-3.9A8 8 0 1 1 8 19z" /></svg>
+              <span>{t(lang, 'form.submit')}</span>
+            </span>
+            <span class="submit-sending" hidden>
+              <span>{t(lang, 'form.sending')}</span>
+              <svg class="dots" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="19" cy="12" r="2" /></svg>
+            </span>
           </button>
+          <p id="contact-sending" class="visually-hidden" role="status"></p>
           <p class="note">{t(lang, 'form.note')}{isEnabled('privacy') && <> <a href={url('privacy', lang)}>{t(lang, 'nav.privacy')}</a></>}</p>
         </form>
       </div>
@@ -324,13 +355,15 @@ const phoneError = t(lang, 'form.phone.error');
    * droits, icône 24px, h3 navy, liens vers les champs (cible ≥ 44px). */
   /* #contact-errors n'est jamais masqué (display: none retirerait la région live de l'arbre
    * d'accessibilité) : vide, il reste à hauteur nulle ; la marge est portée par le bloc inséré. */
+  /* La couleur du filet et de l'icône suit la variante : erreur par défaut, success pour la confirmation. */
   .form-status {
+    --status-color: var(--color-error);
     margin-block-start: var(--form-fields-gap);
     display: flex;
     align-items: flex-start;
     gap: var(--space-4);
     padding: var(--space-6);
-    border-inline-start: var(--form-status-rule) solid var(--color-error);
+    border-inline-start: var(--form-status-rule) solid var(--status-color);
     border-radius: var(--radius-none);
     background-color: var(--color-white);
     color: var(--color-ink);
@@ -340,14 +373,54 @@ const phoneError = t(lang, 'form.phone.error');
     flex-shrink: 0;
     inline-size: var(--icon-size-status);
     block-size: var(--icon-size-status);
-    color: var(--color-error);
+    color: var(--status-color);
     stroke-width: var(--icon-stroke-width);
     stroke-linecap: round;
     stroke-linejoin: round;
   }
 
+  /* Story 2.4 : confirmation au retour (filet et icône success) ; cachée tant que l'îlot ne la montre pas. */
+  .sent {
+    --status-color: var(--color-success);
+  }
+
+  .form-status[hidden] {
+    display: none;
+  }
+
   .status-body {
     min-inline-size: 0;
+  }
+
+  .status-text {
+    margin: 0;
+    margin-block-start: var(--space-2);
+    font-size: var(--type-body-size);
+    line-height: var(--type-body-leading);
+  }
+
+  /* Liens « › » des blocs d'état : en ligne avec le texte (le libellé et le numéro peuvent passer à la ligne
+   * à 320px), cible ≥ 44px de haut ; le numéro ne se coupe pas. */
+  .status-action {
+    display: inline-block;
+    box-sizing: border-box;
+    min-block-size: var(--space-12);
+    padding-block: calc((var(--space-12) - var(--type-body-size) * var(--type-body-leading)) / 2);
+    color: var(--color-link);
+  }
+
+  .status-action :global(bdi) {
+    white-space: nowrap;
+  }
+
+  /* Bloc hors ligne, dans la colonne flex du formulaire : vide, la région annule l'écart qu'elle ajoute
+   * (jamais display: none, qui la retirerait de l'arbre d'accessibilité) ; remplie, l'écart suffit. */
+  .offline:empty {
+    margin-block-end: calc(var(--form-fields-gap) * -1);
+  }
+
+  .offline .form-status {
+    margin-block-start: 0;
   }
 
   .status-title {
@@ -416,6 +489,30 @@ const phoneError = t(lang, 'form.phone.error');
     font-weight: var(--type-submit-weight);
     white-space: nowrap;
     cursor: pointer;
+  }
+
+  /* Story 2.4 : pendant l'ouverture de WhatsApp, le bouton reste focalisable (aria-disabled, jamais disabled). */
+  .submit[aria-disabled="true"] {
+    cursor: default;
+  }
+
+  .submit-idle,
+  .submit-sending {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .submit-idle[hidden],
+  .submit-sending[hidden] {
+    display: none;
+  }
+
+  /* Trois points statiques (aucune animation). */
+  .dots {
+    flex-shrink: 0;
+    inline-size: var(--icon-size);
+    block-size: var(--icon-size);
   }
 
   @media (width < 700px) {
