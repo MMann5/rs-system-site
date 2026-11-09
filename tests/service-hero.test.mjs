@@ -1,6 +1,7 @@
 // Story 3.2 (FR3, AD-4) : héros des pages services, photo encadrée ou illustration ; `alt` exigé pour une photo.
 // Story 3.3 (UX-DR14) : ratio du cadre sous 700px par photo, 4:5 par défaut, 4:3 pour interrupteur et interphone.
 // Story 3.4 (UX-DR13, FR23) : héros sombre `cover` (Réseaux, Entrepreneurs) et liens de tuile omis si leur cible est inactive.
+// Story 3.5 (FR23, D3) : liens Devis (`quote`) et visite à service fixé (`visit.service`) des tuiles de l'accueil.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { heroCover, heroPhoto, tileLinks } from '../src/lib/service-hero.ts';
@@ -77,4 +78,28 @@ test('tileLinks : details → omis si la cible est inactive (contractors, networ
 test('tileLinks : visit → Contact ?service= de la page, omis si contact est inactif', () => {
   assert.deepEqual(tileLinks({ kind: 'visit' }, { lang: 'ru', service: 'intercom' }, deps(['contact'])), [{ href: '/ru/contact/?service=intercom', label: 'ru:action.site-visit' }]);
   assert.deepEqual(tileLinks({ kind: 'visit' }, { lang: 'ru', service: 'intercom' }, deps(['intercom'])), []);
+});
+
+// Story 3.5 (FR23, D3) : liens des tuiles de l'accueil.
+test('tileLinks : quote → Contact ?service= du lien, libellé action.quote ou action.quote-site', () => {
+  assert.deepEqual(tileLinks({ kind: 'quote', service: 'cameras', label: 'quote' }, { lang: 'he' }, deps(['contact'])), [{ href: '/he/contact/?service=cameras', label: 'he:action.quote' }]);
+  assert.deepEqual(tileLinks({ kind: 'quote', service: 'crane-cameras', label: 'quote-site' }, { lang: 'fr', service: 'cameras' }, deps(['contact'])), [{ href: '/fr/contact/?service=crane-cameras', label: 'fr:action.quote-site' }]);
+});
+
+test('tileLinks : visit avec service → prioritaire sur le contexte (accueil sans service)', () => {
+  assert.deepEqual(tileLinks({ kind: 'visit', service: 'intercom' }, { lang: 'en' }, deps(['contact'])), [{ href: '/en/contact/?service=intercom', label: 'en:action.site-visit' }]);
+  assert.deepEqual(tileLinks({ kind: 'visit', service: 'intercom' }, { lang: 'en', service: 'cameras' }, deps(['contact'])), [{ href: '/en/contact/?service=intercom', label: 'en:action.site-visit' }]);
+});
+
+test('tileLinks : quote et visit omis si contact est inactif, url jamais appelé', () => {
+  assert.deepEqual(tileLinks({ kind: 'quote', service: 'cameras', label: 'quote' }, { lang: 'he' }, deps(['cameras', 'contractors'])), []);
+  assert.deepEqual(tileLinks({ kind: 'quote', service: 'crane-cameras', label: 'quote-site' }, { lang: 'ru' }, deps([])), []);
+  assert.deepEqual(tileLinks({ kind: 'visit', service: 'intercom' }, { lang: 'fr' }, deps(['intercom'])), []);
+});
+
+test('tileLinks : details des tuiles de l\'accueil omis si leur page est inactive', () => {
+  for (const page of ['cameras', 'contractors', 'intercom', 'smart-home', 'networks', 'smoke-detectors']) {
+    assert.deepEqual(tileLinks({ kind: 'details', page }, { lang: 'he' }, deps(['contact'])), [], page);
+    assert.deepEqual(tileLinks({ kind: 'details', page }, { lang: 'he' }, deps([page])), [{ href: `/he/${page}/`, label: 'he:action.details' }], page);
+  }
 });

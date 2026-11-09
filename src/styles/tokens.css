@@ -465,4 +465,24 @@
   --hero-photo-min-contractors: 820px;
   /* DESIGN.md › Photographie : Réseaux (baie, câbles) « center 60% » */
   --photo-focus-network: center 60%;
+  /* — Story 3.5 : accueil complet avec les tuiles de services (canvas Main.dc.html, DESIGN.md › Layout) — */
+  /* DESIGN.md › Layout › Par point de rupture › Tuile grue : « min-block-size 720px (accueil) » */
+  --tile-crane-min-home: 720px;
+  /* DESIGN.md › Layout › Tuile claire accueil (caméras) : « photo 1100 × 520 » ; canvas Main.dc.html : « margin-top: 36px » */
+  --tile-feature-photo-max: 1100px;
+  --tile-feature-photo-height: 520px;
+  --tile-feature-photo-gap: 36px;
+  /* DESIGN.md › Layout & Spacing : grille « repeat(auto-fit, minmax(min(100%, 520px), 1fr)) » */
+  --tile-grid-col-min: 520px;
+  /* DESIGN.md › Layout › Par point de rupture › Tuile de grille : « 600px », « 560px », « 520px » */
+  --tile-grid-min: 600px;
+  --tile-grid-min-tablet: 560px;
+  --tile-grid-min-mobile: 520px;
+  /* Canvas Main.dc.html › grille : « padding: 52px 24px 28px » (haut, puis photo à 28px des liens), texte « font-size: 20px » */
+  --tile-grid-pad-top: 52px;
+  --tile-grid-photo-gap: 28px;
+  --type-grid-tile-text-size: 20px;
+  /* Canvas Main.dc.html › tuile détecteur : « padding: 72px 22px 88px » */
+  --tile-smoke-pad-top: 72px;
+  --tile-smoke-pad-end: 88px;
 }

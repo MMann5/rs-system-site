@@ -27,6 +27,23 @@ export const servicePageSchema = z.strictObject({
     .optional(),
 });
 
+// Story 3.5 (FR1, AD-4) : textes des tuiles de l'accueil (src/templates/Home.astro, canvas Main.dc.html) : tuile
+// caméras, tuile grue (avec sur-titre), grille sous un titre masqué (syndics, interphone, maison connectée,
+// réseaux) et tuile détecteur (sans photo, donc sans `alt`). Libellés des liens : src/i18n (action.*).
+const homeTile = z.strictObject({ title: perLang(text), text: perLang(text), alt: perLang(text) });
+export const homePageSchema = z.strictObject({
+  cameras: homeTile,
+  crane: z.strictObject({ eyebrow: perLang(text), title: perLang(text), text: perLang(text), alt: perLang(text) }),
+  services: z.strictObject({
+    title: perLang(text),
+    management: homeTile,
+    intercom: homeTile,
+    'smart-home': homeTile,
+    networks: homeTile,
+  }),
+  smoke: z.strictObject({ title: perLang(text), text: perLang(text) }),
+});
+
 // Le champ s'appelle `slugs` : un champ `slug` remplacerait l'id de l'entrée (loader glob).
 export const pageSchema = z.strictObject({
   slugs: perLang(z.string()),
@@ -34,4 +51,11 @@ export const pageSchema = z.strictObject({
   previewOnly: z.boolean().default(false),
   meta: z.strictObject({ title: perLang(text), description: perLang(text) }),
   service: servicePageSchema.optional(),
+  home: homePageSchema.optional(),
 });
+
+/** Story 3.5 : bloc `home` de la page `id`, obligatoire pour l'accueil ; lève une erreur nommant le fichier sinon. */
+export function requireHome<T>(id: string, home: T | undefined): T {
+  if (!home) throw new Error(`Home : bloc « home » absent de src/content/pages/${id}.yaml`);
+  return home;
+}

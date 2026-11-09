@@ -5,6 +5,7 @@
 // Story 3.4 (UX-DR13, AD-9) : héros photo sombre plein cadre (`cover` : Réseaux, Entrepreneurs), rendu par
 // HeroPhoto.astro avec son point focal, son scrim, sa hauteur et le libellé de son lien Devis ; même garde `alt`.
 // Story 3.4 (FR23) : résolution du lien de tuile sortie de Service.astro (tileLinks), à dépendances injectées.
+// Story 3.5 (FR23, D3) : liens `quote` (Devis des tuiles caméras et grue de l'accueil) et `visit` à service fixé.
 // Pur, sans import Astro, syntaxe TypeScript effaçable uniquement : Node l'importe directement (tests).
 import { bandLinks } from './contact/band.ts';
 import type { Lang } from './langs.ts';
@@ -96,13 +97,19 @@ function requireAlt(id: string, alt: Record<Lang, string> | undefined): Record<L
 }
 
 /**
- * Lien unique d'une tuile de page service :
+ * Lien d'une tuile (pages services et accueil) :
  * - `details` : « לפרטים › » vers la page `page`, omis tant qu'elle est inactive (tuile grue de Caméras →
- *   Entrepreneurs, tuile immeuble d'Entrepreneurs → Réseaux) ;
- * - `visit` : « תיאום סיור טכני › » vers Contact avec `?service=` de la page, construit par bandLinks comme le
- *   Devis du héros, omis si `contact` est inactif (tuile immeuble d'Interphone).
+ *   Entrepreneurs, tuile immeuble d'Entrepreneurs → Réseaux, tuiles de l'accueil) ;
+ * - `visit` : « תיאום סיור טכני › » vers Contact avec `?service=` (celui du lien s'il est donné, sinon celui du
+ *   contexte), construit par bandLinks comme le Devis du héros, omis si `contact` est inactif (tuile immeuble
+ *   d'Interphone, tuile syndics de l'accueil → `intercom`, décision D3) ;
+ * - `quote` (story 3.5) : Devis vers Contact avec `?service=` du lien, libellé `action.quote` ou
+ *   `action.quote-site`, omis si `contact` est inactif (tuiles caméras et grue de l'accueil).
  */
-export type TileLinkDef = { kind: 'details'; page: string } | { kind: 'visit' };
+export type TileLinkDef =
+  | { kind: 'details'; page: string }
+  | { kind: 'visit'; service?: string }
+  | { kind: 'quote'; service: string; label: 'quote' | 'quote-site' };
 
 export interface TileLinkDeps {
   isEnabled(id: string): boolean;
@@ -110,7 +117,7 @@ export interface TileLinkDeps {
   t(lang: Lang, key: string): string;
 }
 
-/** Liens de la tuile (0 ou 1) ; `url` n'est jamais appelé pour une cible inactive (FR23). */
+/** Liens d'un lien de tuile (0 ou 1) ; `url` n'est jamais appelé pour une cible inactive (FR23). */
 export function tileLinks(
   link: TileLinkDef,
   { lang, service }: { lang: Lang; service?: string | undefined },
@@ -119,6 +126,9 @@ export function tileLinks(
   if (link.kind === 'details') {
     return deps.isEnabled(link.page) ? [{ href: deps.url(link.page, lang), label: deps.t(lang, 'action.details') }] : [];
   }
-  const { detailsHref } = bandLinks({ lang, service }, deps);
-  return detailsHref ? [{ href: detailsHref, label: deps.t(lang, 'action.site-visit') }] : [];
+  const target = link.service ?? service;
+  const { detailsHref } = bandLinks({ lang, service: target }, deps);
+  if (!detailsHref) return [];
+  const label = link.kind === 'quote' ? `action.${link.label}` : 'action.site-visit';
+  return [{ href: detailsHref, label: deps.t(lang, label) }];
 }

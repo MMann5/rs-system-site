@@ -17,3 +17,124 @@ meta:
     en: 'Security cameras, smoke detectors, smart home, networks and intercoms installed from Beer Sheva to Jerusalem. Call or WhatsApp 050-956-5669.'
     ru: 'Камеры, датчики дыма, умный дом, сети и домофоны от Беэр-Шевы до Иерусалима. Звоните или пишите в WhatsApp: 050-956-5669.'
     fr: 'Caméras, détecteurs de fumée, maison connectée, réseaux et interphones, de Beer-Sheva à Jérusalem. Appel ou WhatsApp : 050-956-5669.'
+# Story 3.5 : tuiles de l'accueil (src/templates/Home.astro). Hébreu mot pour mot du canvas Main.dc.html ;
+# en/ru/fr réécrits (pas mot à mot) par l'agent : relecture humaine recommandée.
+home:
+  cameras:
+    title:
+      he: 'מצלמות אבטחה'
+      en: 'Security cameras'
+      ru: 'Камеры видеонаблюдения'
+      fr: 'Caméras de surveillance'
+    text:
+      he: 'רואים מה קורה בבית. מכל מקום.'
+      en: 'See what’s happening at home. From anywhere.'
+      ru: 'Вы видите, что происходит дома. Откуда угодно.'
+      fr: 'Voyez ce qui se passe chez vous. D’où que vous soyez.'
+    alt:
+      he: 'מצלמת כיפה מותקנת על קיר אבן'
+      en: 'Dome camera mounted on a stone wall'
+      ru: 'Купольная камера на каменной стене'
+      fr: 'Caméra dôme fixée sur un mur en pierre'
+  crane:
+    eyebrow:
+      he: 'לקבלנים'
+      en: 'For contractors'
+      ru: 'Подрядчикам'
+      fr: 'Entrepreneurs'
+    title:
+      he: 'מצלמה על העגורן.'
+      en: 'A camera on the crane.'
+      ru: 'Камера на кране.'
+      fr: 'Une caméra sur la grue.'
+    text:
+      he: 'רואים את האתר מתקדם. בלי לנסוע.'
+      en: 'Watch your site progress. Without driving out to it.'
+      ru: 'Видно, как продвигается стройка. Без поездок на объект.'
+      fr: 'Vous suivez l’avancement du chantier. Sans vous déplacer.'
+    alt:
+      he: 'עגורן צריח באתר בנייה בשעת ערב'
+      en: 'Tower crane on a building site at dusk'
+      ru: 'Башенный кран на стройплощадке в сумерках'
+      fr: 'Grue à tour sur un chantier au crépuscule'
+  services:
+    title:
+      he: 'שירותים נוספים'
+      en: 'More services'
+      ru: 'Другие услуги'
+      fr: 'Autres services'
+    management:
+      title:
+        he: 'לחברות ניהול ולוועדי בית'
+        en: 'For management companies and building committees'
+        ru: 'Управляющим компаниям и домовым комитетам'
+        fr: 'Pour les syndics et les conseils d’immeuble'
+      text:
+        he: 'אינטרקום ומצלמות לבניין. הצעה מסודרת לדיירים.'
+        en: 'Intercom and cameras for the whole building. A clear quote to present to residents.'
+        ru: 'Домофон и камеры для всего дома. Понятное предложение, которое можно показать жильцам.'
+        fr: 'Interphone et caméras pour tout l’immeuble. Un devis clair à présenter aux résidents.'
+      alt:
+        he: 'בניין מגורים מודרני מואר בלילה'
+        en: 'Modern residential building lit up at night'
+        ru: 'Современный жилой дом с подсветкой ночью'
+        fr: 'Immeuble d’habitation moderne éclairé la nuit'
+    intercom:
+      title:
+        he: 'אינטרקום'
+        en: 'Intercom'
+        ru: 'Домофон'
+        fr: 'Interphone'
+      text:
+        he: 'יודעים מי בדלת. לפני שפותחים.'
+        en: 'Know who’s at the door. Before you open it.'
+        ru: 'Вы знаете, кто у двери. Ещё до того, как открыть.'
+        fr: 'Vous savez qui sonne. Avant d’ouvrir.'
+      alt:
+        he: 'יד לוחצת על לוח אינטרקום בכניסה לבניין'
+        en: 'A hand pressing an intercom panel at a building entrance'
+        ru: 'Рука нажимает кнопку домофона у входа в дом'
+        fr: 'Une main appuie sur la platine d’interphone à l’entrée d’un immeuble'
+    smart-home:
+      title:
+        he: 'בית חכם'
+        en: 'Smart home'
+        ru: 'Умный дом'
+        fr: 'Maison connectée'
+      text:
+        he: 'אור, תריסים ומזגן. בלחיצה אחת.'
+        en: 'Lights, shutters and air conditioning. One touch.'
+        ru: 'Свет, жалюзи и кондиционер. Одним нажатием.'
+        fr: 'Lumière, volets et climatisation. D’une seule touche.'
+      alt:
+        he: 'מתג חכם לבן על קיר בחדר שינה'
+        en: 'White smart switch on a bedroom wall'
+        ru: 'Белый умный выключатель на стене спальни'
+        fr: 'Interrupteur connecté blanc sur le mur d’une chambre'
+    networks:
+      title:
+        he: 'תקשורת ורשתות'
+        en: 'Networks and communications'
+        ru: 'Сети и связь'
+        fr: 'Réseaux et communication'
+      text:
+        he: 'רשת אחת יציבה לכל המערכות.'
+        en: 'One stable network for every system.'
+        ru: 'Одна надёжная сеть для всех систем.'
+        fr: 'Un seul réseau stable pour tous vos équipements.'
+      alt:
+        he: 'כבלי רשת מחוברים למתג תקשורת'
+        en: 'Network cables plugged into a switch'
+        ru: 'Сетевые кабели, подключённые к коммутатору'
+        fr: 'Câbles réseau branchés sur un commutateur'
+  smoke:
+    title:
+      he: 'גלאי עשן'
+      en: 'Smoke detectors'
+      ru: 'Датчики дыма'
+      fr: 'Détecteurs de fumée'
+    text:
+      he: 'מזהים מוקדם. בכל חדר.'
+      en: 'Early warning. In every room.'
+      ru: 'Раннее обнаружение. В каждой комнате.'
+      fr: 'Une alerte précoce. Dans chaque pièce.'

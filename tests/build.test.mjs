@@ -1,4 +1,4 @@
-// Stories 1.3 à 1.9, 2.1 à 2.4, 3.1 à 3.4 : sortie réelle du build, sur une branche puis sur main (registre, layout Base.astro).
+// Stories 1.3 à 1.9, 2.1 à 2.4, 3.1 à 3.5 : sortie réelle du build, sur une branche puis sur main (registre, layout Base.astro).
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
@@ -346,6 +346,8 @@ function assertIcons(html, where) {
 
 /** Story 1.8 : attributs d'une balise ouvrante `tag` (chaîne). */
 const attr = (tag, name) => tag.match(new RegExp(`\\s${name}="([^"]*)"`))?.[1];
+/** Story 3.5 : balises ouvrantes `name`, guillemets compris (un `sizes` peut contenir « >= »). */
+const tagsOf = (html, name) => html.match(new RegExp(`<${name}\\b(?:[^>"]|"[^"]*")*>`, 'g')) ?? [];
 const CHEVRON = '<span aria-hidden="true"[^>]*> ›</span>';
 
 /** Lien « › » : href, data-track/data-placement (ou aucun), libellé puis chevron aria-hidden. */
@@ -358,19 +360,122 @@ function assertTextLink(match, href, label, track, placement, where) {
   assert.match(inner, new RegExp(`^${label}${CHEVRON}$`), `${where} : libellé et chevron ${inner}`);
 }
 
-/** Story 1.8 (FR1, FR21, NFR4, UX-DR13, UX-DR19, D2, D3) : héros photo puis bloc contact de l'accueil. */
+/** Story 3.5 : contenu de src/content/pages/home.yaml (bloc `home`). */
+const HOME_PAGE = parse(readFileSync(join(ROOT, 'src/content/pages/home.yaml'), 'utf8')).home;
+const GRID_SIZES = '(width >= 1076px) calc(50vw - 18px), calc(100vw - 24px)';
+/**
+ * Story 3.5 : tuiles de l'accueil, dans l'ordre de <main> : classes, titre, contenu YAML, point focal, fond et scrim
+ * (tuiles sombres), liens attendus ([page ou href, clé i18n]), `sizes` et dimensions de la photo, mouvement.
+ */
+const HOME_TILES = [
+  { cls: 'tile light feature', id: 'cameras-title', level: 'h2', content: () => HOME_PAGE.cameras, focus: 'dome', links: (lang) => [[PAGE_HREFS.cameras[lang], 'action.details'], [`${PAGE_HREFS.contact[lang]}?service=cameras`, 'action.quote']], sizes: 'min(1100px, calc(100vw - 68px))', land: ['2560', '1280'], portrait: ['1440', '1800'], motion: 'zoom' },
+  { cls: 'tile dark crane-home', id: 'crane-title', level: 'h2', content: () => HOME_PAGE.crane, focus: 'crane', bg: 'tile-night', scrim: 'crane', links: (lang) => [[PAGE_HREFS.contractors[lang], 'action.details'], [`${PAGE_HREFS.contact[lang]}?service=crane-cameras`, 'action.quote-site']], sizes: 'calc(100vw - 24px)', land: ['2560', '1164'], portrait: ['1440', '1800'], motion: 'parallax' },
+  { cls: 'tile dark grid', id: 'management-title', level: 'h3', content: () => HOME_PAGE.services.management, focus: 'building', bg: 'navy-deep', scrim: 'tile', links: (lang) => [[`${PAGE_HREFS.contact[lang]}?service=intercom`, 'action.site-visit']], sizes: GRID_SIZES, land: ['2560', '1280'], portrait: ['1440', '1800'], motion: 'zoom' },
+  { cls: 'tile light grid', id: 'intercom-title', level: 'h3', content: () => HOME_PAGE.services.intercom, focus: 'intercom', links: (lang) => [[PAGE_HREFS.intercom[lang], 'action.details']], sizes: GRID_SIZES, land: ['2560', '1280'], portrait: ['1440', '1080'], motion: 'zoom' },
+  { cls: 'tile light grid', id: 'smart-home-title', level: 'h3', content: () => HOME_PAGE.services['smart-home'], focus: 'switch', links: (lang) => [[PAGE_HREFS['smart-home'][lang], 'action.details']], sizes: GRID_SIZES, land: ['2560', '1280'], portrait: ['1440', '1080'], motion: 'zoom' },
+  { cls: 'tile dark grid', id: 'networks-title', level: 'h3', content: () => HOME_PAGE.services.networks, focus: 'network', bg: 'tile-night', scrim: 'network', links: (lang) => [[PAGE_HREFS.networks[lang], 'action.details']], sizes: GRID_SIZES, land: ['2560', '1344'], portrait: ['1440', '1800'], motion: 'zoom' },
+];
+
+/** Story 3.5 (FR1, FR23, NFR4, UX-DR4, UX-DR16, UX-DR17, UX-DR34, D1 à D3) : tuiles, grille et tuile détecteur de l'accueil. */
+function assertHomeTiles(html, main, pictures, lang, out, where) {
+  const dict = I18N[lang];
+  const tiles = main.match(/<section class="tile\b[\s\S]*?<\/section>/g) ?? [];
+  assert.equal(tiles.length, HOME_TILES.length, `${where} : tuiles`);
+  let linkCount = 0;
+  HOME_TILES.forEach((def, i) => {
+    const tile = tiles[i];
+    const at = `${where} : tuile ${def.id}`;
+    const content = def.content();
+    const dark = def.cls.includes(' dark ');
+    const tag = tile.match(/^<section\b[^>]*>/)[0];
+    assert.equal(attr(tag, 'class'), def.cls, `${at} : classes`);
+    assert.equal(attr(tag, 'aria-labelledby'), def.id, `${at} : aria-labelledby`);
+    assert.equal(attr(tag, 'data-surface'), dark ? 'photo' : undefined, `${at} : data-surface`);
+    const style = [`--photo-position: var(--photo-focus-${def.focus})`, ...(dark ? [`--tile-bg: var(--color-${def.bg}); --tile-scrim: var(--scrim-${def.scrim})`] : [])].join('; ');
+    assert.equal(attr(tag, 'style'), style, `${at} : style`);
+    // Texte : sur-titre (grue seulement), titre de niveau attendu, texte ; tous lus dans home.yaml.
+    const block = tile.match(/<div class="content reveal"[^>]*>([\s\S]*?)<div class="links"/)?.[1] ?? '';
+    assert.equal(block.match(/^<p class="eyebrow"[^>]*>([^<]*)<\/p>/)?.[1], content.eyebrow ? escaped(content.eyebrow[lang]) : undefined, `${at} : sur-titre`);
+    assert.equal(block.match(new RegExp(`<${def.level} id="${def.id}" class="title"[^>]*>([^<]*)</${def.level}>`))?.[1], escaped(content.title[lang]), `${at} : titre`);
+    assert.equal(block.match(/<p class="text"[^>]*>([^<]*)<\/p>/)?.[1], escaped(content.text[lang]), `${at} : texte`);
+    // Liens « › » (2 au plus), dans l'ordre du canvas, sans data-track, ton photo sur sombre, clair sinon, tous avant la photo.
+    const expected = def.links(lang);
+    const links = [...tile.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)];
+    assert.equal(links.length, expected.length, `${at} : liens`);
+    assert.ok(links.length <= 2, `${at} : plus de 2 liens`);
+    expected.forEach(([href, key], j) => {
+      assertTextLink(links[j], href, escaped(dict[key]), undefined, undefined, `${at} : lien ${key}`);
+      assert.equal(attr(`<a${links[j][1]}>`, 'class'), `text-link ${dark ? 'photo' : 'light'}`, `${at} : ton du lien ${key}`);
+      assert.ok(tile.indexOf(links[j][0]) < tile.indexOf('<picture'), `${at} : lien hors de l'image`);
+    });
+    linkCount += links.length;
+    // Photo : une par tuile, lazy, `sizes` de sa taille, budgets NFR4 des tuiles (180 000 octets).
+    assert.equal(tile.match(/<picture>/g)?.length, 1, `${at} : <picture>`);
+    assert.ok(tile.includes(pictures[i]), `${at} : <picture> dans l'ordre`);
+    assertServicePicture(pictures[i], { alt: content.alt[lang], sizes: def.sizes, land: def.land, portrait: def.portrait, priority: false, budgets: { land: 180_000, portrait: 180_000 } }, out, `${at} : photo`);
+    assert.equal(attr(tagsOf(pictures[i], 'img')[0], 'class'), `photo ${def.motion}`, `${at} : mouvement de la photo`);
+  });
+  // Grille : section `services` avec h2 masqué (YAML), conteneur de la grille, 4 tuiles en h3.
+  const services = main.slice(main.indexOf('<section class="services"'), main.indexOf('<section class="smoke'));
+  assert.match(services, /^<section class="services" aria-labelledby="services-title"[\s>]/, `${where} : section services`);
+  assert.equal(services.match(/<h2 id="services-title" class="visually-hidden"[^>]*>([^<]*)<\/h2>/)?.[1], escaped(HOME_PAGE.services.title[lang]), `${where} : h2 masqué de la grille`);
+  assert.match(services, /<\/h2><div class="services-grid"[^>]*><section class="tile dark grid"/, `${where} : conteneur de la grille`);
+  assert.equal(services.match(/<section class="tile\b/g)?.length, 4, `${where} : 4 tuiles dans la grille`);
+  assert.equal(services.match(/<h3[\s>]/g)?.length, 4, `${where} : 4 h3`);
+  // Tuile détecteur : h2, texte, un seul lien « לפרטים › » vers Détecteurs (ton clair), puis détecteur md décoratif.
+  const smoke = main.match(/<section class="smoke reveal"[\s\S]*?<\/section>/)?.[0] ?? '';
+  assert.match(smoke, /^<section class="smoke reveal" aria-labelledby="smoke-title"[\s>]/, `${where} : tuile détecteur`);
+  assert.equal(smoke.match(/<h2 id="smoke-title" class="title"[^>]*>([^<]*)<\/h2>/)?.[1], escaped(HOME_PAGE.smoke.title[lang]), `${where} : h2 détecteur`);
+  assert.equal(smoke.match(/<p class="text"[^>]*>([^<]*)<\/p>/)?.[1], escaped(HOME_PAGE.smoke.text[lang]), `${where} : texte détecteur`);
+  const smokeLinks = [...smoke.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)];
+  assert.equal(smokeLinks.length, 1, `${where} : liens de la tuile détecteur`);
+  assertTextLink(smokeLinks[0], PAGE_HREFS['smoke-detectors'][lang], escaped(dict['action.details']), undefined, undefined, `${where} : tuile détecteur vers Détecteurs`);
+  assert.equal(attr(`<a${smokeLinks[0][1]}>`, 'class'), 'text-link light', `${where} : ton du lien détecteur`);
+  const detector = smoke.match(/<div class="detector\b[^"]*"[^>]*>/)?.[0] ?? '';
+  assert.equal(attr(detector, 'class'), 'detector md', `${where} : détecteur md sans montée`);
+  assert.equal(attr(detector, 'aria-hidden'), 'true', `${where} : détecteur aria-hidden`);
+  assert.ok(smoke.indexOf(detector) > smoke.indexOf(smokeLinks[0][0]), `${where} : détecteur après le lien`);
+  assert.ok(!/<picture[\s>]/.test(smoke), `${where} : photo dans la tuile détecteur`);
+  assert.equal(linkCount + smokeLinks.length, 9, `${where} : 9 liens de tuiles`);
+  // CSS servie : grille auto-fit, colonnes de 520px au moins et 2 au plus, joint et padding de 12px ; tailles des tuiles ; parallaxe de la grue.
+  const css = servedCss(html, out);
+  const flat = css.replace(/\s+/g, '');
+  const grid = flat.match(/\.services-grid\[[^\]]*\]\{([^}]*)\}/)?.[1] ?? '';
+  assert.match(grid, /grid-template-columns:repeat\(auto-fit,minmax\(max\(min\(100%,var\(--tile-grid-col-min\)\),\(100%-var\(--tile-gutter\)\)\/2\),1fr\)\)/, `${where} : colonnes de la grille`);
+  assert.match(grid, /gap:var\(--tile-gutter\)/, `${where} : joint de la grille`);
+  assert.match(grid, /padding:var\(--tile-gutter\)/, `${where} : padding de la grille`);
+  // Photo non chargée : le fond de la tuile reste (claire surface-alt, sombre --tile-bg vérifié dans `style`).
+  assert.match(flat, /\.light\[[^\]]*\]\{[^}]*background-color:var\(--color-surface-alt\)/, `${where} : fond des tuiles claires`);
+  assert.match(flat, /\.dark\[[^\]]*\]\{[^}]*background-color:var\(--tile-bg\)/, `${where} : fond des tuiles sombres`);
+  assert.match(flat, /\.crane-home\[[^\]]*\]\{[^}]*min-block-size:var\(--tile-crane-min-home\)/, `${where} : hauteur de la tuile grue`);
+  assert.match(flat, /\.grid(?:\[[^\]]*\])?\.dark(?:\[[^\]]*\])?\{[^}]*min-block-size:var\(--tile-grid-min\)/, `${where} : hauteur des tuiles sombres de la grille`);
+  assert.match(flat, /\.feature\[[^\]]*\]\.media\[[^\]]*\]\{[^}]*block-size:var\(--tile-feature-photo-height\)/, `${where} : cadre photo de la tuile caméras`);
+  assert.match(flat, /\.parallax[^{]*\{[^}]*animation:[^;}]*tile-drift/, `${where} : parallaxe de la grue`);
+  assert.match(flat, /img\.parallax[^{]*\{animation-timeline:view\(\)/, `${where} : timeline de la parallaxe`);
+  assert.ok(!/animation:[^;}]*view\(\)/.test(css), `${where} : view() dans le raccourci animation`);
+  assert.ok(![...tiles, smoke].some((block) => block.includes('data-track=')), `${where} : data-track dans une tuile`);
+}
+
+/** Story 1.8 (FR1, FR21, NFR4, UX-DR13, UX-DR19, D2, D3), story 3.5 (FR1, FR23, UX-DR4, UX-DR16, UX-DR17) :
+ * héros photo, tuiles de services, tuile détecteur puis bloc contact de l'accueil. */
 function assertHome(html, lang, out) {
   const where = `home (${lang})`;
   const dict = I18N[lang];
   const main = html.match(/<main id="content"[^>]*>([\s\S]*?)<\/main>/)?.[1] ?? '';
-  // Héros en tête de <main>, puis le bloc contact ; plus de h1 site.name ni de baseline.
+  // Story 3.5 : ordre de <main> (les tuiles de la grille sont dans la section `services`), rien d'autre.
+  const sections = [...main.matchAll(/<section class="([^"]*)"/g)].map((m) => m[1]);
+  assert.deepEqual(sections, ['hero', 'tile light feature', 'tile dark crane-home', 'services', 'tile dark grid', 'tile light grid', 'tile light grid', 'tile dark grid', 'smoke reveal', 'band'], `${where} : sections de <main>`);
+  // Héros en tête de <main> ; plus de h1 site.name ni de baseline.
   assert.match(main, /^<section class="hero" aria-labelledby="hero-title" data-surface="photo"[\s>]/, `${where} : héros en tête`);
   const hero = main.match(/^<section class="hero"[\s\S]*?<\/section>/)?.[0] ?? '';
-  const band = main.slice(hero.length);
-  assert.match(band, /^<section class="band" aria-labelledby="contact-band-title" data-surface="navy"[\s>]/, `${where} : bloc après le héros`);
-  assert.ok(band.trimEnd().endsWith('</section>') && band.match(/<section[\s>]/g)?.length === 1, `${where} : rien d'autre dans <main>`);
-  // Un seul h1, celui du héros ; sous-titre.
+  const band = main.slice(main.indexOf('<section class="band"'));
+  assert.match(band, /^<section class="band" aria-labelledby="contact-band-title" data-surface="navy"[\s>]/, `${where} : bloc contact`);
+  assert.ok(band.trimEnd().endsWith('</section>') && band.match(/<section[\s>]/g)?.length === 1, `${where} : rien après le bloc contact`);
+  // Un seul h1, celui du héros, puis aucun saut de niveau (footer compris) ; sous-titre.
   assert.equal(html.match(/<h1[\s>]/g)?.length, 1, `${where} : <h1>`);
+  const levels = [...html.matchAll(/<h([1-6])[\s>]/g)].map((m) => Number(m[1]));
+  assert.equal(levels[0], 1, `${where} : premier titre ${levels}`);
+  levels.forEach((level, i) => assert.ok(i === 0 || level <= levels[i - 1] + 1, `${where} : saut de titre ${levels}`));
   assert.equal(hero.match(/<h1 id="hero-title"[^>]*>([^<]*)<\/h1>/)?.[1], dict['home.hero.title'], `${where} : h1`);
   // Story 3.4 : HeroPhoto sans variante, rendu de l'accueil inchangé (pas de style, h1 hero-title, pas de sur-titre).
   assert.equal(attr(hero.match(/^<section\b[^>]*>/)?.[0] ?? '', 'style'), undefined, `${where} : style du héros`);
@@ -383,10 +488,11 @@ function assertHome(html, lang, out) {
   assertTextLink(heroLinks[0], 'tel:+972509565669', dict['action.call'], 'call_click', 'hero', `${where} : héros Appeler`);
   assertTextLink(heroLinks[1], waHref(), dict['action.whatsapp'], 'whatsapp_click', 'hero', `${where} : héros WhatsApp`);
   for (const [, attrs] of heroLinks) assert.match(attrs, /\sclass="text-link photo"/, `${where} : ton photo`);
-  // <picture> : 3 sources 4:5 sous 700px, 2 sources paysage, puis <img> JPEG.
+  // <picture> : 3 sources 4:5 sous 700px, 2 sources paysage, puis <img> JPEG. Story 3.5 : héros puis 6 tuiles.
   const pictures = html.match(/<picture>[\s\S]*?<\/picture>/g) ?? [];
-  assert.equal(pictures.length, 1, `${where} : <picture>`);
+  assert.equal(pictures.length, 7, `${where} : <picture>`);
   assert.ok(hero.includes(pictures[0]), `${where} : <picture> hors du héros`);
+  assert.equal(html.match(/\sfetchpriority="high"/g)?.length, 1, `${where} : une seule image prioritaire`);
   const sources = pictures[0].match(/<source\b[^>]*>/g) ?? [];
   assert.equal(sources.length, 5, `${where} : <source>`);
   const widthsOf = (srcset) => (srcset ?? '').split(', ').map((c) => Number(c.split(' ')[1]?.replace('w', '')));
@@ -419,10 +525,12 @@ function assertHome(html, lang, out) {
   assert.equal(attr(img, 'sizes'), '100vw', `${where} : sizes img`);
   assert.match(attr(img, 'src') ?? '', /\.jpe?g$/, `${where} : src JPEG`);
   assert.deepEqual(widthsOf(attr(img, 'srcset')), [480, 768, 1080, 1440, 1920, 2560], `${where} : largeurs img`);
-  // Aucun autre <img> de photo : le seul autre est le logo du header.
-  const imgs = html.match(/<img\b[^>]*>/g) ?? [];
-  assert.equal(imgs.length, 2, `${where} : <img>`);
-  assert.ok((html.match(/<header[\s>][\s\S]*?<\/header>/)?.[0] ?? '').includes(imgs.find((i) => i !== img) ?? ''), `${where} : <img> hors header`);
+  // Story 3.5 : un <img> par <picture> (héros + 6 tuiles), plus le logo du header.
+  const imgs = tagsOf(html, 'img');
+  assert.equal(imgs.length, 8, `${where} : <img>`);
+  const photoImgs = pictures.map((pic) => tagsOf(pic, 'img')[0]);
+  assert.ok((html.match(/<header[\s>][\s\S]*?<\/header>/)?.[0] ?? '').includes(imgs.find((i) => !photoImgs.includes(i)) ?? ''), `${where} : <img> hors header`);
+  assertHomeTiles(html, main, pictures.slice(1), lang, out, where);
   // Poids (NFR4) : paysage 1440w ≤ 250 000 octets, portrait 1080w ≤ 120 000 octets, en AVIF et WebP.
   const fileAt = (tag, width) => (attr(tag, 'srcset') ?? '').split(', ').find((c) => c.endsWith(` ${width}w`))?.split(' ')[0];
   for (const [tag, width, budget] of [[sources[0], 1080, 120_000], [sources[1], 1080, 120_000], [sources[3], 1440, 250_000], [sources[4], 1440, 250_000]]) {
@@ -771,7 +879,7 @@ const srcsetFile = (srcset, width) => (srcset ?? '').split(', ').find((c) => c.e
  * puis <img> JPEG ; `sizes`, dimensions, chargement et poids (paysage 1440w, portrait 1080w, AVIF et WebP).
  */
 function assertServicePicture(picture, { alt, sizes, land, portrait, priority, budgets }, out, where) {
-  const sources = picture.match(/<source\b[^>]*>/g) ?? [];
+  const sources = tagsOf(picture, 'source');
   assert.equal(sources.length, 5, `${where} : <source>`);
   ['avif', 'webp', 'jpeg'].forEach((format, i) => {
     const tag = sources[i];
@@ -789,7 +897,7 @@ function assertServicePicture(picture, { alt, sizes, land, portrait, priority, b
     assert.equal(attr(tag, 'sizes'), sizes, `${where} : sizes paysage ${format}`);
     assert.deepEqual([attr(tag, 'width'), attr(tag, 'height')], land, `${where} : dimensions paysage ${format}`);
   });
-  const img = picture.match(/<img\b[^>]*>/)?.[0] ?? '';
+  const img = tagsOf(picture, 'img')[0] ?? '';
   assert.equal(attr(img, 'alt'), escaped(alt), `${where} : alt`);
   assert.deepEqual([attr(img, 'width'), attr(img, 'height')], land, `${where} : dimensions img`);
   assert.equal(attr(img, 'sizes'), sizes, `${where} : sizes img`);
@@ -1289,7 +1397,7 @@ function assertSeoFiles(out, site, indexable) {
   assert.deepEqual(manifest.icons, [{ src: '/rs-icon-512.png', sizes: '512x512', type: 'image/png' }], 'manifeste : icône 512');
 }
 
-test('build de branche : 4 accueils + 4 Contact + 4 Caméras + 4 Détecteurs + 4 Maison connectée + 4 Réseaux + 4 Interphone + 4 Entrepreneurs + 4 path-probe, layout Base (lang/dir, #rs-data, évitement, repères, hreflang relatifs), _redirects', { timeout: 120_000 }, () => {
+test('build de branche : 4 accueils complets (tuiles de services) + 4 Contact + 4 Caméras + 4 Détecteurs + 4 Maison connectée + 4 Réseaux + 4 Interphone + 4 Entrepreneurs + 4 path-probe, layout Base (lang/dir, #rs-data, évitement, repères, hreflang relatifs), _redirects', { timeout: 120_000 }, () => {
   const out = build({});
   assert.deepEqual(indexFiles(out), [...HOMES, ...CONTACTS, ...CAMERAS, ...SMOKES, ...SMARTS, ...NETWORKS, ...INTERCOMS, ...CONTRACTORS, ...PROBES].sort());
   assert.ok(existsSync(join(out, '_redirects')), '_redirects absent');
@@ -1344,12 +1452,14 @@ test('build de branche : 4 accueils + 4 Contact + 4 Caméras + 4 Détecteurs + 4
   assertSeoFiles(out, '', false);
 });
 
-test('build de main indexable avec SITE_URL : 4 accueils + 4 Contact + 4 Caméras + 4 Détecteurs + 4 Maison connectée + 4 Réseaux + 4 Interphone + 4 Entrepreneurs, sans noindex, canonique et hreflang absolus', { timeout: 120_000 }, () => {
+test('build de main indexable avec SITE_URL : 4 accueils complets (tuiles de services) + 4 Contact + 4 Caméras + 4 Détecteurs + 4 Maison connectée + 4 Réseaux + 4 Interphone + 4 Entrepreneurs, sans noindex, canonique et hreflang absolus', { timeout: 120_000 }, () => {
   const out = build({ WORKERS_CI_BRANCH: 'main', DOMAIN_LIVE: 'true', SITE_URL: 'https://rs.example' });
   assert.deepEqual(indexFiles(out), [...HOMES, ...CONTACTS, ...CAMERAS, ...SMOKES, ...SMARTS, ...NETWORKS, ...INTERCOMS, ...CONTRACTORS].sort());
   assert.ok(!existsSync(join(out, 'index.html')));
   for (const lang of LANGS) {
-    assertLayout(readFileSync(join(out, lang, 'index.html'), 'utf8'), 'home', lang, out, 'https://rs.example', true);
+    const html = readFileSync(join(out, lang, 'index.html'), 'utf8');
+    assertLayout(html, 'home', lang, out, 'https://rs.example', true);
+    assertHome(html, lang, out);
   }
   for (const [i, file] of CONTACTS.entries()) {
     const html = readFileSync(join(out, file), 'utf8');

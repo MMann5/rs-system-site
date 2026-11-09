@@ -2,15 +2,39 @@
 // FR1, FR21 (story 1.8) : accueil = héros photo puis bloc contact. Textes depuis src/i18n, photo
 // Pexels n° 31737862 (décision D5) en paysage et en recadrage 4:5 (src/assets/photos/).
 // AD-13 : construit son contexte de page et rend le layout unique.
+// Story 3.5 (FR1, FR23, UX-DR4, UX-DR16, UX-DR17, décisions D1 à D3 de l'epic 3) : accueil complet, canvas
+// Main.dc.html. Entre le héros et le bloc contact : tuile caméras claire, tuile grue sombre en parallaxe, grille
+// sous un h2 masqué (syndics, interphone, maison connectée, réseaux, en h3), puis tuile détecteur (section
+// propre à l'accueil, sans photo). Textes : bloc `home` de src/content/pages/home.yaml ; liens via tileLinks
+// (une page cible inactive omet son lien, `contact` inactif omet Devis et visite). Photos des pages services
+// réutilisées (D1), toutes en lazy : seul le héros est prioritaire.
+import buildingPortrait from '../assets/photos/building-night-portrait.jpg';
+import building from '../assets/photos/building-night.jpg';
+import domePortrait from '../assets/photos/cameras-dome-portrait.jpg';
+import dome from '../assets/photos/cameras-dome.jpg';
+import cranePortrait from '../assets/photos/crane-portrait.jpg';
+import crane from '../assets/photos/crane.jpg';
 import heroPortrait from '../assets/photos/home-hero-portrait.jpg';
 import hero from '../assets/photos/home-hero.jpg';
+import intercomMobile from '../assets/photos/intercom-panel-mobile.jpg';
+import intercomPanel from '../assets/photos/intercom-panel.jpg';
+import networkPortrait from '../assets/photos/network-portrait.jpg';
+import network from '../assets/photos/network.jpg';
+import switchMobile from '../assets/photos/smart-switch-mobile.jpg';
+import smartSwitch from '../assets/photos/smart-switch.jpg';
 import ContactBand from '../components/ContactBand.astro';
 import HeroPhoto from '../components/HeroPhoto.astro';
+import SmokeDetector from '../components/SmokeDetector.astro';
+import TextLink from '../components/TextLink.astro';
+import Tile from '../components/Tile.astro';
 import Base from '../layouts/Base.astro';
 import { t } from '../lib/i18n';
 import type { Lang } from '../lib/langs';
 import { createPageContext } from '../lib/page-context';
 import { page } from '../lib/pages';
+import { requireHome } from '../lib/page-schema';
+import { isEnabled, url } from '../lib/routes';
+import { tileLinks, type TileLinkDef } from '../lib/service-hero';
 
 interface Props {
   id: string;
@@ -19,7 +43,52 @@ interface Props {
 
 const { id, lang } = Astro.props;
 const ctx = createPageContext({ id, lang });
-const { meta } = page(id);
+const { meta, home: block } = page(id);
+// AD-4 : `home` est facultatif au schéma (les autres pages n'en ont pas), obligatoire ici.
+const home = requireHome(id, block);
+
+/** Liens « › » d'une tuile, dans l'ordre du canvas ; chacun omis si sa cible est inactive (FR23). */
+const links = (...defs: TileLinkDef[]) => defs.flatMap((def) => tileLinks(def, { lang }, { isEnabled, url, t }));
+
+const cameras = links({ kind: 'details', page: 'cameras' }, { kind: 'quote', service: 'cameras', label: 'quote' });
+const craneLinks = links({ kind: 'details', page: 'contractors' }, { kind: 'quote', service: 'crane-cameras', label: 'quote-site' });
+const { services, smoke } = home;
+const grid = [
+  {
+    key: 'management',
+    variant: 'dark',
+    text: services.management,
+    photo: { src: building, portrait: buildingPortrait, focus: 'building' },
+    background: 'navy-deep',
+    scrim: 'tile',
+    // Décision D3 : « תיאום סיור טכני › » présélectionne Interphone.
+    links: links({ kind: 'visit', service: 'intercom' }),
+  },
+  {
+    key: 'intercom',
+    variant: 'light',
+    text: services.intercom,
+    photo: { src: intercomPanel, portrait: intercomMobile, focus: 'intercom' },
+    links: links({ kind: 'details', page: 'intercom' }),
+  },
+  {
+    key: 'smart-home',
+    variant: 'light',
+    text: services['smart-home'],
+    photo: { src: smartSwitch, portrait: switchMobile, focus: 'switch' },
+    links: links({ kind: 'details', page: 'smart-home' }),
+  },
+  {
+    key: 'networks',
+    variant: 'dark',
+    text: services.networks,
+    photo: { src: network, portrait: networkPortrait, focus: 'network' },
+    background: 'tile-night',
+    scrim: 'network',
+    links: links({ kind: 'details', page: 'networks' }),
+  },
+] as const;
+const smokeLinks = links({ kind: 'details', page: 'smoke-detectors' });
 ---
 <Base ctx={ctx} title={meta.title[lang]} description={meta.description[lang]}>
   <HeroPhoto
@@ -28,5 +97,114 @@ const { meta } = page(id);
     title={t(lang, 'home.hero.title')}
     subtitle={t(lang, 'home.hero.subtitle')}
   />
+  <Tile
+    variant="light"
+    size="feature"
+    id="cameras-title"
+    level="h2"
+    title={home.cameras.title[lang]}
+    text={home.cameras.text[lang]}
+    links={cameras}
+    photo={{ src: dome, portrait: domePortrait, alt: home.cameras.alt[lang], focus: 'dome' }}
+  />
+  <Tile
+    variant="dark"
+    size="crane-home"
+    id="crane-title"
+    level="h2"
+    eyebrow={home.crane.eyebrow[lang]}
+    title={home.crane.title[lang]}
+    text={home.crane.text[lang]}
+    links={craneLinks}
+    photo={{ src: crane, portrait: cranePortrait, alt: home.crane.alt[lang], focus: 'crane' }}
+    background="tile-night"
+    scrim="crane"
+    motion="parallax"
+  />
+  <section class="services" aria-labelledby="services-title">
+    <h2 id="services-title" class="visually-hidden">{services.title[lang]}</h2>
+    <div class="services-grid">
+      {grid.map((tile) => (
+        <Tile
+          variant={tile.variant}
+          size="grid"
+          id={`${tile.key}-title`}
+          level="h3"
+          title={tile.text.title[lang]}
+          text={tile.text.text[lang]}
+          links={tile.links}
+          photo={{ ...tile.photo, alt: tile.text.alt[lang] }}
+          {...('background' in tile ? { background: tile.background, scrim: tile.scrim } : {})}
+        />
+      ))}
+    </div>
+  </section>
+  <section class="smoke reveal" aria-labelledby="smoke-title">
+    <h2 id="smoke-title" class="title">{smoke.title[lang]}</h2>
+    <p class="text">{smoke.text[lang]}</p>
+    {smokeLinks.length > 0 && (
+      <div class="links">
+        {smokeLinks.map((link) => <TextLink href={link.href} label={link.label} tone="light" />)}
+      </div>
+    )}
+    <div class="smoke-figure">
+      <SmokeDetector size="md" />
+    </div>
+  </section>
   <ContactBand ctx={ctx} />
 </Base>
+
+<style>
+  /* Grille de services (DESIGN.md › Layout & Spacing) : 2 colonnes sur desktop, 1 sur mobile, joint fin de 12px. */
+  /* Colonne d'au moins 520px (1 colonne en dessous) mais jamais moins de la moitié de la largeur : 2 colonnes au plus,
+   * même sur très grand écran (grille 2×2, et `sizes` en 50vw de GRID_TILE_PHOTO_SIZES). */
+  .services-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(max(min(100%, var(--tile-grid-col-min)), (100% - var(--tile-gutter)) / 2), 1fr));
+    gap: var(--tile-gutter);
+    padding: var(--tile-gutter);
+  }
+
+  /* Tuile détecteur (canvas Main.dc.html) : blanche, filet haut, texte centré, détecteur de 260px à 48px. */
+  .smoke {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--stack-gap);
+    margin-inline: var(--tile-gutter);
+    padding-block: var(--tile-smoke-pad-top) var(--tile-smoke-pad-end);
+    padding-inline: var(--page-gutter);
+    border-block-start: thin solid var(--color-line);
+    background-color: var(--color-surface);
+    color: var(--color-navy);
+    text-align: center;
+  }
+
+  .title {
+    margin: 0;
+    font-size: var(--type-tile-title-size);
+    font-weight: var(--type-tile-title-weight);
+    line-height: var(--type-tile-title-leading);
+  }
+
+  .text {
+    margin: 0;
+    font-size: var(--type-subhead-size);
+    font-weight: var(--type-subhead-weight);
+    line-height: var(--type-subhead-leading);
+    color: var(--color-ink-muted);
+  }
+
+  .links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    column-gap: var(--link-gap);
+  }
+
+  .smoke-figure {
+    display: flex;
+    justify-content: center;
+    margin-block-start: var(--space-12);
+  }
+</style>

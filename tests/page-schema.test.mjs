@@ -6,7 +6,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
-import { pageSchema } from '../src/lib/page-schema.ts';
+import { pageSchema, requireHome } from '../src/lib/page-schema.ts';
 
 const PAGES = fileURLToPath(new URL('../src/content/pages/', import.meta.url));
 const cameras = () => parse(readFileSync(join(PAGES, 'cameras.yaml'), 'utf8'));
@@ -119,4 +119,53 @@ test('networks.yaml et contractors.yaml : slugs, héros du canvas, Entrepreneurs
   assert.equal(contractors.service.hero.title.he, 'מצלמה על העגורן.');
   assert.equal(contractors.service.tile.eyebrow, undefined);
   assert.equal(contractors.service.tile.title.he, 'מהיסודות ועד הדיירים.');
+});
+
+// Story 3.5 (AD-4) : bloc `home` des tuiles de l'accueil, facultatif au schéma (Home.astro l'exige), complet s'il est présent.
+const home = () => parse(readFileSync(join(PAGES, 'home.yaml'), 'utf8'));
+
+test('home.yaml : bloc home complet, hébreu du canvas Main.dc.html', () => {
+  const { home: tiles } = pageSchema.parse(home());
+  assert.equal(tiles.cameras.title.he, 'מצלמות אבטחה');
+  assert.equal(tiles.crane.eyebrow.he, 'לקבלנים');
+  assert.equal(tiles.crane.title.he, 'מצלמה על העגורן.');
+  assert.equal(tiles.services.title.he, 'שירותים נוספים');
+  assert.deepEqual(
+    ['management', 'intercom', 'smart-home', 'networks'].map((key) => tiles.services[key].title.he),
+    ['לחברות ניהול ולוועדי בית', 'אינטרקום', 'בית חכם', 'תקשורת ורשתות'],
+  );
+  assert.equal(tiles.smoke.text.he, 'מזהים מוקדם. בכל חדר.');
+});
+
+test('home : une langue manquante, un texte vide ou une clé inconnue sont refusés', () => {
+  for (const change of [
+    (d) => delete d.home.cameras.alt.ru,
+    (d) => delete d.home.crane.eyebrow.fr,
+    (d) => delete d.home.services.title.en,
+    (d) => delete d.home.services['smart-home'].text.he,
+    (d) => delete d.home.smoke.title.ru,
+    (d) => delete d.home.services.networks,
+    (d) => (d.home.smoke.alt = d.home.cameras.alt),
+    (d) => (d.home.services.extra = d.home.services.intercom),
+    (d) => (d.home.cameras.link = 'x'),
+    (d) => (d.home.services.intercom.text.de = 'Wer klingelt?'),
+    (d) => (d.home.cameras.text.he = '  '),
+  ]) {
+    const data = home();
+    change(data);
+    assert.ok(refused(data), String(change));
+  }
+});
+
+test('home : bloc absent accepté (pages autres que l’accueil)', () => {
+  const data = home();
+  delete data.home;
+  assert.ok(!refused(data));
+  assert.equal(pageSchema.parse(cameras()).home, undefined);
+});
+
+test('requireHome : bloc absent → erreur nommant le fichier ; présent → rendu tel quel', () => {
+  assert.throws(() => requireHome('home', undefined), /bloc « home » absent de src\/content\/pages\/home\.yaml/);
+  const { home: tiles } = pageSchema.parse(home());
+  assert.equal(requireHome('home', tiles), tiles);
 });
