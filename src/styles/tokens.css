@@ -485,4 +485,12 @@
   /* Canvas Main.dc.html › tuile détecteur : « padding: 72px 22px 88px » */
   --tile-smoke-pad-top: 72px;
   --tile-smoke-pad-end: 88px;
+  /* — Correctif 3.1 (D5 de l'epic 3, recette) : parallaxe de la grue plus douce sous 700px. Avec le recadrage
+   * téléphone crane-mast-portrait.jpg, mât et cabine restent dans la tuile (600px) et sous le bloc de texte à 320 et
+   * 390px, du début à la fin de la parallaxe. L'échelle dépasse la translation d'une marge, comme au-dessus de
+   * 700px (débord (1,05 − 1) / 2 = 2,5 % > 2 % de course) : pas de bord vide, même arrondi au sous-pixel.
+   * EXPERIENCE.md › Mouvement (±7 %, 1,16) reste la valeur au-dessus de 700px. — */
+  --drift-from-mobile: -2%;
+  --drift-to-mobile: 2%;
+  --drift-scale-mobile: 1.05;
 }

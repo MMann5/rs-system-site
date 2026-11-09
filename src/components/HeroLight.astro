@@ -11,6 +11,11 @@
 // Détecteurs) prend la place du cadre : 72px sous les liens, 112px avant la fin du héros (canvas Smoke.dc.html).
 // Story 3.3 (UX-DR14) : ratio du cadre sous 700px porté par la photo : 4:5 par défaut, 4:3 (`mobile: 'landscape'`,
 // interrupteur et interphone) via --hero-mobile-ratio posé en style inline, sans second composant.
+// Correctif 3.1 (D4, recette) : sous 960px le ratio est porté par la photo elle-même, pas par le cadre. Le cadre est
+// un élément flex centré (align-items: center) en largeur 100 % ; WebKit (iPhone) calculait sa hauteur
+// `aspect-ratio` sur la largeur du héros (écran) et non sur sa propre largeur, d'où une bande vide sous la photo
+// (55px en 4:5, 33px en 4:3 à 390px). L'image, en flux bloc dans le cadre, a une largeur définie : le cadre prend
+// exactement sa hauteur. Au-dessus de 960px (600px de haut), rien ne change.
 import type { ImageMetadata } from 'astro';
 import { bandLinks } from '../lib/contact/band';
 import { telHref, waHref } from '../lib/contact/core';
@@ -27,7 +32,7 @@ import TextLink from './TextLink.astro';
 interface Props {
   ctx: PageContext;
   /**
-   * `focus` : point focal, jeton --photo-focus-{focus} de tokens.css ; `mobile` : ratio du cadre sous 700px
+   * `focus` : point focal, jeton --photo-focus-{focus} de tokens.css ; `mobile` : ratio de la photo (donc du cadre) sous 700px
    * (`landscape` → --photo-ratio-mobile-landscape). Absente : l'illustration du slot.
    */
   photo?: HeroPhoto<ImageMetadata>;
@@ -39,7 +44,7 @@ const { ctx, photo, title, subtitle } = Astro.props;
 const { lang } = ctx;
 const wa = waHref(pageWaInput(ctx, serviceLabels('he')));
 const { detailsHref: quoteHref } = bandLinks({ lang, service: ctx.service }, { isEnabled, url });
-// Cadre 4:5 sous 700px par défaut (rendu de Caméras inchangé) ; 4:3 seulement pour une photo `landscape`.
+// Photo 4:5 sous 700px par défaut (le cadre suit sa hauteur) ; 4:3 seulement pour une photo `landscape`.
 const frameStyle = photo
   ? [`--photo-position: var(--photo-focus-${photo.focus})`, photo.mobile === 'landscape' ? '--hero-mobile-ratio: var(--photo-ratio-mobile-landscape)' : '']
       .filter(Boolean)
@@ -129,19 +134,6 @@ const frameStyle = photo
     overflow: hidden;
   }
 
-  @media (width < 960px) {
-    .frame {
-      block-size: auto;
-      aspect-ratio: var(--photo-ratio-tablet);
-    }
-  }
-
-  @media (width < 700px) {
-    .frame {
-      aspect-ratio: var(--hero-mobile-ratio, var(--photo-ratio-portrait));
-    }
-  }
-
   /* Illustration sans photo : le héros garde padding-block-end 0, l'espace du bas est porté ici. */
   .illustration {
     display: flex;
@@ -164,6 +156,29 @@ const frameStyle = photo
     object-fit: cover;
     object-position: var(--photo-position);
     animation: light-zoom var(--hero-zoom-duration) var(--ease) both;
+  }
+
+  /* Sous 960px : hauteur du cadre = hauteur de la photo, dont le ratio se calcule sur la largeur réelle du cadre
+   * (16:9, puis 4:5 ou 4:3 sous 700px). Jamais d'aspect-ratio sur le cadre lui-même (bande vide en WebKit). */
+  @media (width < 960px) {
+    .frame {
+      block-size: auto;
+    }
+
+    .frame :global(picture) {
+      block-size: auto;
+    }
+
+    .frame :global(.photo) {
+      block-size: auto;
+      aspect-ratio: var(--photo-ratio-tablet);
+    }
+  }
+
+  @media (width < 700px) {
+    .frame :global(.photo) {
+      aspect-ratio: var(--hero-mobile-ratio, var(--photo-ratio-portrait));
+    }
   }
 
   @keyframes light-zoom {

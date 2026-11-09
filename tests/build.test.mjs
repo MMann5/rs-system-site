@@ -414,6 +414,7 @@ function assertHomeTiles(html, main, pictures, lang, out, where) {
     assert.ok(tile.includes(pictures[i]), `${at} : <picture> dans l'ordre`);
     assertServicePicture(pictures[i], { alt: content.alt[lang], sizes: def.sizes, land: def.land, portrait: def.portrait, priority: false, budgets: { land: 180_000, portrait: 180_000 } }, out, `${at} : photo`);
     assert.equal(attr(tagsOf(pictures[i], 'img')[0], 'class'), `photo ${def.motion}`, `${at} : mouvement de la photo`);
+    if (def.id === 'crane-title') assertCraneMobile(pictures[i], html, out, at);
   });
   // Grille : section `services` avec h2 masqué (YAML), conteneur de la grille, 4 tuiles en h3.
   const services = main.slice(main.indexOf('<section class="services"'), main.indexOf('<section class="smoke'));
@@ -960,6 +961,8 @@ function assertCameras(html, lang, out) {
   const cameraFrame = hero.match(/<div class="frame"[^>]*>/)?.[0] ?? '';
   assert.equal(attr(cameraFrame, 'style'), '--photo-position: var(--photo-focus-dome)', `${where} : style du cadre du héros`);
   assertServicePicture(pictures[1], { alt: CAMERAS_PAGE.tile.alt[lang], sizes: 'calc(100vw - 24px)', land: ['2560', '1164'], portrait: ['1440', '1800'], priority: false, budgets: { land: 180_000, portrait: 180_000 } }, out, `${where} : grue`);
+  assertHeroLightFrameCss(html, out, where);
+  assertCraneMobile(pictures[1], html, out, `${where} : grue`);
   // Trio : h2 puis 3 h3, chacun suivi de son texte ; aucun lien.
   assert.match(trio, /^<section class="trio reveal" aria-labelledby="trio-title"[\s>]/, `${where} : trio`);
   assert.equal(trio.match(/<h2 id="trio-title"[^>]*>([^<]*)<\/h2>/)?.[1], escaped(CAMERAS_PAGE.trio.title[lang]), `${where} : h2 du trio`);
@@ -1023,6 +1026,32 @@ function assertCameras(html, lang, out) {
 
 /** Story 3.2 : contenu de src/content/pages/smoke-detectors.yaml (bloc `service`). */
 const SMOKE_PAGE = parse(readFileSync(join(ROOT, 'src/content/pages/smoke-detectors.yaml'), 'utf8')).service;
+
+/**
+ * Correctif 3.1 (D4, recette) : sous 960px, le ratio du héros clair est porté par la photo (16:9, puis le ratio
+ * mobile sous 700px), jamais par le cadre. Un `aspect-ratio` sur `.frame` (élément flex centré en largeur 100 %)
+ * faisait calculer à WebKit sa hauteur sur la largeur de l'écran : bande vide sous la photo sur iPhone.
+ */
+function assertHeroLightFrameCss(html, out, where) {
+  const flat = servedCss(html, out).replace(/\s+/g, '');
+  const cid = html.match(/<div class="frame"[^>]*\s(data-astro-cid-[\w-]+)/)?.[1];
+  assert.ok(cid, `${where} : scope CSS du cadre`);
+  const frame = `\\.frame\\[${cid}\\]`;
+  assert.ok(!new RegExp(`${frame}\\{[^}]*aspect-ratio`).test(flat), `${where} : aspect-ratio sur le cadre du héros clair`);
+  // Le minifieur fusionne les sélecteurs de même déclaration (`.frame,.frame picture{block-size:auto}`).
+  assert.match(flat, new RegExp(`@media\\(width<960px\\)\\{${frame}(?:,${frame}picture)?\\{block-size:auto\\}[^@]*?${frame}\\.photo\\{block-size:auto;aspect-ratio:var\\(--photo-ratio-tablet\\)\\}\\}`), `${where} : ratio 16:9 porté par la photo sous 960px`);
+  assert.match(flat, new RegExp(`@media\\(width<700px\\)\\{${frame}\\.photo\\{aspect-ratio:var\\(--hero-mobile-ratio,var\\(--photo-ratio-portrait\\)\\)\\}\\}`), `${where} : ratio mobile porté par la photo sous 700px`);
+}
+
+/**
+ * Correctif 3.1 (D5, recette) : sous 700px, la grue est servie depuis le recadrage téléphone crane-mast-portrait.jpg
+ * (mât et cabine) et sa parallaxe est plus douce (jetons --drift-*-mobile).
+ */
+function assertCraneMobile(picture, html, out, where) {
+  assert.match(picture, /<source media="\(width < 700px\)" type="image\/avif" srcset="[^"]*\/crane-mast-portrait\.[^"]*"/, `${where} : source téléphone crane-mast-portrait`);
+  const flat = servedCss(html, out).replace(/\s+/g, '');
+  assert.match(flat, /@media\(width<700px\)\{\.media\[data-astro-cid-[\w-]+\]\.parallax\{--drift-from:var\(--drift-from-mobile\);--drift-to:var\(--drift-to-mobile\);--drift-scale:var\(--drift-scale-mobile\)\}\}/, `${where} : parallaxe douce sous 700px`);
+}
 
 /** CSS servie par une page : feuilles liées puis <style> inline. */
 function servedCss(html, out) {
@@ -1168,7 +1197,7 @@ function assertPhotoService(html, lang, out, { id, content, focus, tile: withTil
   const frame = hero.match(/<div class="frame"[^>]*>/)?.[0] ?? '';
   assert.equal(attr(frame, 'style'), `--photo-position: var(--photo-focus-${focus}); --hero-mobile-ratio: var(--photo-ratio-mobile-landscape)`, `${where} : style du cadre`);
   const all = servedCss(html, out);
-  assert.match(all, /\.frame\[[^\]]*\]\s*\{[^}]*aspect-ratio: ?var\(--hero-mobile-ratio, ?var\(--photo-ratio-portrait\)\)/, `${where} : ratio mobile du cadre`);
+  assertHeroLightFrameCss(html, out, where);
   const token = (name) => all.match(new RegExp(`${name}:\\s*([^;}]+)`))?.[1]?.trim();
   assert.equal(token('--photo-ratio-mobile-landscape'), '4 / 3', `${where} : jeton 4:3`);
   // Photos : héros (seule eager/high, recadrage mobile 4:3) et, sur Interphone, l'immeuble de la tuile (lazy, 4:5).
@@ -1302,6 +1331,8 @@ function assertCoverService(html, lang, out, { id, service, content, focus, scri
   assert.equal(html.match(/<img\b/g)?.length, withTile ? 3 : 2, `${where} : <img> (logo + photos)`);
   assert.equal(html.match(/\sfetchpriority="high"/g)?.length, 1, `${where} : une seule image prioritaire`);
   assertServicePicture(pictures[0], { alt: content.hero.alt[lang], sizes: '100vw', land, portrait: ['1440', '1800'], priority: true, budgets: { land: 250_000, portrait: 120_000 } }, out, `${where} : héros`);
+  // Correctif 3.1 (D5) : le héros Entrepreneurs (grue) sert lui aussi le recadrage téléphone crane-mast-portrait.jpg.
+  if (focus === 'crane') assert.match(pictures[0], /<source media="\(width < 700px\)" type="image\/avif" srcset="[^"]*\/crane-mast-portrait\.[^"]*"/, `${where} : source téléphone crane-mast-portrait`);
   // CSS servie : la variante est lue avec les valeurs de l'accueil en repli ; jetons de la story 3.4.
   const all = servedCss(html, out);
   const heroCid = heroTag.match(/\s(data-astro-cid-[\w-]+)/)?.[1];
