@@ -1,9 +1,9 @@
 // Stories 1.5 et 1.6 (AD-5, AD-13, FR31) : noyau des liens Appeler / WhatsApp, table des services,
-// entrée WhatsApp d'une page (pageWaInput).
+// entrée WhatsApp d'une page (pageWaInput). Story 2.2 (FR28) : règles de validation du formulaire.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { PHONE_DISPLAY, telHref, waHref } from '../src/lib/contact/core.ts';
+import { invalidContactFields, isValidName, isValidPhone, normalizePhone, PHONE_DISPLAY, telHref, waHref } from '../src/lib/contact/core.ts';
 import { buildServiceTable, pageWaInput, SERVICE_CODES } from '../src/lib/contact/table.ts';
 
 const PREFIX = 'https://wa.me/972509565669?text=';
@@ -149,4 +149,37 @@ test('pageWaInput : service inconnu → lève', () => {
 test('pageWaInput : ville → lève tant que la table des villes est absente (epic 4)', () => {
   assert.throws(() => pageWaInput({ city: 'modiin' }, TABLE), { message: 'contact : table des villes absente (epic 4)' });
   assert.throws(() => pageWaInput({ service: 'cameras', city: 'modiin' }, TABLE), { message: 'contact : table des villes absente (epic 4)' });
+});
+
+// — Story 2.2 (FR28) : validation du formulaire —
+
+test('normalizePhone retire espaces, tirets, points et parenthèses, rien d’autre', () => {
+  assert.equal(normalizePhone(' (02) 123-4567 '), '021234567');
+  assert.equal(normalizePhone('+972 50\t123.4567'), '+972501234567');
+  assert.equal(normalizePhone('05O-12'), '05O12');
+  assert.equal(normalizePhone('050–123'), '050–123', 'tiret Unicode conservé');
+});
+
+test('isValidPhone : formes valides', () => {
+  for (const value of ['050-123-4567', '+972 50 123 4567', '(02) 123-4567', '+33 6 12 34 56 78', '02.123.4567', ' 0501234567 ', '021234567', '+97221234567']) {
+    assert.equal(isValidPhone(value), true, value);
+  }
+});
+
+test('isValidPhone : formes invalides', () => {
+  for (const value of ['12345', '', '   ', '050-123', '+12345', '0501234567890', '05O1234567', '+972 50 abc', '+1234567890123456', '0050']) {
+    assert.equal(isValidPhone(value), false, value);
+  }
+});
+
+test('isValidName : vide ou espaces → invalide ; texte → valide', () => {
+  for (const value of ['', '   ', '\t', '\n ']) assert.equal(isValidName(value), false, JSON.stringify(value));
+  for (const value of ['דנה', ' a ', 'Иван']) assert.equal(isValidName(value), true, JSON.stringify(value));
+});
+
+test('invalidContactFields : liste ordonnée Nom puis Téléphone', () => {
+  assert.deepEqual(invalidContactFields({ name: '', phone: '12345' }), ['name', 'phone']);
+  assert.deepEqual(invalidContactFields({ name: 'דנה', phone: '' }), ['phone']);
+  assert.deepEqual(invalidContactFields({ name: ' ', phone: '050-123-4567' }), ['name']);
+  assert.deepEqual(invalidContactFields({ name: 'דנה', phone: '050-123-4567' }), []);
 });

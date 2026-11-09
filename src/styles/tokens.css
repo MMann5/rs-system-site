@@ -360,4 +360,12 @@
   --type-info-value-weight: 600;
   --type-info-phone-size: 26px;
   --type-info-phone-weight: 700;
+  /* DESIGN.md › Components › Champ en erreur : « Bordure 2px {colors.error} » */
+  --field-border-width-error: 2px;
+  /* DESIGN.md › Components › Champ en erreur : « icône d'alerte 16px (cercle + « ! », trait 1,8px) » */
+  --icon-size-alert: 16px;
+  /* DESIGN.md › Components › Messages du formulaire : « icône 24px » (padding 24px = --space-6) */
+  --icon-size-status: 24px;
+  /* DESIGN.md › Components › Messages du formulaire : « filet 4px à l'extrémité de début » */
+  --form-status-rule: 4px;
 }

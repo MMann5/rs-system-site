@@ -1,10 +1,14 @@
 ---
 // FR13, FR28, FR33, NFR9, UX-DR28, AD-2, AD-5, AD-6, AD-7, AD-8, AD-13, décisions D1 à D4 de l'epic 2 :
 // page Contact (canvas Contact.dc.html). Héros clair centré (h1, numéro géant, Appeler › WhatsApp ›),
-// puis section formulaire sur surface-alt : le formulaire balisé (sans comportement : validation en 2.2,
-// envoi en 2.3) et la colonne d'infos. Pas de bloc contact sur cette page. Sans JS (`scripting: none`),
+// puis section formulaire sur surface-alt : le formulaire et la colonne d'infos.
+// Story 2.2 (FR28, FR33, UX-DR29) : messages d'erreur sous Nom et Téléphone et résumé d'erreurs (dans un
+// <template>), rendus au build et cachés ; l'îlot src/scripts/contact-form.ts valide à l'envoi, montre les
+// messages, clone le résumé dans #contact-errors (role="alert") et pose aria-invalid / aria-describedby.
+// L'envoi vers WhatsApp arrive en 2.3. Pas de bloc contact sur cette page. Sans JS (`scripting: none`),
 // le bloc formulaire est masqué et le <noscript> propose Appeler › WhatsApp ›.
-// Aucun attribut `name` sur les champs en 2.1 : sans îlot, rien ne doit partir dans l'URL.
+// Aucun attribut `name` sur les champs : l'îlot les lit par id, et si le script ne charge pas, rien ne doit
+// partir dans l'URL.
 import PhoneNumber from '../components/PhoneNumber.astro';
 import Placeholder from '../components/Placeholder.astro';
 import TextLink from '../components/TextLink.astro';
@@ -29,6 +33,8 @@ const { meta } = page(id);
 const wa = waHref(pageWaInput(ctx, serviceLabels('he')));
 const services = serviceLabels(lang);
 const optional = t(lang, 'form.optional');
+const nameError = t(lang, 'form.name.error');
+const phoneError = t(lang, 'form.phone.error');
 ---
 <Base ctx={ctx} title={meta.title[lang]} description={meta.description[lang]}>
   <section class="hero" aria-labelledby="contact-title">
@@ -44,14 +50,29 @@ const optional = t(lang, 'form.optional');
     <div class="grid">
       <div class="form-block">
         <h2 class="form-title">{t(lang, 'form.title')}</h2>
-        <form class="form">
+        <div id="contact-errors" role="alert"></div>
+        <template id="contact-errors-template">
+          <div class="form-status">
+            <svg class="status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7.5v5.5M12 16.5v.01" /></svg>
+            <div class="status-body">
+              <h3 class="status-title">{t(lang, 'form.errors.title')}</h3>
+              <ul class="status-list">
+                <li data-field="name"><a href="#contact-name" class="status-link">{nameError}</a></li>
+                <li data-field="phone"><a href="#contact-phone" class="status-link">{phoneError}</a></li>
+              </ul>
+            </div>
+          </div>
+        </template>
+        <form id="contact-form" class="form">
           <div class="field-group">
             <label for="contact-name" class="label">{t(lang, 'form.name.label')}</label>
             <input id="contact-name" class="field" type="text" autocomplete="name" required aria-required="true" />
+            <p id="contact-name-error" class="error" hidden><svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7.5v5.5M12 16.5v.01" /></svg><span>{nameError}</span></p>
           </div>
           <div class="field-group">
             <label for="contact-phone" class="label">{t(lang, 'form.phone.label')}</label>
             <input id="contact-phone" class="field" type="tel" dir="ltr" autocomplete="tel" required aria-required="true" />
+            <p id="contact-phone-error" class="error" hidden><svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7.5v5.5M12 16.5v.01" /></svg><span>{phoneError}</span></p>
           </div>
           <div class="field-group">
             <label for="contact-city" class="label">{t(lang, 'form.city.label')} <span class="optional">{optional}</span></label>
@@ -108,6 +129,10 @@ const optional = t(lang, 'form.optional');
     </div>
   </section>
 </Base>
+
+<script>
+  import '../scripts/contact-form.ts';
+</script>
 
 <style>
   /* Seuils (les @media ne lisent pas les tokens) : --bp-mobile-bar 700px. */
@@ -253,6 +278,98 @@ const optional = t(lang, 'form.optional');
 
   .message {
     resize: block;
+  }
+
+  /* — Story 2.2 (FR33, UX-DR29) : champ en erreur — bordure 2px error, même au focus ; le padding perd
+   * l'épaisseur ajoutée pour que le texte ne bouge pas. Le libellé reste navy. */
+  .field[aria-invalid="true"],
+  .field[aria-invalid="true"]:focus,
+  .field[aria-invalid="true"]:focus-visible {
+    border-width: var(--field-border-width-error);
+    border-color: var(--color-error);
+    padding-block: calc(var(--field-pad-block) - (var(--field-border-width-error) - var(--field-border-width)));
+    padding-inline: calc(var(--field-pad-inline) - (var(--field-border-width-error) - var(--field-border-width)));
+  }
+
+  /* Message sous le champ : small 600 error, icône d'alerte 16px avant le texte, alignée au début. */
+  .error {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+    margin: 0;
+    font-size: var(--type-small-size);
+    font-weight: var(--type-label-weight);
+    line-height: var(--type-small-leading);
+    color: var(--color-error);
+  }
+
+  .error[hidden] {
+    display: none;
+  }
+
+  .alert-icon {
+    flex-shrink: 0;
+    inline-size: var(--icon-size-alert);
+    block-size: var(--icon-size-alert);
+    /* Centre l'icône sur la première ligne du texte. */
+    margin-block-start: calc((var(--type-small-size) * var(--type-small-leading) - var(--icon-size-alert)) / 2);
+    stroke-width: var(--icon-stroke-width);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  /* Résumé d'erreurs (form-status, couleur erreur) : bloc blanc, filet 4px au début, padding 24px, angles
+   * droits, icône 24px, h3 navy, liens vers les champs (cible ≥ 44px). */
+  /* #contact-errors n'est jamais masqué (display: none retirerait la région live de l'arbre
+   * d'accessibilité) : vide, il reste à hauteur nulle ; la marge est portée par le bloc inséré. */
+  .form-status {
+    margin-block-start: var(--form-fields-gap);
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-4);
+    padding: var(--space-6);
+    border-inline-start: var(--form-status-rule) solid var(--color-error);
+    border-radius: var(--radius-none);
+    background-color: var(--color-white);
+    color: var(--color-ink);
+  }
+
+  .status-icon {
+    flex-shrink: 0;
+    inline-size: var(--icon-size-status);
+    block-size: var(--icon-size-status);
+    color: var(--color-error);
+    stroke-width: var(--icon-stroke-width);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .status-body {
+    min-inline-size: 0;
+  }
+
+  .status-title {
+    margin: 0;
+    font-size: var(--type-h3-size);
+    font-weight: var(--type-h3-weight);
+    line-height: var(--type-h3-leading);
+    color: var(--color-navy);
+  }
+
+  .status-list {
+    margin: 0;
+    margin-block-start: var(--space-2);
+    padding: 0;
+    list-style: none;
+  }
+
+  .status-link {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: var(--space-12);
+    font-size: var(--type-body-size);
+    line-height: var(--type-body-leading);
+    color: var(--color-link);
   }
 
   /* Liste déroulante sans apparence native (WebKit iOS ignore sinon la hauteur de 52px) : flèche en SVG

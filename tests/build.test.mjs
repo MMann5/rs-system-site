@@ -1,4 +1,4 @@
-// Stories 1.3 à 1.9 et 2.1 : sortie réelle du build, sur une branche puis sur main (registre, layout Base.astro).
+// Stories 1.3 à 1.9, 2.1 et 2.2 : sortie réelle du build, sur une branche puis sur main (registre, layout Base.astro).
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
@@ -470,7 +470,47 @@ function assertFormHiddenWithoutJs(html, out, where) {
   assert.match(css.join('\n'), /@media \(scripting: ?none\)\s*\{\s*\.form-block(?:\[data-astro-cid-[\w-]+\])?\s*\{\s*display: ?none;?\s*\}/, `${where} : bloc formulaire non masqué sans JS`);
 }
 
-function assertContact(html, lang) {
+/** Story 2.2 : icône d'alerte `aria-hidden` (cercle + « ! »). */
+const ALERT_ICON = /^<svg class="[\w-]+-icon"[^>]*\saria-hidden="true"[^>]*><circle\b[^>]*><\/circle><path\b[^>]*><\/path><\/svg>/;
+
+/** Story 2.2 (FR33, UX-DR29) : résumé d'erreurs, messages sous Nom et Téléphone, îlot du formulaire. */
+function assertContactErrors(html, block, form, dict, out, where) {
+  // #contact-errors (role="alert", vide) puis <template>, entre le h2 et le <form>.
+  const afterTitle = block.slice(block.indexOf('</h2>') + '</h2>'.length);
+  assert.match(afterTitle, /^<div id="contact-errors" role="alert"(?: data-astro-cid-[\w-]+)?><\/div><template id="contact-errors-template"[^>]*>/, `${where} : #contact-errors puis <template> après le h2`);
+  const template = afterTitle.match(/<template id="contact-errors-template"[^>]*>([\s\S]*?)<\/template><form\b/)?.[1] ?? '';
+  assert.ok(template, `${where} : <template> juste avant le <form>`);
+  assert.match(template, /^<div class="form-status"[^>]*>/, `${where} : bloc form-status`);
+  const status = template.replace(/^<div class="form-status"[^>]*>/, '');
+  assert.match(status, ALERT_ICON, `${where} : icône 24px du résumé`);
+  assert.equal(status.match(/<h3 class="status-title"[^>]*>([^<]*)<\/h3>/)?.[1], escaped(dict['form.errors.title']), `${where} : h3 du résumé`);
+  const items = [...status.matchAll(/<li data-field="(\w+)"[^>]*><a href="([^"]*)"[^>]*>([^<]*)<\/a><\/li>/g)].map((m) => m.slice(1));
+  assert.deepEqual(items, [['name', '#contact-name', escaped(dict['form.name.error'])], ['phone', '#contact-phone', escaped(dict['form.phone.error'])]], `${where} : liens du résumé`);
+  // Messages cachés juste après leur champ, icône aria-hidden puis texte traduit.
+  for (const [id, key] of [['contact-name', 'form.name.error'], ['contact-phone', 'form.phone.error']]) {
+    const m = form.match(new RegExp(`<input id="${id}"[^>]*>(<p\\b[^>]*>)([\\s\\S]*?)</p></div>`));
+    assert.ok(m, `${where} : message juste après #${id}`);
+    assert.equal(attr(m[1], 'id'), `${id}-error`, `${where} : id du message de ${id}`);
+    assert.equal(attr(m[1], 'class'), 'error', `${where} : classe du message de ${id}`);
+    assert.ok(hasAttr(m[1], 'hidden', ''), `${where} : message de ${id} caché`);
+    assert.match(m[2], ALERT_ICON, `${where} : icône du message de ${id}`);
+    assert.equal(m[2].replace(ALERT_ICON, '').match(/^<span\b[^>]*>([^<]*)<\/span>$/)?.[1], escaped(dict[key]), `${where} : texte du message de ${id}`);
+  }
+  assert.equal(form.match(/class="error"/g)?.length, 2, `${where} : messages d'erreur (champs facultatifs sans message)`);
+  assert.ok(!/\saria-(?:invalid|describedby)=/.test(html), `${where} : aria-invalid / aria-describedby au build`);
+  // Îlot du formulaire embarqué (<script type="module"> inline ou src) qui vise #contact-errors.
+  const modules = [...html.matchAll(/<script type="module"(?:\s+src="([^"]+)")?[^>]*>([\s\S]*?)<\/script>/g)];
+  const code = modules.map(([, src, inline]) => (src ? readFileSync(join(out, src), 'utf8') : inline)).join('\n');
+  assert.match(code, /contact-errors/, `${where} : îlot du formulaire absent`);
+  // La région role="alert" n'est jamais masquée (sinon le contenu inséré n'est pas annoncé de façon fiable).
+  const css = [...html.matchAll(/<link rel="stylesheet" href="([^"]+)"/g)].map(([, href]) => readFileSync(join(out, href), 'utf8'));
+  css.push(...[...html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/g)].map((m) => m[1]));
+  for (const [, selector, body] of css.join('\n').matchAll(/([^{}]*)\{([^{}]*)\}/g)) {
+    if (selector.includes('#contact-errors')) assert.ok(!/display:\s*none/.test(body), `${where} : #contact-errors masqué par « ${selector.trim()} »`);
+  }
+}
+
+function assertContact(html, lang, out) {
   const where = `contact (${lang})`;
   const dict = I18N[lang];
   const tel = 'tel:+972509565669';
@@ -501,7 +541,10 @@ function assertContact(html, lang) {
   assert.equal(block.match(/^<h2 class="form-title"[^>]*>([^<]*)<\/h2>/)?.[1], escaped(dict['form.title']), `${where} : h2`);
   const formTag = block.match(/<form\b[^>]*>/)?.[0] ?? '';
   assert.ok(formTag && attr(formTag, 'action') === undefined, `${where} : <form> sans action ${formTag}`);
+  assert.equal(attr(formTag, 'id'), 'contact-form', `${where} : id du <form>`);
+  assert.equal(attr(formTag, 'name'), undefined, `${where} : <form> sans name`);
   const form = block.slice(block.indexOf(formTag));
+  assertContactErrors(html, block, form, dict, out, where);
   // 5 champs dans l'ordre, label for au-dessus, attributs de FR28, aucun name/value/placeholder.
   const controls = [...form.matchAll(/<(input|select|textarea)\b[^>]*>/g)];
   assert.deepEqual(controls.map((m) => attr(m[0], 'id')), FIELDS.map((f) => f.id), `${where} : ordre des champs`);
@@ -561,7 +604,7 @@ function assertContact(html, lang) {
   assert.match(hours, new RegExp(`^<span data-placeholder(?:="")?>\\[${escaped(dict['placeholder.hours'])}\\]</span>$`), `${where} : placeholder horaires`);
   assert.equal(dl.match(/data-placeholder/g)?.length, 2, `${where} : placeholders de la colonne`);
   assert.ok(!html.includes('mailto:'), `${where} : mailto:`);
-  // Aucun îlot de formulaire en 2.1 ni tables dans #rs-data (vérifié par assertLayout) ; aucun data-umami-*.
+  // Aucune table dans #rs-data en 2.2 (vérifié par assertLayout) ; aucun data-umami-*.
   assert.ok(!html.includes('data-umami'), `${where} : data-umami-*`);
 }
 
@@ -603,7 +646,7 @@ test('build de branche : 4 accueils + 4 Contact + 4 path-probe, layout Base (lan
   for (const [i, file] of CONTACTS.entries()) {
     const html = readFileSync(join(out, file), 'utf8');
     assertLayout(html, 'contact', LANGS[i], out);
-    assertContact(html, LANGS[i]);
+    assertContact(html, LANGS[i], out);
     assertFormHiddenWithoutJs(html, out, file);
   }
   assertNotFoundPages(out);
@@ -620,7 +663,7 @@ test('build de main indexable avec SITE_URL : 4 accueils + 4 Contact, sans noind
   for (const [i, file] of CONTACTS.entries()) {
     const html = readFileSync(join(out, file), 'utf8');
     assertLayout(html, 'contact', LANGS[i], out, 'https://rs.example', true);
-    assertContact(html, LANGS[i]);
+    assertContact(html, LANGS[i], out);
     assertFormHiddenWithoutJs(html, out, file);
   }
   // Story 1.9 : les 5 404 restent en noindex sur un build indexable ; sitemap et robots absolus.
