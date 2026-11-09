@@ -44,6 +44,28 @@ export const homePageSchema = z.strictObject({
   smoke: z.strictObject({ title: perLang(text), text: perLang(text) }),
 });
 
+// Story 5.1 (FR10, FR40, AD-4, décisions D2 et D3 de l'epic 5) : contenu de la page À propos (src/templates/About.astro).
+// `fillable` : un texte fourni dans les 4 langues, ou `{ placeholder }` (4 langues, sans crochets) tant que RS SYSTEM
+// ne l'a pas fourni, rendu par <Placeholder>. Mêler les deux formes, ou omettre une langue, est refusé.
+export const fillable = z.union([perLang(text), z.strictObject({ placeholder: perLang(text) })]);
+/** Un chiffre : valeur et libellé de colonne ensemble (retirer l'entrée retire la colonne). */
+const aboutStat = z.strictObject({ value: fillable, label: perLang(text) });
+export const aboutPageSchema = z.strictObject({
+  hero: z.strictObject({ title: perLang(text) }),
+  story: fillable,
+  // Chiffres dans un ordre fixe (année · installations · zone), chacun facultatif ; `label` = aria-label de la section.
+  stats: z.strictObject({
+    label: perLang(text),
+    founded: aboutStat.optional(),
+    installations: aboutStat.optional(),
+    zone: aboutStat.optional(),
+  }),
+  how: z.strictObject({
+    title: perLang(text),
+    items: z.array(z.strictObject({ title: perLang(text), text: fillable })).length(3),
+  }),
+});
+
 // Le champ s'appelle `slugs` : un champ `slug` remplacerait l'id de l'entrée (loader glob).
 export const pageSchema = z.strictObject({
   slugs: perLang(z.string()),
@@ -52,10 +74,17 @@ export const pageSchema = z.strictObject({
   meta: z.strictObject({ title: perLang(text), description: perLang(text) }),
   service: servicePageSchema.optional(),
   home: homePageSchema.optional(),
+  about: aboutPageSchema.optional(),
 });
 
 /** Story 3.5 : bloc `home` de la page `id`, obligatoire pour l'accueil ; lève une erreur nommant le fichier sinon. */
 export function requireHome<T>(id: string, home: T | undefined): T {
   if (!home) throw new Error(`Home : bloc « home » absent de src/content/pages/${id}.yaml`);
   return home;
+}
+
+/** Story 5.1 : bloc `about` de la page `id`, obligatoire pour À propos ; lève une erreur nommant le fichier sinon. */
+export function requireAbout<T>(id: string, about: T | undefined): T {
+  if (!about) throw new Error(`About : bloc « about » absent de src/content/pages/${id}.yaml`);
+  return about;
 }

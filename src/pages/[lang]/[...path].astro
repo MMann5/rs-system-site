@@ -5,6 +5,7 @@
 // scripts/postbuild/not-found.mjs (chemin réservé par le registre).
 import { LANGS, type Lang } from '../../lib/langs';
 import { entries, NOT_FOUND_ID, NOT_FOUND_SEGMENT } from '../../lib/routes';
+import About from '../../templates/About.astro';
 import Areas from '../../templates/Areas.astro';
 import City from '../../templates/City.astro';
 import Contact from '../../templates/Contact.astro';
@@ -29,7 +30,7 @@ interface Props {
 }
 
 // Modèle par type d'id (préfixe avant « : », ex. `city:modiin` → `city`).
-const TEMPLATES = { home: Home, areas: Areas, city: City, contact: Contact, cameras: Service, 'smoke-detectors': Service, 'smart-home': Service, networks: Service, intercom: Service, contractors: Service, 'path-probe': PathProbe, 'not-found': NotFound } as const;
+const TEMPLATES = { home: Home, about: About, areas: Areas, city: City, contact: Contact, cameras: Service, 'smoke-detectors': Service, 'smart-home': Service, networks: Service, intercom: Service, contractors: Service, 'path-probe': PathProbe, 'not-found': NotFound } as const;
 
 const { id, lang } = Astro.props;
 const type = id.split(':')[0] as string;

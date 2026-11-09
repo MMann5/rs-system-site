@@ -546,4 +546,18 @@
   /* Canvas Zones.dc.html › phrase « לא מצאתם… » : « max-width: 760px; margin: 40px auto 0 » */
   --areas-missing-max: 760px;
   --areas-missing-gap: 40px;
+  /* — Story 5.1 : page À propos (canvas About.dc.html, décision D1 de l'epic 5) — */
+  /* D1 : logo complet blanc « hauteur 220px sur ordinateur », « ≈ 150px à 390 px » (sous 700px) */
+  --about-logo-height: 220px;
+  --about-logo-height-mobile: 150px;
+  /* Canvas About.dc.html › zone : « font-size: 40px; font-weight: 700; line-height: 1.6 » (police du texte) */
+  --type-stat-text-size: 40px;
+  --type-stat-text-weight: 700;
+  --type-stat-text-leading: 1.6;
+  /* Canvas About.dc.html › libellé d'un chiffre : « font-size: 17px; color: #4a6280 » */
+  --type-stat-label-size: 17px;
+  /* Canvas About.dc.html › chiffres : « repeat(auto-fit, minmax(240px, 1fr)); gap: 48px », « gap: 6px » valeur/libellé */
+  --stat-col-min: 240px;
+  --stat-grid-gap: 48px;
+  --stat-gap: 6px;
 }
