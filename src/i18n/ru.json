@@ -47,5 +47,22 @@
   "contact-band.leave-details": "Оставить контакты",
   "not-found.meta-title": "Страница не найдена · RS SYSTEM",
   "not-found.title": "Страница не найдена.",
-  "not-found.home": "На главную"
+  "not-found.home": "На главную",
+  "contact.title": "Свяжитесь с нами.",
+  "form.title": "Или оставьте контакты, и мы с вами свяжемся.",
+  "form.name.label": "Имя",
+  "form.phone.label": "Телефон",
+  "form.city.label": "Город или населённый пункт",
+  "form.service.label": "Что нужно?",
+  "form.message.label": "Сообщение",
+  "form.optional": "(необязательно)",
+  "form.submit": "Отправить в WhatsApp",
+  "form.note": "Заявка откроется в WhatsApp.",
+  "contact.info.phone": "Телефон",
+  "contact.info.whatsapp": "WhatsApp",
+  "contact.info.whatsapp-link": "Написать сообщение",
+  "contact.info.email": "Эл. почта",
+  "contact.info.zone": "Зона обслуживания",
+  "contact.info.hours": "Часы работы",
+  "placeholder.hours": "часы работы"
 }

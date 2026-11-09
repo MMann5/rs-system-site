@@ -47,5 +47,22 @@
   "contact-band.leave-details": "Laisser ses coordonnées",
   "not-found.meta-title": "Page introuvable · RS SYSTEM",
   "not-found.title": "Page introuvable.",
-  "not-found.home": "Aller à l'accueil"
+  "not-found.home": "Aller à l'accueil",
+  "contact.title": "Contactez-nous.",
+  "form.title": "Ou laissez vos coordonnées, on vous recontacte.",
+  "form.name.label": "Nom",
+  "form.phone.label": "Téléphone",
+  "form.city.label": "Ville ou localité",
+  "form.service.label": "De quoi avez-vous besoin ?",
+  "form.message.label": "Message",
+  "form.optional": "(facultatif)",
+  "form.submit": "Envoyer sur WhatsApp",
+  "form.note": "La demande s'ouvre dans WhatsApp.",
+  "contact.info.phone": "Téléphone",
+  "contact.info.whatsapp": "WhatsApp",
+  "contact.info.whatsapp-link": "Envoyer un message",
+  "contact.info.email": "E-mail",
+  "contact.info.zone": "Zone d'intervention",
+  "contact.info.hours": "Horaires",
+  "placeholder.hours": "horaires"
 }

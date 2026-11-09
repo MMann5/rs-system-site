@@ -47,5 +47,22 @@
   "contact-band.leave-details": "Leave your details",
   "not-found.meta-title": "Page not found · RS SYSTEM",
   "not-found.title": "Page not found.",
-  "not-found.home": "Go to home page"
+  "not-found.home": "Go to home page",
+  "contact.title": "Talk to us.",
+  "form.title": "Or leave your details and we'll get back to you.",
+  "form.name.label": "Name",
+  "form.phone.label": "Phone",
+  "form.city.label": "City or town",
+  "form.service.label": "What do you need?",
+  "form.message.label": "Message",
+  "form.optional": "(optional)",
+  "form.submit": "Send on WhatsApp",
+  "form.note": "Your request opens in WhatsApp.",
+  "contact.info.phone": "Phone",
+  "contact.info.whatsapp": "WhatsApp",
+  "contact.info.whatsapp-link": "Send a message",
+  "contact.info.email": "Email",
+  "contact.info.zone": "Service area",
+  "contact.info.hours": "Opening hours",
+  "placeholder.hours": "opening hours"
 }

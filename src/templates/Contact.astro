@@ -1,0 +1,385 @@
+---
+// FR13, FR28, FR33, NFR9, UX-DR28, AD-2, AD-5, AD-6, AD-7, AD-8, AD-13, décisions D1 à D4 de l'epic 2 :
+// page Contact (canvas Contact.dc.html). Héros clair centré (h1, numéro géant, Appeler › WhatsApp ›),
+// puis section formulaire sur surface-alt : le formulaire balisé (sans comportement : validation en 2.2,
+// envoi en 2.3) et la colonne d'infos. Pas de bloc contact sur cette page. Sans JS (`scripting: none`),
+// le bloc formulaire est masqué et le <noscript> propose Appeler › WhatsApp ›.
+// Aucun attribut `name` sur les champs en 2.1 : sans îlot, rien ne doit partir dans l'URL.
+import PhoneNumber from '../components/PhoneNumber.astro';
+import Placeholder from '../components/Placeholder.astro';
+import TextLink from '../components/TextLink.astro';
+import Base from '../layouts/Base.astro';
+import { telHref, waHref } from '../lib/contact/core';
+import { serviceLabels } from '../lib/contact/labels';
+import { pageWaInput, SERVICE_CODES } from '../lib/contact/table';
+import { t } from '../lib/i18n';
+import type { Lang } from '../lib/langs';
+import { createPageContext } from '../lib/page-context';
+import { page } from '../lib/pages';
+import { isEnabled, url } from '../lib/routes';
+
+interface Props {
+  id: string;
+  lang: Lang;
+}
+
+const { id, lang } = Astro.props;
+const ctx = createPageContext({ id, lang, navSection: 'contact' });
+const { meta } = page(id);
+const wa = waHref(pageWaInput(ctx, serviceLabels('he')));
+const services = serviceLabels(lang);
+const optional = t(lang, 'form.optional');
+---
+<Base ctx={ctx} title={meta.title[lang]} description={meta.description[lang]}>
+  <section class="hero" aria-labelledby="contact-title">
+    <h1 id="contact-title" class="title">{t(lang, 'contact.title')}</h1>
+    <a href={telHref()} class="phone" data-track="call_click" data-placement="contact_page"><PhoneNumber /></a>
+    <div class="row">
+      <TextLink href={telHref()} label={t(lang, 'action.call')} tone="light" track="call_click" placement="contact_page" />
+      <TextLink href={wa} label={t(lang, 'action.whatsapp')} tone="light" track="whatsapp_click" placement="contact_page" />
+    </div>
+  </section>
+
+  <section class="form-section">
+    <div class="grid">
+      <div class="form-block">
+        <h2 class="form-title">{t(lang, 'form.title')}</h2>
+        <form class="form">
+          <div class="field-group">
+            <label for="contact-name" class="label">{t(lang, 'form.name.label')}</label>
+            <input id="contact-name" class="field" type="text" autocomplete="name" required aria-required="true" />
+          </div>
+          <div class="field-group">
+            <label for="contact-phone" class="label">{t(lang, 'form.phone.label')}</label>
+            <input id="contact-phone" class="field" type="tel" dir="ltr" autocomplete="tel" required aria-required="true" />
+          </div>
+          <div class="field-group">
+            <label for="contact-city" class="label">{t(lang, 'form.city.label')} <span class="optional">{optional}</span></label>
+            <input id="contact-city" class="field" type="text" autocomplete="address-level2" />
+          </div>
+          <div class="field-group">
+            <label for="contact-service" class="label">{t(lang, 'form.service.label')} <span class="optional">{optional}</span></label>
+            <div class="select-wrap">
+              <select id="contact-service" class="field select">
+                {SERVICE_CODES.map((code) => <option value={code} selected={code === 'unsure'}>{services[code].label}</option>)}
+              </select>
+              <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </div>
+          </div>
+          <div class="field-group">
+            <label for="contact-message" class="label">{t(lang, 'form.message.label')} <span class="optional">{optional}</span></label>
+            <textarea id="contact-message" class="field message" rows="4" maxlength="1000" enterkeyhint="send"></textarea>
+          </div>
+          <button type="submit" class="submit" data-surface="accent">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path d="M4 20l1.3-3.9A8 8 0 1 1 8 19z" /></svg>
+            <span>{t(lang, 'form.submit')}</span>
+          </button>
+          <p class="note">{t(lang, 'form.note')}{isEnabled('privacy') && <> <a href={url('privacy', lang)}>{t(lang, 'nav.privacy')}</a></>}</p>
+        </form>
+      </div>
+      <noscript>
+        <div class="row noscript-links">
+          <TextLink href={telHref()} label={t(lang, 'action.call')} tone="light" track="call_click" placement="contact_page" />
+          <TextLink href={wa} label={t(lang, 'action.whatsapp')} tone="light" track="whatsapp_click" placement="contact_page" />
+        </div>
+      </noscript>
+      <dl class="info">
+        <div class="pair">
+          <dt class="info-label">{t(lang, 'contact.info.phone')}</dt>
+          <dd class="info-value"><a href={telHref()} class="info-phone" data-track="call_click" data-placement="contact_page"><PhoneNumber /></a></dd>
+        </div>
+        <div class="pair">
+          <dt class="info-label">{t(lang, 'contact.info.whatsapp')}</dt>
+          <dd class="info-value"><a href={wa} class="info-link" data-track="whatsapp_click" data-placement="contact_page">{t(lang, 'contact.info.whatsapp-link')}<span aria-hidden="true">{' ›'}</span></a></dd>
+        </div>
+        <div class="pair">
+          <dt class="info-label">{t(lang, 'contact.info.email')}</dt>
+          <dd class="info-value"><Placeholder text={t(lang, 'placeholder.email')} /></dd>
+        </div>
+        <div class="pair">
+          <dt class="info-label">{t(lang, 'contact.info.zone')}</dt>
+          <dd class="info-value">{t(lang, 'contact.zone')}</dd>
+        </div>
+        <div class="pair">
+          <dt class="info-label">{t(lang, 'contact.info.hours')}</dt>
+          <dd class="info-value"><Placeholder text={t(lang, 'placeholder.hours')} /></dd>
+        </div>
+      </dl>
+    </div>
+  </section>
+</Base>
+
+<style>
+  /* Seuils (les @media ne lisent pas les tokens) : --bp-mobile-bar 700px. */
+
+  /* — Héros clair, centré (canvas Contact.dc.html) — */
+  .hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--contact-hero-gap);
+    padding-block: var(--contact-pad-start) var(--section-y-tablet);
+    padding-inline: var(--page-gutter);
+    background-color: var(--color-surface);
+    color: var(--color-ink);
+    text-align: center;
+  }
+
+  .title {
+    margin: 0;
+    font-size: var(--type-contact-title-size);
+    font-weight: var(--type-contact-title-weight);
+    line-height: var(--type-contact-title-leading);
+  }
+
+  /* Numéro géant : chiffres en family-sans, encre, une seule ligne. */
+  .phone {
+    font-family: var(--type-phone-giant-family);
+    font-size: var(--type-phone-giant-size);
+    font-weight: var(--type-phone-giant-weight);
+    line-height: var(--type-phone-giant-leading);
+    letter-spacing: var(--type-phone-giant-tracking);
+    color: var(--color-ink);
+    text-decoration: none;
+    white-space: nowrap;
+    /* Cible ≥ 44px même quand le numéro descend à 36px (line-height 1). */
+    display: inline-flex;
+    align-items: center;
+    min-block-size: var(--space-12);
+  }
+
+  .phone:hover,
+  .phone:focus-visible {
+    text-decoration: underline;
+  }
+
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    column-gap: var(--link-gap);
+    margin-block-start: var(--space-2);
+  }
+
+  /* — Section formulaire : surface-alt, deux colonnes dès que la place le permet — */
+  .form-section {
+    padding-block: var(--contact-pad-start) var(--section-y-lg);
+    padding-inline: var(--page-gutter);
+    background-color: var(--color-surface-alt);
+    color: var(--color-ink);
+  }
+
+  @media (width < 700px) {
+    .hero,
+    .form-section {
+      padding-block: var(--section-y-mobile);
+    }
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--form-col-min)), 1fr));
+    gap: var(--form-cols-gap);
+    align-items: start;
+    max-inline-size: var(--container-form);
+    margin-inline: auto;
+  }
+
+  /* FR33, NFR9 : sans JS, le formulaire (et son h2) laisse la place aux liens du <noscript>. */
+  @media (scripting: none) {
+    .form-block {
+      display: none;
+    }
+  }
+
+  .noscript-links {
+    justify-content: flex-start;
+    margin-block-start: 0;
+  }
+
+  .form-title {
+    margin-block: 0 var(--space-2);
+    font-size: var(--type-h1-size);
+    font-weight: var(--type-h1-weight);
+    line-height: var(--type-h1-leading);
+  }
+
+  .form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--form-fields-gap);
+    margin-block-start: var(--form-fields-gap);
+  }
+
+  /* Label au-dessus du champ. */
+  .field-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .label {
+    font-size: var(--type-field-label-size);
+    font-weight: var(--type-field-label-weight);
+    line-height: var(--type-field-label-leading);
+  }
+
+  .optional {
+    font-weight: var(--type-body-weight);
+    color: var(--color-ink-muted);
+  }
+
+  .field {
+    box-sizing: border-box;
+    inline-size: 100%;
+    min-block-size: var(--field-min-height);
+    padding-block: var(--field-pad-block);
+    padding-inline: var(--field-pad-inline);
+    border: var(--field-border-width) solid var(--color-field-border);
+    border-radius: var(--radius-xs);
+    background-color: var(--color-white);
+    color: var(--color-ink);
+    font-size: var(--type-field-text-size);
+    font-weight: var(--type-field-text-weight);
+    line-height: var(--type-field-text-leading);
+  }
+
+  .field:focus,
+  .field:focus-visible {
+    border-color: var(--focus-ring);
+    outline: var(--focus-ring-width) solid var(--focus-ring);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  .message {
+    resize: block;
+  }
+
+  /* Liste déroulante sans apparence native (WebKit iOS ignore sinon la hauteur de 52px) : flèche en SVG
+   * à l'extrémité de fin, qui suit le sens de la page ; le texte ne passe jamais dessous. */
+  .select-wrap {
+    position: relative;
+  }
+
+  .select {
+    appearance: none;
+    padding-inline-end: calc(var(--field-pad-inline) * 2 + var(--icon-size));
+  }
+
+  .chevron {
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-end: var(--field-pad-inline);
+    inline-size: var(--icon-size);
+    block-size: var(--icon-size);
+    translate: 0 -50%;
+    color: var(--color-ink);
+    stroke-width: var(--icon-stroke-width);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    pointer-events: none;
+  }
+
+  /* Bouton d'envoi : signal-blue, 56px, 18/700, icône WhatsApp 20px puis libellé, aligné au début. */
+  .submit {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    align-self: flex-start;
+    min-block-size: var(--submit-min-height);
+    padding-block: 0;
+    padding-inline: var(--submit-pad-inline);
+    border: 0;
+    border-radius: var(--radius-xs);
+    background-color: var(--color-signal-blue);
+    color: var(--color-on-accent);
+    font-size: var(--type-submit-size);
+    font-weight: var(--type-submit-weight);
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  @media (width < 700px) {
+    .submit {
+      padding-inline: var(--submit-pad-inline-mobile);
+    }
+  }
+
+  .icon {
+    flex-shrink: 0;
+    inline-size: var(--icon-size);
+    block-size: var(--icon-size);
+    stroke-width: var(--icon-stroke-width);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .note {
+    margin: 0;
+    font-size: var(--type-small-size);
+    font-weight: var(--type-small-weight);
+    line-height: var(--type-small-leading);
+    color: var(--color-ink-muted);
+  }
+
+  .note a {
+    color: var(--color-link);
+  }
+
+  /* — Colonne d'infos : libellé small muted, valeur 22–26px — */
+  .info {
+    display: flex;
+    flex-direction: column;
+    gap: var(--info-gap);
+    margin: 0;
+    padding-block-start: var(--space-2);
+  }
+
+  .pair {
+    display: flex;
+    flex-direction: column;
+    gap: var(--info-pair-gap);
+  }
+
+  .info-label {
+    font-size: var(--type-small-size);
+    font-weight: var(--type-small-weight);
+    line-height: var(--type-small-leading);
+    color: var(--color-ink-muted);
+  }
+
+  .info-value {
+    margin: 0;
+    font-size: var(--type-info-value-size);
+    font-weight: var(--type-info-value-weight);
+    line-height: var(--type-h3-leading);
+  }
+
+  /* Liens de la colonne : cible ≥ 44px, soulignés au survol et au focus. */
+  .info-phone,
+  .info-link {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: var(--space-12);
+    text-decoration: none;
+  }
+
+  .info-phone {
+    font-family: var(--family-sans);
+    font-size: var(--type-info-phone-size);
+    font-weight: var(--type-info-phone-weight);
+    color: var(--color-ink);
+    white-space: nowrap;
+  }
+
+  .info-link {
+    color: var(--color-link);
+  }
+
+  .info-phone:hover,
+  .info-phone:focus-visible,
+  .info-link:hover,
+  .info-link:focus-visible {
+    text-decoration: underline;
+  }
+</style>

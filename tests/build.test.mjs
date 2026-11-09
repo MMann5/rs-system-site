@@ -1,4 +1,4 @@
-// Stories 1.3 à 1.9 : sortie réelle du build, sur une branche puis sur main (registre, layout Base.astro).
+// Stories 1.3 à 1.9 et 2.1 : sortie réelle du build, sur une branche puis sur main (registre, layout Base.astro).
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
@@ -6,12 +6,16 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } 
 import { tmpdir } from 'node:os';
 import { join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parse } from 'yaml';
 import { waHref } from '../src/lib/contact/core.ts';
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
 const LANGS = ['he', 'en', 'ru', 'fr'];
 const HOMES = LANGS.map((lang) => `${lang}/index.html`);
 const PROBES = ['en/path-probe/index.html', 'fr/test-de-chemin/index.html', 'he/בדיקת-נתיב/index.html', 'ru/проверка-пути/index.html'];
+// Story 2.1 : page Contact, slugs des décisions de l'epic 2.
+const CONTACT_SLUGS = { he: 'צור-קשר', en: 'contact', ru: 'контакты', fr: 'contact' };
+const CONTACTS = LANGS.map((lang) => `${lang}/${CONTACT_SLUGS[lang]}/index.html`);
 const dirs = [];
 
 // Étapes du script `build` de package.json : `astro build`, puis chaque `node <script>` lancé sur le dossier
@@ -66,7 +70,7 @@ function metaField(id, field) {
 }
 
 const META = Object.fromEntries(
-  ['home', 'path-probe'].map((id) => [id, { title: metaField(id, 'title'), description: metaField(id, 'description') }]),
+  ['home', 'path-probe', 'contact'].map((id) => [id, { title: metaField(id, 'title'), description: metaField(id, 'description') }]),
 );
 const titles = META.home.title;
 
@@ -78,6 +82,7 @@ const PAGE_HREFS = {
   'path-probe': Object.fromEntries(
     PROBES.map((file) => [file.split('/')[0], `/${file.split('/')[0]}/${encodeURIComponent(file.split('/')[1])}/`]),
   ),
+  contact: Object.fromEntries(LANGS.map((lang) => [lang, `/${lang}/${encodeURIComponent(CONTACT_SLUGS[lang])}/`])),
 };
 // Story 1.6 : chaînes i18n du menu, du sélecteur et de la barre mobile.
 const MENU_LABEL = { he: 'תפריט', en: 'Menu', ru: 'Меню', fr: 'Menu' };
@@ -95,18 +100,24 @@ const BASELINE_BDI = /<bdi lang="he" dir="rtl"[^>]*>/g;
 const RATING_BDI = /<bdi dir="ltr"[^>]*>[\d.,]+<\/bdi>/g;
 const FOCUSABLE = /<(?:a\b[^>]*\shref=|button\b|input\b|select\b|textarea\b|[a-z][\w-]*\b[^>]*\stabindex=)[^>]*>/i;
 
-/** Story 1.7 (FR19, UX-DR33, D1) : footer pendant l'epic 1 (aucune page de colonne ni légale active). */
+/** Story 1.7 (FR19, UX-DR33, D1), story 2.1 : footer avec `contact` seul actif (colonne RS SYSTEM = Contact). */
 function assertFooter(footer, lang, where) {
   const dict = I18N[lang];
   const contact = dict['footer.col.contact'];
-  // Deux <nav> : la colonne Contact (seule colonne rendue) et le sélecteur ; aucun <nav> légal.
+  const company = dict['footer.col.company'];
+  // Trois <nav> : la colonne RS SYSTEM (seul lien : Contact), la colonne Contact, puis le sélecteur ; aucun <nav> légal.
   const navs = footer.match(/<nav\b[^>]*>/g) ?? [];
-  assert.equal(navs.length, 2, `${where} : <nav> du footer ${navs}`);
-  assert.match(navs[0], new RegExp(`^<nav aria-label="${contact}"[\\s>]`), `${where} : <nav> Contact`);
+  assert.equal(navs.length, 3, `${where} : <nav> du footer ${navs}`);
+  assert.match(navs[0], new RegExp(`^<nav aria-label="${company}"[\\s>]`), `${where} : <nav> RS SYSTEM`);
+  assert.match(navs[1], new RegExp(`^<nav aria-label="${contact}"[\\s>]`), `${where} : <nav> Contact`);
   assert.ok(!navs.some((n) => n.includes(`aria-label="${dict['footer.legal-label']}"`)), `${where} : <nav> légal`);
-  const col = footer.slice(footer.indexOf(navs[0]), footer.indexOf('</nav>'));
+  const companyCol = footer.slice(footer.indexOf(navs[0]), footer.indexOf('</nav>'));
+  assert.equal(companyCol.match(/<h2\b[^>]*>([^<]*)<\/h2>/)?.[1], company, `${where} : <h2> RS SYSTEM`);
+  const companyLinks = [...companyCol.matchAll(/<a href="([^"]*)"[^>]*>([^<]*)<\/a>/g)].map((m) => [m[1], m[2]]);
+  assert.deepEqual(companyLinks, [[PAGE_HREFS.contact[lang], dict['nav.contact']]], `${where} : liens RS SYSTEM`);
+  const col = footer.slice(footer.indexOf(navs[1]), footer.indexOf('</nav>', footer.indexOf(navs[1])));
   assert.equal(col.match(/<h2\b[^>]*>([^<]*)<\/h2>/)?.[1], contact, `${where} : <h2> Contact`);
-  assert.equal(footer.match(/<h2[\s>]/g)?.length, 1, `${where} : <h2> du footer`);
+  assert.equal(footer.match(/<h2[\s>]/g)?.length, 2, `${where} : <h2> du footer`);
   // Numéro : lien d'appel mesuré (AD-5, AD-6), isolé en LTR.
   const calls = [...col.matchAll(/<a href="tel:\+972509565669"([^>]*)>([\s\S]*?)<\/a>/g)];
   assert.equal(calls.length, 1, `${where} : lien d'appel du footer`);
@@ -121,8 +132,8 @@ function assertFooter(footer, lang, where) {
   const baseline = I18N.he['site.tagline'];
   const tagline = lang === 'he' ? baseline : `<bdi lang="he" dir="rtl"[^>]*>${baseline}</bdi>`;
   assert.match(footer, new RegExp(`<p\\b[^>]*>${dict['footer.copyright']} · ${tagline}</p>`), `${where} : ligne basse`);
-  // Ordre de lecture : colonne, puis ligne basse, puis sélecteur.
-  assert.ok(footer.indexOf(navs[0]) < footer.indexOf('<p') && footer.indexOf('<p') < footer.indexOf(navs[1]), `${where} : ordre du footer`);
+  // Ordre de lecture : colonnes, puis ligne basse, puis sélecteur.
+  assert.ok(footer.indexOf(navs[1]) < footer.indexOf('<p') && footer.indexOf('<p') < footer.indexOf(navs[2]), `${where} : ordre du footer`);
 }
 
 /** Story 1.4 : sortie du layout unique pour la page `id` en `lang` ; `out` = dossier du build, `site` = SITE_URL. */
@@ -138,12 +149,16 @@ function assertLayout(html, id, lang, out, site = '', indexable = false) {
   // liens du sélecteur de langues, qui portent chacun lang + hreflang, et baseline du footer hors hébreu).
   assert.equal(html.match(BASELINE_BDI)?.length ?? 0, lang === 'he' ? 0 : 1, `${where} : bdi de la baseline`);
   assert.equal(html.replace(SWITCHER_LINK, '').replace(BASELINE_BDI, '').match(/\slang=/g)?.length, 1, `${where} : lang= en double`);
-  assert.equal(html.replaceAll(PHONE_BDI, '').replace(BASELINE_BDI, '').replace(RATING_BDI, '').match(/\sdir=/g)?.length, 1, `${where} : dir= en double`);
+  // Story 2.1 : seul autre dir= de la page Contact, dir="ltr" sur le champ téléphone.
+  const withoutIsolates = html.replaceAll(PHONE_BDI, '').replace(BASELINE_BDI, '').replace(RATING_BDI, '');
+  const phoneField = id === 'contact' ? /<input id="contact-phone"[^>]*>/ : /$^/;
+  assert.equal(withoutIsolates.replace(phoneField, '').match(/\sdir=/g)?.length, 1, `${where} : dir= en double`);
   assert.match(html, new RegExp(`<html lang="${lang}" dir="${lang === 'he' ? 'rtl' : 'ltr'}" data-page-id="${id}"[\\s>]`), where);
-  // AD-13 : un seul #rs-data, qui vaut { context }.
+  // AD-13 : un seul #rs-data, qui vaut { context } (navSection sur la page Contact, sans tables en 2.1).
   assert.equal(html.match(/\sid="rs-data"/g)?.length, 1, `${where} : #rs-data absent ou en double`);
   const json = html.match(/<script type="application\/json" id="rs-data">([\s\S]*?)<\/script>/)?.[1];
-  assert.deepEqual(JSON.parse(json), { context: { id, lang, indexable } }, where);
+  const context = id === 'contact' ? { id, lang, navSection: 'contact', indexable } : { id, lang, indexable };
+  assert.deepEqual(JSON.parse(json), { context }, where);
   // FR24 : premier élément focalisable du <body> = lien d'évitement vers #content.
   const body = html.slice(html.indexOf('<body'));
   const first = body.slice(body.indexOf('>') + 1).match(FOCUSABLE);
@@ -173,13 +188,23 @@ function assertLayout(html, id, lang, out, site = '', indexable = false) {
     assert.ok(buttons[0].includes(` ${attr}`), `${where} : ${attr} absent de ${buttons[0]}`);
   }
   assert.ok(header.indexOf('<button') > header.indexOf('href="tel:'), `${where} : bouton pas après le numéro`);
-  // Panneau #mobile-menu après la barre ; aucun id de nav actif pendant l'epic : un seul <nav> dans le
-  // header, celui du sélecteur de langues, dans le panneau.
+  // Panneau #mobile-menu après la barre. Story 2.1 : `contact` seul id de nav actif, donc trois <nav> dans
+  // le header : liens de la barre (avant le panneau), puis dans le panneau les mêmes liens et le sélecteur.
   assert.equal(header.match(/\sid="mobile-menu"/g)?.length, 1, `${where} : #mobile-menu`);
   const menu = header.slice(header.indexOf(' id="mobile-menu"'));
   assert.ok(header.indexOf(' id="mobile-menu"') > header.indexOf('<button'), `${where} : panneau pas après le bouton`);
-  assert.equal(header.match(/<nav[\s>]/g)?.length, 1, `${where} : <nav> du header`);
-  assert.equal(menu.match(/<nav[\s>]/g)?.length, 1, `${where} : <nav> hors du panneau`);
+  assert.equal(header.match(/<nav[\s>]/g)?.length, 3, `${where} : <nav> du header`);
+  assert.equal(menu.match(/<nav[\s>]/g)?.length, 2, `${where} : <nav> du panneau`);
+  const navLabel = I18N[lang]['nav.main-label'];
+  const mainNavs = [...header.matchAll(new RegExp(`<nav aria-label="${navLabel}"[^>]*>([\\s\\S]*?)</nav>`, 'g'))];
+  assert.equal(mainNavs.length, 2, `${where} : <nav> principaux`);
+  for (const [, inner] of mainNavs) {
+    const links = [...inner.matchAll(/<a\b([^>]*)>([^<]*)<\/a>/g)];
+    assert.equal(links.length, 1, `${where} : liens du <nav> principal`);
+    assert.equal(attr(`<a${links[0][1]}>`, 'href'), PAGE_HREFS.contact[lang], `${where} : href Contact du header`);
+    assert.equal(links[0][2], I18N[lang]['nav.contact'], `${where} : libellé Contact du header`);
+    assert.equal(attr(`<a${links[0][1]}>`, 'aria-current'), id === 'contact' ? 'page' : undefined, `${where} : aria-current Contact`);
+  }
   assert.match(menu, new RegExp(`<nav aria-label="${SWITCHER_LABEL[lang]}"[^>]*\\sdata-lang-switcher[\\s>]`), `${where} : <nav> du sélecteur`);
   // Story 1.7 : deux sélecteurs (menu, footer), chacun <nav aria-label data-lang-switcher>.
   const switcherNavs = html.match(new RegExp(`<nav aria-label="${SWITCHER_LABEL[lang]}"[^>]*\\sdata-lang-switcher[\\s>]`, 'g')) ?? [];
@@ -341,18 +366,20 @@ function assertHome(html, lang, out) {
   const zone = band.match(/<p class="zone"[^>]*>([^<]*)<\/p>/);
   assert.equal(zone?.[1], dict['contact.zone'], `${where} : zone`);
   const links = [...band.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)];
-  assert.equal(links.length, 3, `${where} : liens du bloc`);
+  assert.equal(links.length, 4, `${where} : liens du bloc`);
   assert.equal(attr(`<a${links[0][1]}>`, 'href'), 'tel:+972509565669', `${where} : numéro`);
   assert.equal(attr(`<a${links[0][1]}>`, 'data-track'), 'call_click', `${where} : numéro data-track`);
   assert.equal(attr(`<a${links[0][1]}>`, 'data-placement'), 'contact_band', `${where} : numéro data-placement`);
   assert.equal(links[0][2], PHONE_BDI, `${where} : numéro du bloc`);
   assertTextLink(links[1], 'tel:+972509565669', dict['action.call'], 'call_click', 'contact_band', `${where} : bloc Appeler`);
   assertTextLink(links[2], waHref(), dict['action.whatsapp'], 'whatsapp_click', 'contact_band', `${where} : bloc WhatsApp`);
+  // Story 2.1 (FR21, FR29) : 3e action « Laisser ses coordonnées » vers Contact, sans paramètre (accueil sans service).
+  assertTextLink(links[3], PAGE_HREFS.contact[lang], escaped(dict['contact-band.leave-details']), undefined, undefined, `${where} : bloc leave-details`);
+  assert.ok(!attr(`<a${links[3][1]}>`, 'href').includes('?'), `${where} : leave-details sans paramètre`);
   for (const [, attrs] of links.slice(1)) assert.match(attrs, /\sclass="text-link night"/, `${where} : ton nuit`);
-  const order = [h2.index, score.index, line.index, zone.index, links[0].index, links[1].index, links[2].index];
+  const order = [h2.index, score.index, line.index, zone.index, links[0].index, links[1].index, links[2].index, links[3].index];
   assert.deepEqual(order, [...order].sort((a, b) => a - b), `${where} : ordre du bloc`);
-  // Aucun lien contact/areas ni « Laisser ses coordonnées », aucun placeholder dans le bloc.
-  assert.ok(!band.includes(dict['contact-band.leave-details']), `${where} : leave-details`);
+  // Aucun lien Zones (areas inactif), aucun placeholder dans le bloc.
   assert.ok(!band.includes('data-placeholder'), `${where} : placeholder dans le bloc`);
 }
 
@@ -382,9 +409,9 @@ function assertNotFound(html, lang, where) {
   assert.equal(svgs.length, 1, `${where} : <svg>`);
   assert.match(svgs[0], /^<svg aria-hidden="true"/, `${where} : svg aria-hidden`);
   assert.equal(svgs[0].match(/<path\b[^>]*\spathLength="1"/g)?.length, 3, `${where} : 3 arcs`);
-  // Numéro, Appeler, WhatsApp (404), puis Accueil ; rien d'autre (areas, contact inactifs).
+  // Numéro, Appeler, WhatsApp (404), puis Accueil et Contact (story 2.1) ; areas inactif.
   const links = [...main.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)];
-  assert.equal(links.length, 4, `${where} : liens de la 404`);
+  assert.equal(links.length, 5, `${where} : liens de la 404`);
   assert.equal(attr(`<a${links[0][1]}>`, 'href'), 'tel:+972509565669', `${where} : numéro`);
   assert.equal(attr(`<a${links[0][1]}>`, 'data-track'), 'call_click', `${where} : numéro data-track`);
   assert.equal(attr(`<a${links[0][1]}>`, 'data-placement'), '404', `${where} : numéro data-placement`);
@@ -392,6 +419,7 @@ function assertNotFound(html, lang, where) {
   assertTextLink(links[1], 'tel:+972509565669', dict['action.call'], 'call_click', '404', `${where} : Appeler`);
   assertTextLink(links[2], waHref(), dict['action.whatsapp'], 'whatsapp_click', '404', `${where} : WhatsApp`);
   assertTextLink(links[3], `/${lang}/`, escaped(dict['not-found.home']), undefined, undefined, `${where} : Accueil`);
+  assertTextLink(links[4], PAGE_HREFS.contact[lang], escaped(dict['nav.contact']), undefined, undefined, `${where} : Contact`);
   for (const [, attrs] of links.slice(1)) assert.match(attrs, /\sclass="text-link night"/, `${where} : ton nuit`);
   // Aucun lien de header actif, pas de bloc contact.
   assert.ok(!html.includes('aria-current="page"'), `${where} : aria-current="page"`);
@@ -420,15 +448,134 @@ function assertNotFoundPages(out) {
   for (const lang of LANGS) assert.ok(!existsSync(join(out, lang, '404')), `${lang}/404/ présent`);
 }
 
-/** Story 1.9 (FR39) : sitemap (4 <url> de l'accueil, 5 xhtml:link chacun), robots.txt, icônes et manifeste. */
+/** Story 2.1 (FR13, FR28, FR33, UX-DR28, D1 à D4) : page Contact en `lang`. */
+const FIELDS = [
+  { tag: 'input', id: 'contact-name', label: 'form.name.label', attrs: { type: 'text', autocomplete: 'name', required: '', 'aria-required': 'true' }, optional: false },
+  { tag: 'input', id: 'contact-phone', label: 'form.phone.label', attrs: { type: 'tel', dir: 'ltr', autocomplete: 'tel', required: '', 'aria-required': 'true' }, optional: false },
+  { tag: 'input', id: 'contact-city', label: 'form.city.label', attrs: { type: 'text', autocomplete: 'address-level2' }, optional: true },
+  { tag: 'select', id: 'contact-service', label: 'form.service.label', attrs: {}, optional: true },
+  { tag: 'textarea', id: 'contact-message', label: 'form.message.label', attrs: { rows: '4', maxlength: '1000', enterkeyhint: 'send' }, optional: true },
+];
+const SERVICE_ORDER = ['cameras', 'smoke-detectors', 'smart-home', 'networks', 'intercom', 'crane-cameras', 'unsure'];
+const SERVICES = parse(readFileSync(join(ROOT, 'src/content/services.yaml'), 'utf8'));
+/** Libellé du service `code` en `lang`, lu dans src/content/services.yaml. */
+const serviceLabel = (code, lang) => SERVICES.find((entry) => entry.id === code)?.label[lang];
+/** Attribut booléen ou valué présent dans une balise ouvrante (`required` rendu sans valeur). */
+const hasAttr = (tag, name, value) => (value === '' ? new RegExp(`\\s${name}(?:="")?[\\s>]`).test(tag) : attr(tag, name) === value);
+
+/** Story 2.1 (FR33, NFR9) : sans JS, le CSS de la page masque le bloc formulaire (`@media (scripting: none)`). */
+function assertFormHiddenWithoutJs(html, out, where) {
+  const css = [...html.matchAll(/<link rel="stylesheet" href="([^"]+)"/g)].map(([, href]) => readFileSync(join(out, href), 'utf8'));
+  css.push(...[...html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/g)].map((m) => m[1]));
+  assert.match(css.join('\n'), /@media \(scripting: ?none\)\s*\{\s*\.form-block(?:\[data-astro-cid-[\w-]+\])?\s*\{\s*display: ?none;?\s*\}/, `${where} : bloc formulaire non masqué sans JS`);
+}
+
+function assertContact(html, lang) {
+  const where = `contact (${lang})`;
+  const dict = I18N[lang];
+  const tel = 'tel:+972509565669';
+  const main = html.match(/<main id="content"[^>]*>([\s\S]*?)<\/main>/)?.[1] ?? '';
+  // Ordre de <main> : héros, puis section formulaire ; aucun bloc contact.
+  assert.match(main, /^<section class="hero" aria-labelledby="contact-title"[\s>]/, `${where} : héros en tête`);
+  const hero = main.match(/^<section class="hero"[\s\S]*?<\/section>/)?.[0] ?? '';
+  const rest = main.slice(hero.length);
+  assert.match(rest, /^<section class="form-section"[\s>]/, `${where} : section formulaire après le héros`);
+  assert.equal(main.match(/<section[\s>]/g)?.length, 2, `${where} : sections de <main>`);
+  assert.ok(!html.includes('class="band"'), `${where} : bloc contact`);
+  // Héros : h1, numéro géant, Appeler › WhatsApp › (ton clair, contact_page).
+  assert.equal(html.match(/<h1[\s>]/g)?.length, 1, `${where} : <h1>`);
+  assert.equal(hero.match(/<h1 id="contact-title"[^>]*>([^<]*)<\/h1>/)?.[1], escaped(dict['contact.title']), `${where} : h1`);
+  const heroLinks = [...hero.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)];
+  assert.equal(heroLinks.length, 3, `${where} : liens du héros`);
+  assert.equal(attr(`<a${heroLinks[0][1]}>`, 'href'), tel, `${where} : numéro`);
+  assert.equal(attr(`<a${heroLinks[0][1]}>`, 'class'), 'phone', `${where} : classe du numéro`);
+  assert.equal(attr(`<a${heroLinks[0][1]}>`, 'data-track'), 'call_click', `${where} : numéro data-track`);
+  assert.equal(attr(`<a${heroLinks[0][1]}>`, 'data-placement'), 'contact_page', `${where} : numéro data-placement`);
+  assert.equal(heroLinks[0][2], PHONE_BDI, `${where} : numéro en <bdi>`);
+  assertTextLink(heroLinks[1], tel, dict['action.call'], 'call_click', 'contact_page', `${where} : héros Appeler`);
+  assertTextLink(heroLinks[2], waHref(), dict['action.whatsapp'], 'whatsapp_click', 'contact_page', `${where} : héros WhatsApp`);
+  for (const [, attrs] of heroLinks.slice(1)) assert.match(attrs, /\sclass="text-link light"/, `${where} : ton clair`);
+  // Bloc formulaire : h2 (D1) puis <form> sans action.
+  const block = rest.match(/<div class="form-block"[^>]*>([\s\S]*?<\/form>)<\/div>/)?.[1] ?? '';
+  assert.ok(block, `${where} : bloc formulaire`);
+  assert.equal(block.match(/^<h2 class="form-title"[^>]*>([^<]*)<\/h2>/)?.[1], escaped(dict['form.title']), `${where} : h2`);
+  const formTag = block.match(/<form\b[^>]*>/)?.[0] ?? '';
+  assert.ok(formTag && attr(formTag, 'action') === undefined, `${where} : <form> sans action ${formTag}`);
+  const form = block.slice(block.indexOf(formTag));
+  // 5 champs dans l'ordre, label for au-dessus, attributs de FR28, aucun name/value/placeholder.
+  const controls = [...form.matchAll(/<(input|select|textarea)\b[^>]*>/g)];
+  assert.deepEqual(controls.map((m) => attr(m[0], 'id')), FIELDS.map((f) => f.id), `${where} : ordre des champs`);
+  for (const [i, field] of FIELDS.entries()) {
+    const tag = controls[i][0];
+    assert.equal(controls[i][1], field.tag, `${where} : ${field.id} balise`);
+    for (const [name, value] of Object.entries(field.attrs)) assert.ok(hasAttr(tag, name, value), `${where} : ${field.id} ${name} dans ${tag}`);
+    if (!field.optional) assert.ok(!/\sdir=/.test(tag) || field.id === 'contact-phone', `${where} : ${field.id} dir`);
+    if (field.optional) assert.ok(!/\srequired[\s=>]/.test(tag) && !/\saria-required=/.test(tag), `${where} : ${field.id} facultatif`);
+    for (const forbidden of ['name', 'value', 'placeholder']) assert.equal(attr(tag, forbidden), undefined, `${where} : ${field.id} ${forbidden}`);
+    const label = form.match(new RegExp(`<label for="${field.id}"[^>]*>([\\s\\S]*?)</label>`));
+    assert.ok(label, `${where} : <label for="${field.id}">`);
+    assert.ok(label.index < controls[i].index, `${where} : label de ${field.id} pas au-dessus`);
+    const optional = `<span class="optional"[^>]*>${escaped(dict['form.optional']).replace(/[()]/g, '\\$&')}</span>`;
+    const text = escaped(dict[field.label]).replace(/[?()]/g, '\\$&');
+    assert.match(label[1], new RegExp(`^${text}${field.optional ? ` ${optional}` : ''}$`), `${where} : label de ${field.id} ${label[1]}`);
+  }
+  assert.equal(form.split(`>${dict['form.optional']}</span>`).length - 1, 3, `${where} : « ${dict['form.optional']} » × 3`);
+  assert.ok(!/\s(?:value|placeholder|name)=/.test(form.replace(/<option\b[^>]*>/g, '')), `${where} : value/placeholder/name dans le formulaire`);
+  // Les 7 options dans l'ordre des codes, `unsure` sélectionné, libellés de services.yaml.
+  const select = form.match(/<select\b[^>]*>([\s\S]*?)<\/select>/)?.[1] ?? '';
+  const options = [...select.matchAll(/<option\b([^>]*)>([^<]*)<\/option>/g)];
+  assert.deepEqual(options.map(([, a]) => attr(`<option${a}>`, 'value')), SERVICE_ORDER, `${where} : options`);
+  assert.deepEqual(options.map(([, , label]) => label), SERVICE_ORDER.map((code) => escaped(serviceLabel(code, lang))), `${where} : libellés des options`);
+  options.forEach(([, a], i) => assert.equal(/\sselected[\s=>]|\sselected$/.test(a), SERVICE_ORDER[i] === 'unsure', `${where} : selected ${SERVICE_ORDER[i]}`));
+  // Bouton : submit, surface accent, icône aria-hidden puis libellé (D2) ; note dessous, sans lien (privacy inactif).
+  const button = form.match(/<button\b([^>]*)>([\s\S]*?)<\/button>/);
+  assert.ok(button, `${where} : bouton`);
+  assert.equal(attr(`<button${button[1]}>`, 'type'), 'submit', `${where} : type du bouton`);
+  assert.equal(attr(`<button${button[1]}>`, 'data-surface'), 'accent', `${where} : surface du bouton`);
+  assert.match(button[2], /^<svg\b[^>]*\saria-hidden="true"[^>]*>[\s\S]*?<\/svg><span\b[^>]*>([^<]*)<\/span>$/, `${where} : icône puis libellé`);
+  assert.equal(button[2].match(/<span\b[^>]*>([^<]*)<\/span>$/)?.[1], dict['form.submit'], `${where} : libellé du bouton`);
+  assert.ok(form.indexOf('<button') > controls.at(-1).index, `${where} : bouton après les champs`);
+  const note = form.slice(form.indexOf('</button>')).match(/<p class="note"[^>]*>([\s\S]*?)<\/p>/)?.[1];
+  assert.equal(note, escaped(dict['form.note']), `${where} : note`);
+  // <noscript> juste après le bloc formulaire : Appeler › WhatsApp ›.
+  const afterBlock = rest.slice(rest.indexOf('</form></div>') + '</form></div>'.length);
+  assert.match(afterBlock, /^<noscript>/, `${where} : <noscript> après le bloc formulaire`);
+  const noscript = afterBlock.match(/^<noscript>([\s\S]*?)<\/noscript>/)?.[1] ?? '';
+  const noscriptLinks = [...noscript.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)];
+  assert.equal(noscriptLinks.length, 2, `${where} : liens du <noscript>`);
+  assertTextLink(noscriptLinks[0], tel, dict['action.call'], 'call_click', 'contact_page', `${where} : noscript Appeler`);
+  assertTextLink(noscriptLinks[1], waHref(), dict['action.whatsapp'], 'whatsapp_click', 'contact_page', `${where} : noscript WhatsApp`);
+  // Colonne d'infos : 5 paires dt/dd, dans l'ordre.
+  const dl = afterBlock.match(/<dl class="info"[^>]*>([\s\S]*?)<\/dl>/)?.[1] ?? '';
+  const pairs = [...dl.matchAll(/<dt\b[^>]*>([^<]*)<\/dt><dd\b[^>]*>([\s\S]*?)<\/dd>/g)];
+  assert.deepEqual(pairs.map(([, dt]) => dt), ['phone', 'whatsapp', 'email', 'zone', 'hours'].map((k) => escaped(dict[`contact.info.${k}`])), `${where} : libellés des infos`);
+  const [phone, wa, email, zone, hours] = pairs.map(([, , dd]) => dd);
+  const phoneLink = phone.match(/^<a\b([^>]*)>([\s\S]*?)<\/a>$/);
+  assert.equal(attr(`<a${phoneLink?.[1]}>`, 'href'), tel, `${where} : info téléphone`);
+  assert.equal(attr(`<a${phoneLink?.[1]}>`, 'data-track'), 'call_click', `${where} : info téléphone data-track`);
+  assert.equal(attr(`<a${phoneLink?.[1]}>`, 'data-placement'), 'contact_page', `${where} : info téléphone data-placement`);
+  assert.equal(phoneLink?.[2], PHONE_BDI, `${where} : info téléphone en <bdi>`);
+  assertTextLink(wa.match(/^<a\b([^>]*)>([\s\S]*?)<\/a>$/), waHref(), escaped(dict['contact.info.whatsapp-link']), 'whatsapp_click', 'contact_page', `${where} : info WhatsApp`);
+  assert.match(email, new RegExp(`^<span data-placeholder(?:="")?>\\[${escaped(dict['placeholder.email'])}\\]</span>$`), `${where} : placeholder e-mail`);
+  assert.equal(zone, escaped(dict['contact.zone']), `${where} : zone`);
+  assert.match(hours, new RegExp(`^<span data-placeholder(?:="")?>\\[${escaped(dict['placeholder.hours'])}\\]</span>$`), `${where} : placeholder horaires`);
+  assert.equal(dl.match(/data-placeholder/g)?.length, 2, `${where} : placeholders de la colonne`);
+  assert.ok(!html.includes('mailto:'), `${where} : mailto:`);
+  // Aucun îlot de formulaire en 2.1 ni tables dans #rs-data (vérifié par assertLayout) ; aucun data-umami-*.
+  assert.ok(!html.includes('data-umami'), `${where} : data-umami-*`);
+}
+
+/** Story 1.9 (FR39), story 2.1 : sitemap (4 <url> de Contact puis 4 de l'accueil, 5 xhtml:link chacun), robots.txt, icônes et manifeste. */
 function assertSeoFiles(out, site, indexable) {
   const xml = readFileSync(join(out, 'sitemap.xml'), 'utf8');
   const blocks = [...xml.matchAll(/<url>([\s\S]*?)<\/url>/g)].map((m) => m[1]);
-  assert.equal(blocks.length, 4, 'sitemap : <url>');
+  assert.equal(blocks.length, 8, 'sitemap : <url>');
   blocks.forEach((block, i) => {
-    assert.equal(block.match(/<loc>([^<]*)<\/loc>/)?.[1], `${site}/${LANGS[i]}/`, `sitemap : loc ${LANGS[i]}`);
+    const hrefs = PAGE_HREFS[i < 4 ? 'contact' : 'home'];
+    const lang = LANGS[i % 4];
+    assert.equal(block.match(/<loc>([^<]*)<\/loc>/)?.[1], `${site}${hrefs[lang]}`, `sitemap : loc ${i} ${lang}`);
     const links = [...block.matchAll(/<xhtml:link rel="alternate" hreflang="([^"]*)" href="([^"]*)"\/>/g)].map((m) => [m[1], m[2]]);
-    assert.deepEqual(links, [...LANGS.map((l) => [l, `${site}/${l}/`]), ['x-default', `${site}/he/`]], `sitemap : xhtml:link ${LANGS[i]}`);
+    assert.deepEqual(links, [...LANGS.map((l) => [l, `${site}${hrefs[l]}`]), ['x-default', `${site}${hrefs.he}`]], `sitemap : xhtml:link ${i} ${lang}`);
   });
   assert.ok(!xml.includes('404') && !/path-probe|%D7%91|%D0%BF/.test(xml), 'sitemap : 404 ou path-probe');
   const robots = readFileSync(join(out, 'robots.txt'), 'utf8');
@@ -438,9 +585,9 @@ function assertSeoFiles(out, site, indexable) {
   assert.deepEqual(manifest.icons, [{ src: '/rs-icon-512.png', sizes: '512x512', type: 'image/png' }], 'manifeste : icône 512');
 }
 
-test('build de branche : 4 accueils + 4 path-probe, layout Base (lang/dir, #rs-data, évitement, repères, hreflang relatifs), _redirects', { timeout: 120_000 }, () => {
+test('build de branche : 4 accueils + 4 Contact + 4 path-probe, layout Base (lang/dir, #rs-data, évitement, repères, hreflang relatifs), _redirects', { timeout: 120_000 }, () => {
   const out = build({});
-  assert.deepEqual(indexFiles(out), [...HOMES, ...PROBES].sort());
+  assert.deepEqual(indexFiles(out), [...HOMES, ...CONTACTS, ...PROBES].sort());
   assert.ok(existsSync(join(out, '_redirects')), '_redirects absent');
   assert.ok(!existsSync(join(out, 'index.html')), 'index.html racine présent');
   assert.deepEqual(Object.keys(titles), LANGS);
@@ -453,16 +600,28 @@ test('build de branche : 4 accueils + 4 path-probe, layout Base (lang/dir, #rs-d
   for (const file of PROBES) {
     assertLayout(readFileSync(join(out, file), 'utf8'), 'path-probe', file.split('/')[0], out);
   }
+  for (const [i, file] of CONTACTS.entries()) {
+    const html = readFileSync(join(out, file), 'utf8');
+    assertLayout(html, 'contact', LANGS[i], out);
+    assertContact(html, LANGS[i]);
+    assertFormHiddenWithoutJs(html, out, file);
+  }
   assertNotFoundPages(out);
   assertSeoFiles(out, '', false);
 });
 
-test('build de main indexable avec SITE_URL : seulement les 4 accueils, sans noindex, canonique et hreflang absolus', { timeout: 120_000 }, () => {
+test('build de main indexable avec SITE_URL : 4 accueils + 4 Contact, sans noindex, canonique et hreflang absolus', { timeout: 120_000 }, () => {
   const out = build({ WORKERS_CI_BRANCH: 'main', DOMAIN_LIVE: 'true', SITE_URL: 'https://rs.example' });
-  assert.deepEqual(indexFiles(out), [...HOMES].sort());
+  assert.deepEqual(indexFiles(out), [...HOMES, ...CONTACTS].sort());
   assert.ok(!existsSync(join(out, 'index.html')));
   for (const lang of LANGS) {
     assertLayout(readFileSync(join(out, lang, 'index.html'), 'utf8'), 'home', lang, out, 'https://rs.example', true);
+  }
+  for (const [i, file] of CONTACTS.entries()) {
+    const html = readFileSync(join(out, file), 'utf8');
+    assertLayout(html, 'contact', LANGS[i], out, 'https://rs.example', true);
+    assertContact(html, LANGS[i]);
+    assertFormHiddenWithoutJs(html, out, file);
   }
   // Story 1.9 : les 5 404 restent en noindex sur un build indexable ; sitemap et robots absolus.
   assertNotFoundPages(out);

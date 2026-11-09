@@ -325,4 +325,39 @@
   --arc-delay-1: 0.3s;
   --arc-delay-2: 0.5s;
   --arc-delay-3: 0.7s;
+  /* — Story 2.1 : page Contact et formulaire (canvas Contact.dc.html, DESIGN.md › Components) — */
+  /* Canvas Contact.dc.html : « padding: 88px 22px … » en tête du héros et de la section formulaire */
+  --contact-pad-start: 88px;
+  /* Canvas Contact.dc.html › héros : « gap: 12px » entre titre, numéro et liens */
+  --contact-hero-gap: 12px;
+  /* Canvas Contact.dc.html › section formulaire : « max-width: 1080px » */
+  --container-form: 1080px;
+  /* Canvas Contact.dc.html : « repeat(auto-fit, minmax(min(100%, 420px), 1fr)) » (largeur min. d'une colonne) */
+  --form-col-min: 420px;
+  /* Canvas Contact.dc.html : « gap: 64px » entre le formulaire et la colonne d'infos */
+  --form-cols-gap: 64px;
+  /* Canvas Contact.dc.html › formulaire : « gap: 20px » entre les champs */
+  --form-fields-gap: 20px;
+  /* Canvas Contact.dc.html › colonne d'infos : « gap: 32px » entre les paires, « gap: 6px » libellé / valeur */
+  --info-gap: 32px;
+  --info-pair-gap: 6px;
+  /* DESIGN.md › components.field : « minHeight: 52px » ; canvas .field : « padding: 12px 14px » */
+  --field-min-height: 52px;
+  /* Canvas .field : « border: 1px solid #7a8fa8 » (couleur : --color-field-border) */
+  --field-border-width: 1px;
+  --field-pad-block: 12px;
+  --field-pad-inline: 14px;
+  /* DESIGN.md › components.button-submit : « minHeight: 56px » ; canvas : « padding: 0 36px » */
+  --submit-min-height: 56px;
+  --submit-pad-inline: 36px;
+  /* Story 2.1 : bouton sur une ligne dès 320px dans les 4 langues (ru « Отправить в WhatsApp ») : padding réduit sous 700px */
+  --submit-pad-inline-mobile: 16px;
+  /* DESIGN.md › Components › Formulaire : bouton « 18px/700 » */
+  --type-submit-size: 18px;
+  --type-submit-weight: 700;
+  /* DESIGN.md › Components › Formulaire : « valeur 22–26px » (canvas : 22px 600, téléphone 26px 700) */
+  --type-info-value-size: 22px;
+  --type-info-value-weight: 600;
+  --type-info-phone-size: 26px;
+  --type-info-phone-weight: 700;
 }
