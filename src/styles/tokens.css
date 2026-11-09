@@ -368,4 +368,49 @@
   --icon-size-status: 24px;
   /* DESIGN.md › Components › Messages du formulaire : « filet 4px à l'extrémité de début » */
   --form-status-rule: 4px;
+  /* — Story 3.1 : page Caméras et composants des pages services (canvas Cameras.dc.html, Steps.dc.html) — */
+  /* DESIGN.md › Layout › Par point de rupture : « Héros clair + photo encadrée (services) : photo 1180 × 600 » (largeur : --container) */
+  --hero-light-photo-height: 600px;
+  /* DESIGN.md › Layout › Par point de rupture : photo encadrée « 16:9 » (700–960px) et « 4:5 » (< 700px) */
+  --photo-ratio-tablet: 16 / 9;
+  --photo-ratio-portrait: 4 / 5;
+  /* Canvas Cameras.dc.html › héros : photo « margin-top: 44px » sous les liens */
+  --hero-light-photo-gap: 44px;
+  /* Canvas Cameras.dc.html › héros : sous-titre « max-width: 760px » */
+  --hero-light-subtitle-max: 760px;
+  /* DESIGN.md › Photographie : points focaux « dôme center 32% », « grue center 40% » */
+  --photo-focus-dome: center 32%;
+  --photo-focus-crane: center 40%;
+  /* Canvas Cameras.dc.html / Steps.dc.html : « gap: 56px » entre le titre de section et sa grille */
+  --section-head-gap: 56px;
+  /* Canvas Cameras.dc.html / Steps.dc.html : « gap: 10px » entre les lignes d'un élément (trio, étape, tuile) */
+  --stack-gap: 10px;
+  /* DESIGN.md › Components › Trio : « minmax(min(100%, 260px), 1fr) » ; canvas : « gap: 48px » */
+  --trio-col-min: 260px;
+  --trio-gap: 48px;
+  /* DESIGN.md › Components › Trio : texte « {typography.body} 17px » */
+  --type-trio-text-size: 17px;
+  /* DESIGN.md › Components › Étapes : « minmax(min(100%, 220px), 1fr) » ; canvas Steps.dc.html : « gap: 40px » */
+  --steps-col-min: 220px;
+  --steps-gap: 40px;
+  /* DESIGN.md › Components › Étapes : titre « {typography.h3} 700 » */
+  --type-step-title-weight: 700;
+  /* DESIGN.md › Layout › Par point de rupture › Tuile grue : « 640px (Caméras) », « 600px » en tablette et mobile */
+  --tile-crane-min: 640px;
+  --tile-crane-min-tablet: 600px;
+  /* DESIGN.md › Layout › Par point de rupture : padding haut des tuiles à texte « 52–64px » (canvas : 64px) */
+  --tile-pad-top: 64px;
+  /* DESIGN.md › Components › Tuile sombre : sur-titre « 17px/600 » ; canvas Cameras.dc.html : texte « 22px » */
+  --type-eyebrow-size: 17px;
+  --type-eyebrow-weight: 600;
+  --type-tile-text-size: 22px;
+  /* EXPERIENCE.md › Mouvement › Révélation au défilement : « opacité 0,4 → 1 + translateY(56px) → 0 » */
+  --reveal-opacity-from: 0.4;
+  --reveal-distance: 56px;
+  /* EXPERIENCE.md › Mouvement › Dézoom au défilement : « scale(1.14) → 1 » */
+  --tile-zoom-from: 1.14;
+  /* EXPERIENCE.md › Mouvement › Parallaxe : « translateY(-7%) → 7% à scale(1.16) » */
+  --drift-from: -7%;
+  --drift-to: 7%;
+  --drift-scale: 1.16;
 }

@@ -16,3 +16,9 @@ export function photoWidths(sourceWidth: number, max: number = Infinity): number
   const widths = PHOTO_WIDTHS.filter((w) => w <= limit);
   return widths.length > 0 ? widths : [sourceWidth];
 }
+
+// Story 3.1 : `sizes` des photos des pages services (les attributs HTML ne lisent pas les tokens).
+/** Photo encadrée du héros clair : --container (1180px) au plus, entre les deux --page-gutter (22px). */
+export const FRAMED_PHOTO_SIZES = 'min(1180px, calc(100vw - 44px))';
+/** Tuile pleine largeur : l'écran moins les deux --tile-gutter (12px). */
+export const TILE_PHOTO_SIZES = 'calc(100vw - 24px)';

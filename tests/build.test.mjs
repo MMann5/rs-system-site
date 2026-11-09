@@ -1,4 +1,4 @@
-// Stories 1.3 à 1.9, 2.1 à 2.3 : sortie réelle du build, sur une branche puis sur main (registre, layout Base.astro).
+// Stories 1.3 à 1.9, 2.1 à 2.4, 3.1 : sortie réelle du build, sur une branche puis sur main (registre, layout Base.astro).
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
@@ -8,6 +8,7 @@ import { join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
 import { waHref } from '../src/lib/contact/core.ts';
+import { buildServiceTable, pageWaInput } from '../src/lib/contact/table.ts';
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
 const LANGS = ['he', 'en', 'ru', 'fr'];
@@ -16,6 +17,9 @@ const PROBES = ['en/path-probe/index.html', 'fr/test-de-chemin/index.html', 'he/
 // Story 2.1 : page Contact, slugs des décisions de l'epic 2.
 const CONTACT_SLUGS = { he: 'צור-קשר', en: 'contact', ru: 'контакты', fr: 'contact' };
 const CONTACTS = LANGS.map((lang) => `${lang}/${CONTACT_SLUGS[lang]}/index.html`);
+// Story 3.1 : page Caméras, slugs des décisions de l'epic 3.
+const CAMERAS_SLUGS = { he: 'מצלמות', en: 'cameras', ru: 'камеры', fr: 'cameras' };
+const CAMERAS = LANGS.map((lang) => `${lang}/${CAMERAS_SLUGS[lang]}/index.html`);
 const dirs = [];
 
 // Étapes du script `build` de package.json : `astro build`, puis chaque `node <script>` lancé sur le dossier
@@ -70,7 +74,7 @@ function metaField(id, field) {
 }
 
 const META = Object.fromEntries(
-  ['home', 'path-probe', 'contact'].map((id) => [id, { title: metaField(id, 'title'), description: metaField(id, 'description') }]),
+  ['home', 'path-probe', 'contact', 'cameras'].map((id) => [id, { title: metaField(id, 'title'), description: metaField(id, 'description') }]),
 );
 const titles = META.home.title;
 
@@ -83,7 +87,10 @@ const PAGE_HREFS = {
     PROBES.map((file) => [file.split('/')[0], `/${file.split('/')[0]}/${encodeURIComponent(file.split('/')[1])}/`]),
   ),
   contact: Object.fromEntries(LANGS.map((lang) => [lang, `/${lang}/${encodeURIComponent(CONTACT_SLUGS[lang])}/`])),
+  cameras: Object.fromEntries(LANGS.map((lang) => [lang, `/${lang}/${encodeURIComponent(CAMERAS_SLUGS[lang])}/`])),
 };
+/** Story 3.1 : ids actifs du header, dans l'ordre de nav.ts (HEADER_NAV_IDS). */
+const HEADER_IDS = ['cameras', 'contact'];
 // Story 1.6 : chaînes i18n du menu, du sélecteur et de la barre mobile.
 const MENU_LABEL = { he: 'תפריט', en: 'Menu', ru: 'Меню', fr: 'Menu' };
 const SWITCHER_LABEL = { he: 'שפה', en: 'Language', ru: 'Язык', fr: 'Langue' };
@@ -100,24 +107,32 @@ const BASELINE_BDI = /<bdi lang="he" dir="rtl"[^>]*>/g;
 const RATING_BDI = /<bdi dir="ltr"[^>]*>[\d.,]+<\/bdi>/g;
 const FOCUSABLE = /<(?:a\b[^>]*\shref=|button\b|input\b|select\b|textarea\b|[a-z][\w-]*\b[^>]*\stabindex=)[^>]*>/i;
 
-/** Story 1.7 (FR19, UX-DR33, D1), story 2.1 : footer avec `contact` seul actif (colonne RS SYSTEM = Contact). */
+/** Story 1.7 (FR19, UX-DR33, D1), stories 2.1 et 3.1 : footer avec `cameras` et `contact` seuls actifs
+ * (colonne Services = Caméras, colonne RS SYSTEM = Contact). */
 function assertFooter(footer, lang, where) {
   const dict = I18N[lang];
   const contact = dict['footer.col.contact'];
   const company = dict['footer.col.company'];
-  // Trois <nav> : la colonne RS SYSTEM (seul lien : Contact), la colonne Contact, puis le sélecteur ; aucun <nav> légal.
+  const services = dict['footer.col.services'];
+  // Quatre <nav> : Services (seul lien : Caméras), RS SYSTEM (seul lien : Contact), la colonne Contact, puis le
+  // sélecteur ; ni colonne Pour les entreprises ni Zones (pages inactives), aucun <nav> légal.
   const navs = footer.match(/<nav\b[^>]*>/g) ?? [];
-  assert.equal(navs.length, 3, `${where} : <nav> du footer ${navs}`);
-  assert.match(navs[0], new RegExp(`^<nav aria-label="${company}"[\\s>]`), `${where} : <nav> RS SYSTEM`);
-  assert.match(navs[1], new RegExp(`^<nav aria-label="${contact}"[\\s>]`), `${where} : <nav> Contact`);
+  assert.equal(navs.length, 4, `${where} : <nav> du footer ${navs}`);
+  assert.match(navs[0], new RegExp(`^<nav aria-label="${services}"[\\s>]`), `${where} : <nav> Services`);
+  assert.match(navs[1], new RegExp(`^<nav aria-label="${company}"[\\s>]`), `${where} : <nav> RS SYSTEM`);
+  assert.match(navs[2], new RegExp(`^<nav aria-label="${contact}"[\\s>]`), `${where} : <nav> Contact`);
   assert.ok(!navs.some((n) => n.includes(`aria-label="${dict['footer.legal-label']}"`)), `${where} : <nav> légal`);
-  const companyCol = footer.slice(footer.indexOf(navs[0]), footer.indexOf('</nav>'));
+  const column = (nav) => footer.slice(footer.indexOf(nav), footer.indexOf('</nav>', footer.indexOf(nav)));
+  const linksOf = (col) => [...col.matchAll(/<a href="([^"]*)"[^>]*>([^<]*)<\/a>/g)].map((m) => [m[1], m[2]]);
+  const servicesCol = column(navs[0]);
+  assert.equal(servicesCol.match(/<h2\b[^>]*>([^<]*)<\/h2>/)?.[1], services, `${where} : <h2> Services`);
+  assert.deepEqual(linksOf(servicesCol), [[PAGE_HREFS.cameras[lang], dict['nav.cameras']]], `${where} : liens Services`);
+  const companyCol = column(navs[1]);
   assert.equal(companyCol.match(/<h2\b[^>]*>([^<]*)<\/h2>/)?.[1], company, `${where} : <h2> RS SYSTEM`);
-  const companyLinks = [...companyCol.matchAll(/<a href="([^"]*)"[^>]*>([^<]*)<\/a>/g)].map((m) => [m[1], m[2]]);
-  assert.deepEqual(companyLinks, [[PAGE_HREFS.contact[lang], dict['nav.contact']]], `${where} : liens RS SYSTEM`);
-  const col = footer.slice(footer.indexOf(navs[1]), footer.indexOf('</nav>', footer.indexOf(navs[1])));
+  assert.deepEqual(linksOf(companyCol), [[PAGE_HREFS.contact[lang], dict['nav.contact']]], `${where} : liens RS SYSTEM`);
+  const col = column(navs[2]);
   assert.equal(col.match(/<h2\b[^>]*>([^<]*)<\/h2>/)?.[1], contact, `${where} : <h2> Contact`);
-  assert.equal(footer.match(/<h2[\s>]/g)?.length, 2, `${where} : <h2> du footer`);
+  assert.equal(footer.match(/<h2[\s>]/g)?.length, 3, `${where} : <h2> du footer`);
   // Numéro : lien d'appel mesuré (AD-5, AD-6), isolé en LTR.
   const calls = [...col.matchAll(/<a href="tel:\+972509565669"([^>]*)>([\s\S]*?)<\/a>/g)];
   assert.equal(calls.length, 1, `${where} : lien d'appel du footer`);
@@ -133,7 +148,7 @@ function assertFooter(footer, lang, where) {
   const tagline = lang === 'he' ? baseline : `<bdi lang="he" dir="rtl"[^>]*>${baseline}</bdi>`;
   assert.match(footer, new RegExp(`<p\\b[^>]*>${dict['footer.copyright']} · ${tagline}</p>`), `${where} : ligne basse`);
   // Ordre de lecture : colonnes, puis ligne basse, puis sélecteur.
-  assert.ok(footer.indexOf(navs[1]) < footer.indexOf('<p') && footer.indexOf('<p') < footer.indexOf(navs[2]), `${where} : ordre du footer`);
+  assert.ok(footer.indexOf(navs[2]) < footer.indexOf('<p') && footer.indexOf('<p') < footer.indexOf(navs[3]), `${where} : ordre du footer`);
 }
 
 /** Story 1.4 : sortie du layout unique pour la page `id` en `lang` ; `out` = dossier du build, `site` = SITE_URL. */
@@ -170,9 +185,13 @@ function assertLayout(html, id, lang, out, site = '', indexable = false) {
       assert.deepEqual(data.services[code], { label: serviceLabel(code, lang), he: serviceLabel(code, 'he') }, `${where} : service ${code}`);
     }
     assert.deepEqual(data.cities, {}, `${where} : cities`);
+  } else if (id === 'cameras') {
+    // Story 3.1 (AD-13) : le modèle Service fixe le service et la section de navigation.
+    assert.deepEqual(JSON.parse(json), { context: { id, lang, service: 'cameras', navSection: 'cameras', indexable } }, where);
   } else {
     assert.deepEqual(JSON.parse(json), { context: { id, lang, indexable } }, where);
   }
+  const context = JSON.parse(json).context;
   // FR24 : premier élément focalisable du <body> = lien d'évitement vers #content.
   const body = html.slice(html.indexOf('<body'));
   const first = body.slice(body.indexOf('>') + 1).match(FOCUSABLE);
@@ -202,8 +221,8 @@ function assertLayout(html, id, lang, out, site = '', indexable = false) {
     assert.ok(buttons[0].includes(` ${attr}`), `${where} : ${attr} absent de ${buttons[0]}`);
   }
   assert.ok(header.indexOf('<button') > header.indexOf('href="tel:'), `${where} : bouton pas après le numéro`);
-  // Panneau #mobile-menu après la barre. Story 2.1 : `contact` seul id de nav actif, donc trois <nav> dans
-  // le header : liens de la barre (avant le panneau), puis dans le panneau les mêmes liens et le sélecteur.
+  // Panneau #mobile-menu après la barre. Stories 2.1 et 3.1 : `cameras` et `contact` seuls ids de nav actifs ;
+  // trois <nav> dans le header : liens de la barre (avant le panneau), puis dans le panneau les mêmes liens et le sélecteur.
   assert.equal(header.match(/\sid="mobile-menu"/g)?.length, 1, `${where} : #mobile-menu`);
   const menu = header.slice(header.indexOf(' id="mobile-menu"'));
   assert.ok(header.indexOf(' id="mobile-menu"') > header.indexOf('<button'), `${where} : panneau pas après le bouton`);
@@ -214,10 +233,12 @@ function assertLayout(html, id, lang, out, site = '', indexable = false) {
   assert.equal(mainNavs.length, 2, `${where} : <nav> principaux`);
   for (const [, inner] of mainNavs) {
     const links = [...inner.matchAll(/<a\b([^>]*)>([^<]*)<\/a>/g)];
-    assert.equal(links.length, 1, `${where} : liens du <nav> principal`);
-    assert.equal(attr(`<a${links[0][1]}>`, 'href'), PAGE_HREFS.contact[lang], `${where} : href Contact du header`);
-    assert.equal(links[0][2], I18N[lang]['nav.contact'], `${where} : libellé Contact du header`);
-    assert.equal(attr(`<a${links[0][1]}>`, 'aria-current'), id === 'contact' ? 'page' : undefined, `${where} : aria-current Contact`);
+    assert.equal(links.length, HEADER_IDS.length, `${where} : liens du <nav> principal`);
+    HEADER_IDS.forEach((navId, i) => {
+      assert.equal(attr(`<a${links[i][1]}>`, 'href'), PAGE_HREFS[navId][lang], `${where} : href ${navId} du header`);
+      assert.equal(links[i][2], I18N[lang][`nav.${navId}`], `${where} : libellé ${navId} du header`);
+      assert.equal(attr(`<a${links[i][1]}>`, 'aria-current'), id === navId ? 'page' : undefined, `${where} : aria-current ${navId}`);
+    });
   }
   assert.match(menu, new RegExp(`<nav aria-label="${SWITCHER_LABEL[lang]}"[^>]*\\sdata-lang-switcher[\\s>]`), `${where} : <nav> du sélecteur`);
   // Story 1.7 : deux sélecteurs (menu, footer), chacun <nav aria-label data-lang-switcher>.
@@ -245,14 +266,17 @@ function assertLayout(html, id, lang, out, site = '', indexable = false) {
   assert.equal(html.match(/<main[\s>]/g)?.length, 1, `${where} : <main>`);
   assert.match(html, /<main id="content"[\s>]/, `${where} : main#content`);
   assert.equal(html.match(/<footer[\s>]/g)?.length, 1, `${where} : <footer>`);
-  // Story 1.6 (FR18, FR31, AD-6) : barre mobile unique, après </footer> ; Appeler puis WhatsApp
-  // (salutation seule : aucune page de l'epic n'a de service ni de ville).
+  // Story 1.6 (FR18, FR31, AD-6) : barre mobile unique, après </footer> ; Appeler puis WhatsApp.
+  // Story 3.1 (report DW-3 de l'epic 1) : message = waHref(pageWaInput(contexte)), donc le libellé hébreu du
+  // service sur une page service (« מצלמות אבטחה » sur Caméras), la salutation seule ailleurs.
   assert.equal(html.match(/\sclass="mobile-bar"/g)?.length, 1, `${where} : barre mobile`);
   const bar = html.slice(html.indexOf(' class="mobile-bar"'));
   assert.ok(html.indexOf(' class="mobile-bar"') > html.indexOf('</footer>'), `${where} : barre pas après </footer>`);
   const actions = [...bar.matchAll(/<a href="([^"]*)"([^>]*)>([\s\S]*?)<\/a>/g)].slice(0, 2);
   assert.equal(actions[0]?.[1], 'tel:+972509565669', `${where} : lien Appeler`);
-  assert.equal(actions[1]?.[1], waHref().replaceAll('&', '&amp;'), `${where} : lien WhatsApp`);
+  const barWa = waHref(pageWaInput(context, HE_SERVICES));
+  assert.equal(actions[1]?.[1], barWa.replaceAll('&', '&amp;'), `${where} : lien WhatsApp`);
+  if (id === 'cameras') assert.ok(decodeURIComponent(barWa).includes(serviceLabel('cameras', 'he')), `${where} : service dans le message de la barre`);
   for (const [[, , attrs, inner], event, label] of [[actions[0], 'call_click', CALL_LABEL[lang]], [actions[1], 'whatsapp_click', WA_LABEL[lang]]]) {
     assert.match(attrs, new RegExp(`\\sdata-track="${event}"`), `${where} : data-track ${event}`);
     assert.match(attrs, /\sdata-placement="mobile_bar"/, `${where} : data-placement ${event}`);
@@ -474,6 +498,8 @@ const SERVICE_ORDER = ['cameras', 'smoke-detectors', 'smart-home', 'networks', '
 const SERVICES = parse(readFileSync(join(ROOT, 'src/content/services.yaml'), 'utf8'));
 /** Libellé du service `code` en `lang`, lu dans src/content/services.yaml. */
 const serviceLabel = (code, lang) => SERVICES.find((entry) => entry.id === code)?.label[lang];
+/** Table des services en hébreu (message WhatsApp), comme src/lib/contact/labels.ts. */
+const HE_SERVICES = buildServiceTable(SERVICES, 'he');
 /** Attribut booléen ou valué présent dans une balise ouvrante (`required` rendu sans valeur). */
 const hasAttr = (tag, name, value) => (value === '' ? new RegExp(`\\s${name}(?:="")?[\\s>]`).test(tag) : attr(tag, name) === value);
 
@@ -695,13 +721,166 @@ function assertContact(html, lang, out) {
   assert.ok(!html.includes('data-umami'), `${where} : data-umami-*`);
 }
 
-/** Story 1.9 (FR39), story 2.1 : sitemap (4 <url> de Contact puis 4 de l'accueil, 5 xhtml:link chacun), robots.txt, icônes et manifeste. */
+/** Story 3.1 : contenu de src/content/pages/cameras.yaml (bloc `service`). */
+const CAMERAS_PAGE = parse(readFileSync(join(ROOT, 'src/content/pages/cameras.yaml'), 'utf8')).service;
+const STEP_KEYS = ['call', 'visit', 'install', 'service'];
+/** Largeurs d'un srcset (`f 480w, …` → [480, …]). */
+const srcsetWidths = (srcset) => (srcset ?? '').split(', ').map((c) => Number(c.split(' ')[1]?.replace('w', '')));
+/** Fichier servi à la largeur `width` d'un srcset. */
+const srcsetFile = (srcset, width) => (srcset ?? '').split(', ').find((c) => c.endsWith(` ${width}w`))?.split(' ')[0];
+
+/**
+ * Story 3.1 (AD-9, NFR4) : <picture> d'une photo des pages services : 3 sources 4:5 sous 700px, 2 sources paysage,
+ * puis <img> JPEG ; `sizes`, dimensions, chargement et poids (paysage 1440w, portrait 1080w, AVIF et WebP).
+ */
+function assertServicePicture(picture, { alt, sizes, land, portrait, priority, budgets }, out, where) {
+  const sources = picture.match(/<source\b[^>]*>/g) ?? [];
+  assert.equal(sources.length, 5, `${where} : <source>`);
+  ['avif', 'webp', 'jpeg'].forEach((format, i) => {
+    const tag = sources[i];
+    assert.equal(attr(tag, 'media'), '(width < 700px)', `${where} : media ${format}`);
+    assert.equal(attr(tag, 'type'), `image/${format}`, `${where} : type portrait ${format}`);
+    assert.deepEqual(srcsetWidths(attr(tag, 'srcset')), [480, 768, 1080, 1440], `${where} : largeurs portrait ${format}`);
+    assert.equal(attr(tag, 'sizes'), sizes, `${where} : sizes portrait ${format}`);
+    assert.deepEqual([attr(tag, 'width'), attr(tag, 'height')], portrait, `${where} : dimensions portrait ${format}`);
+  });
+  ['avif', 'webp'].forEach((format, i) => {
+    const tag = sources[3 + i];
+    assert.equal(attr(tag, 'media'), undefined, `${where} : media paysage ${format}`);
+    assert.equal(attr(tag, 'type'), `image/${format}`, `${where} : type paysage ${format}`);
+    assert.deepEqual(srcsetWidths(attr(tag, 'srcset')), [480, 768, 1080, 1440, 1920, 2560], `${where} : largeurs paysage ${format}`);
+    assert.equal(attr(tag, 'sizes'), sizes, `${where} : sizes paysage ${format}`);
+    assert.deepEqual([attr(tag, 'width'), attr(tag, 'height')], land, `${where} : dimensions paysage ${format}`);
+  });
+  const img = picture.match(/<img\b[^>]*>/)?.[0] ?? '';
+  assert.equal(attr(img, 'alt'), escaped(alt), `${where} : alt`);
+  assert.deepEqual([attr(img, 'width'), attr(img, 'height')], land, `${where} : dimensions img`);
+  assert.equal(attr(img, 'sizes'), sizes, `${where} : sizes img`);
+  assert.match(attr(img, 'src') ?? '', /\.jpe?g$/, `${where} : src JPEG`);
+  if (priority) {
+    assert.equal(attr(img, 'loading'), 'eager', `${where} : loading`);
+    assert.equal(attr(img, 'fetchpriority'), 'high', `${where} : fetchpriority`);
+    assert.equal(attr(img, 'decoding'), undefined, `${where} : decoding`);
+  } else {
+    assert.equal(attr(img, 'loading'), 'lazy', `${where} : loading`);
+    assert.equal(attr(img, 'fetchpriority'), undefined, `${where} : fetchpriority`);
+    assert.equal(attr(img, 'decoding'), 'async', `${where} : decoding`);
+  }
+  for (const [tag, width, budget] of [[sources[0], 1080, budgets.portrait], [sources[1], 1080, budgets.portrait], [sources[3], 1440, budgets.land], [sources[4], 1440, budgets.land]]) {
+    const file = srcsetFile(attr(tag, 'srcset'), width);
+    assert.ok(file, `${where} : ${width}w absent`);
+    const size = statSync(join(out, file)).size;
+    assert.ok(size <= budget, `${where} : ${file} ${size} > ${budget}`);
+  }
+}
+
+/** Story 3.1 (FR2, FR21, FR22, FR23, FR31, UX-DR14, UX-DR17, UX-DR18, UX-DR20, UX-DR21, UX-DR37) : page Caméras en `lang`. */
+function assertCameras(html, lang, out) {
+  const where = `cameras (${lang})`;
+  const dict = I18N[lang];
+  const tel = 'tel:+972509565669';
+  const wa = waHref({ serviceHe: serviceLabel('cameras', 'he') });
+  const quote = `${PAGE_HREFS.contact[lang]}?service=cameras`;
+  const main = html.match(/<main id="content"[^>]*>([\s\S]*?)<\/main>/)?.[1] ?? '';
+  // Ordre de <main> : héros clair, trio, tuile grue, étapes, bloc contact ; rien d'autre.
+  const sections = [...main.matchAll(/<section class="([^"]*)"/g)].map((m) => m[1]);
+  assert.deepEqual(sections, ['hero', 'trio reveal', 'tile dark crane', 'steps reveal', 'band'], `${where} : sections de <main>`);
+  assert.match(main, /^<section class="hero"/, `${where} : héros en tête`);
+  const sectionAt = (cls) => main.match(new RegExp(`<section class="${cls}"[\\s\\S]*?</section>`))?.[0] ?? '';
+  const [hero, trio, tile, steps, band] = sections.map(sectionAt);
+  // Titres : un seul h1, puis aucun saut de niveau sur toute la page (footer compris).
+  assert.equal(html.match(/<h1[\s>]/g)?.length, 1, `${where} : <h1>`);
+  const levels = [...html.matchAll(/<h([1-6])[\s>]/g)].map((m) => Number(m[1]));
+  assert.equal(levels[0], 1, `${where} : premier titre ${levels}`);
+  levels.forEach((level, i) => assert.ok(i === 0 || level <= levels[i - 1] + 1, `${where} : saut de titre ${levels}`));
+  // Héros clair : h1, sous-titre, Appeler › WhatsApp › Devis › (ton clair), photo dôme encadrée.
+  assert.match(hero, /^<section class="hero" aria-labelledby="hero-title"[\s>]/, `${where} : héros`);
+  assert.ok(!/\sdata-surface=/.test(hero.match(/^<section\b[^>]*>/)[0]), `${where} : héros clair sans data-surface`);
+  assert.equal(hero.match(/<h1 id="hero-title"[^>]*>([^<]*)<\/h1>/)?.[1], escaped(CAMERAS_PAGE.hero.title[lang]), `${where} : h1`);
+  assert.equal(hero.match(/<p class="subtitle"[^>]*>([^<]*)<\/p>/)?.[1], escaped(CAMERAS_PAGE.hero.subtitle[lang]), `${where} : sous-titre`);
+  const heroLinks = [...hero.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)];
+  assert.equal(heroLinks.length, 3, `${where} : liens du héros`);
+  assertTextLink(heroLinks[0], tel, dict['action.call'], 'call_click', 'hero', `${where} : héros Appeler`);
+  assertTextLink(heroLinks[1], wa, dict['action.whatsapp'], 'whatsapp_click', 'hero', `${where} : héros WhatsApp`);
+  assertTextLink(heroLinks[2], quote, escaped(dict['action.quote']), undefined, undefined, `${where} : héros Devis`);
+  for (const [, attrs] of heroLinks) assert.match(attrs, /\sclass="text-link light"/, `${where} : ton clair`);
+  // Photos : dôme dans le héros (seule eager/high), grue dans la tuile (lazy) ; aucun autre <img> que le logo.
+  const pictures = html.match(/<picture>[\s\S]*?<\/picture>/g) ?? [];
+  assert.equal(pictures.length, 2, `${where} : <picture>`);
+  assert.ok(hero.includes(pictures[0]) && tile.includes(pictures[1]), `${where} : <picture> hors du héros ou de la tuile`);
+  assert.equal(html.match(/<img\b/g)?.length, 3, `${where} : <img> (logo + 2 photos)`);
+  assert.equal(html.match(/\sfetchpriority="high"/g)?.length, 1, `${where} : une seule image prioritaire`);
+  assertServicePicture(pictures[0], { alt: CAMERAS_PAGE.hero.alt[lang], sizes: 'min(1180px, calc(100vw - 44px))', land: ['2560', '1280'], portrait: ['1440', '1800'], priority: true, budgets: { land: 250_000, portrait: 120_000 } }, out, `${where} : dôme`);
+  assertServicePicture(pictures[1], { alt: CAMERAS_PAGE.tile.alt[lang], sizes: 'calc(100vw - 24px)', land: ['2560', '1164'], portrait: ['1440', '1800'], priority: false, budgets: { land: 180_000, portrait: 180_000 } }, out, `${where} : grue`);
+  // Trio : h2 puis 3 h3, chacun suivi de son texte ; aucun lien.
+  assert.match(trio, /^<section class="trio reveal" aria-labelledby="trio-title"[\s>]/, `${where} : trio`);
+  assert.equal(trio.match(/<h2 id="trio-title"[^>]*>([^<]*)<\/h2>/)?.[1], escaped(CAMERAS_PAGE.trio.title[lang]), `${where} : h2 du trio`);
+  const trioItems = [...trio.matchAll(/<h3\b[^>]*>([^<]*)<\/h3><p\b[^>]*>([^<]*)<\/p>/g)].map((m) => [m[1], m[2]]);
+  assert.deepEqual(trioItems, CAMERAS_PAGE.trio.items.map((item) => [escaped(item.title[lang]), escaped(item.text[lang])]), `${where} : 3 h3 du trio`);
+  assert.equal(trio.match(/<h3[\s>]/g)?.length, 3, `${where} : h3 du trio`);
+  assert.ok(!/<a\b|<svg\b|<img\b/.test(trio), `${where} : lien, picto ou image dans le trio`);
+  // Tuile grue : sombre sur photo, sur-titre, h2, texte ; aucun lien (contractors inactif), bloc non cliquable.
+  const tileTag = tile.match(/^<section\b[^>]*>/)[0];
+  assert.equal(attr(tileTag, 'data-surface'), 'photo', `${where} : data-surface de la tuile`);
+  assert.equal(attr(tileTag, 'aria-labelledby'), 'tile-title', `${where} : aria-labelledby de la tuile`);
+  assert.match(attr(tileTag, 'style') ?? '', /--tile-bg: var\(--color-tile-night\)/, `${where} : fond tile-night`);
+  assert.match(attr(tileTag, 'style') ?? '', /--tile-scrim: var\(--scrim-crane\)/, `${where} : scrim-crane`);
+  const content = tile.match(/<div class="content reveal"[^>]*>([\s\S]*?)<\/div>/)?.[1] ?? '';
+  assert.equal(content.match(/^<p class="eyebrow"[^>]*>([^<]*)<\/p>/)?.[1], escaped(CAMERAS_PAGE.tile.eyebrow[lang]), `${where} : sur-titre`);
+  assert.equal(content.match(/<h2 id="tile-title"[^>]*>([^<]*)<\/h2>/)?.[1], escaped(CAMERAS_PAGE.tile.title[lang]), `${where} : h2 de la tuile`);
+  assert.equal(content.match(/<p class="text"[^>]*>([^<]*)<\/p>/)?.[1], escaped(CAMERAS_PAGE.tile.text[lang]), `${where} : texte de la tuile`);
+  assert.ok(!/<a\b/.test(tile), `${where} : lien dans la tuile`);
+  // Slugs proposés pour Entrepreneurs (décisions de l'epic 3) : aucun lien vers la page, inactive.
+  for (const slug of ['לקבלנים', 'contractors', 'подрядчикам', 'entrepreneurs']) {
+    assert.ok(!html.includes(`href="/${lang}/${encodeURIComponent(slug)}/`), `${where} : lien vers Entrepreneurs (${slug})`);
+  }
+  assert.match(tile, /<img\b[^>]*\sclass="photo parallax"/, `${where} : photo de la grue en parallaxe`);
+  // Étapes : h2, puis <ol role="list"> de 4 <li> : numéro aria-hidden, h3 et texte lus dans i18n.
+  assert.match(steps, /^<section class="steps reveal" aria-labelledby="steps-title"[\s>]/, `${where} : étapes`);
+  assert.equal(steps.match(/<h2 id="steps-title"[^>]*>([^<]*)<\/h2>/)?.[1], escaped(dict['steps.title']), `${where} : h2 des étapes`);
+  const ol = steps.match(/<ol\b([^>]*)>([\s\S]*?)<\/ol>/);
+  assert.equal(attr(`<ol${ol?.[1]}>`, 'role'), 'list', `${where} : ol role=list`);
+  const items = [...(ol?.[2] ?? '').matchAll(/<li\b[^>]*><span class="number" aria-hidden="true"[^>]*>(\d)<\/span><h3\b[^>]*>([^<]*)<\/h3><p\b[^>]*>([^<]*)<\/p><\/li>/g)].map((m) => m.slice(1));
+  assert.deepEqual(items, STEP_KEYS.map((key, i) => [String(i + 1), escaped(dict[`steps.${key}.title`]), escaped(dict[`steps.${key}.text`])]), `${where} : 4 étapes`);
+  assert.equal((ol?.[2] ?? '').match(/<li[\s>]/g)?.length, 4, `${where} : <li> des étapes`);
+  // Bloc contact : WhatsApp avec le service, « Laisser ses coordonnées » vers Contact avec ?service=cameras.
+  const bandLinks = [...band.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)];
+  assert.equal(bandLinks.length, 4, `${where} : liens du bloc`);
+  assertTextLink(bandLinks[2], wa, dict['action.whatsapp'], 'whatsapp_click', 'contact_band', `${where} : bloc WhatsApp`);
+  assertTextLink(bandLinks[3], quote, escaped(dict['contact-band.leave-details']), undefined, undefined, `${where} : bloc leave-details`);
+  assert.ok(decodeURIComponent(wa).includes(serviceLabel('cameras', 'he')), `${where} : service dans le message`);
+  // CSS servie : mouvement au défilement seulement sous @supports (animation-timeline: view()).
+  const css = [...html.matchAll(/<link rel="stylesheet" href="([^"]+)"/g)].map(([, href]) => readFileSync(join(out, href), 'utf8'));
+  css.push(...[...html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/g)].map((m) => m[1]));
+  const all = css.join('\n');
+  const supports = [...all.matchAll(/@supports \(animation-timeline: ?view\(\)\)\s*\{/g)];
+  assert.ok(supports.length >= 2, `${where} : blocs @supports (animation-timeline: view())`);
+  assert.ok(!/animation-timeline: ?view\(\)/.test(all.replace(/@supports \(animation-timeline: ?view\(\)\)\s*\{(?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})*\}/g, '')), `${where} : animation-timeline hors @supports`);
+  const supported = supports.map((m) => all.slice(m.index, m.index + 2000)).join('\n');
+  // Le minifieur abrège les plages (`entry 0% entry 45%` → `entry entry 45%`, `cover 0% cover 100%` → `cover`).
+  assert.match(supported, /\.reveal\s*\{[^}]*animation-timeline: ?view\(\);[^}]*animation-range: ?entry(?: 0%)? entry 45%/, `${where} : .reveal`);
+  assert.match(supported, /\.parallax[^{]*\{[^}]*animation:[^;}]*tile-drift[^}]*animation-range: ?cover(?: 0% cover 100%)?[;}]/, `${where} : parallaxe`);
+  assert.match(supported, /img\.parallax[^{]*\{\s*animation-timeline: ?view\(\)/, `${where} : timeline de la parallaxe`);
+  // Cadre de la photo de tuile en overflow: clip (hidden en ferait la source de view() : parallaxe figée).
+  const tileCid = tileTag.match(/\s(data-astro-cid-[\w-]+)/)?.[1];
+  assert.ok(tileCid, `${where} : scope CSS de la tuile`);
+  const media = all.match(new RegExp(`\\.media\\[${tileCid}\\]\\s*\\{([^}]*)\\}`))?.[1] ?? '';
+  assert.match(media, /overflow: ?clip/, `${where} : .media de la tuile en overflow: clip`);
+  assert.ok(!/overflow: ?hidden/.test(media), `${where} : .media de la tuile en overflow: hidden`);
+  // Jamais `view()` replié dans le raccourci `animation` (rejeté en entier par les navigateurs).
+  assert.ok(!/animation:[^;}]*view\(\)/.test(all), `${where} : view() dans le raccourci animation`);
+  assert.ok(!html.includes('data-umami'), `${where} : data-umami-*`);
+}
+
+/** Story 1.9 (FR39), stories 2.1 et 3.1 : sitemap dans l'ordre du registre (ids triés : Caméras, Contact, accueil ;
+ * 4 <url> chacun, 5 xhtml:link chacun), robots.txt, icônes et manifeste. */
+const SITEMAP_IDS = ['cameras', 'contact', 'home'];
 function assertSeoFiles(out, site, indexable) {
   const xml = readFileSync(join(out, 'sitemap.xml'), 'utf8');
   const blocks = [...xml.matchAll(/<url>([\s\S]*?)<\/url>/g)].map((m) => m[1]);
-  assert.equal(blocks.length, 8, 'sitemap : <url>');
+  assert.equal(blocks.length, 12, 'sitemap : <url>');
   blocks.forEach((block, i) => {
-    const hrefs = PAGE_HREFS[i < 4 ? 'contact' : 'home'];
+    const hrefs = PAGE_HREFS[SITEMAP_IDS[Math.floor(i / 4)]];
     const lang = LANGS[i % 4];
     assert.equal(block.match(/<loc>([^<]*)<\/loc>/)?.[1], `${site}${hrefs[lang]}`, `sitemap : loc ${i} ${lang}`);
     const links = [...block.matchAll(/<xhtml:link rel="alternate" hreflang="([^"]*)" href="([^"]*)"\/>/g)].map((m) => [m[1], m[2]]);
@@ -715,9 +894,9 @@ function assertSeoFiles(out, site, indexable) {
   assert.deepEqual(manifest.icons, [{ src: '/rs-icon-512.png', sizes: '512x512', type: 'image/png' }], 'manifeste : icône 512');
 }
 
-test('build de branche : 4 accueils + 4 Contact + 4 path-probe, layout Base (lang/dir, #rs-data, évitement, repères, hreflang relatifs), _redirects', { timeout: 120_000 }, () => {
+test('build de branche : 4 accueils + 4 Contact + 4 Caméras + 4 path-probe, layout Base (lang/dir, #rs-data, évitement, repères, hreflang relatifs), _redirects', { timeout: 120_000 }, () => {
   const out = build({});
-  assert.deepEqual(indexFiles(out), [...HOMES, ...CONTACTS, ...PROBES].sort());
+  assert.deepEqual(indexFiles(out), [...HOMES, ...CONTACTS, ...CAMERAS, ...PROBES].sort());
   assert.ok(existsSync(join(out, '_redirects')), '_redirects absent');
   assert.ok(!existsSync(join(out, 'index.html')), 'index.html racine présent');
   assert.deepEqual(Object.keys(titles), LANGS);
@@ -736,13 +915,18 @@ test('build de branche : 4 accueils + 4 Contact + 4 path-probe, layout Base (lan
     assertContact(html, LANGS[i], out);
     assertFormHiddenWithoutJs(html, out, file);
   }
+  for (const [i, file] of CAMERAS.entries()) {
+    const html = readFileSync(join(out, file), 'utf8');
+    assertLayout(html, 'cameras', LANGS[i], out);
+    assertCameras(html, LANGS[i], out);
+  }
   assertNotFoundPages(out);
   assertSeoFiles(out, '', false);
 });
 
-test('build de main indexable avec SITE_URL : 4 accueils + 4 Contact, sans noindex, canonique et hreflang absolus', { timeout: 120_000 }, () => {
+test('build de main indexable avec SITE_URL : 4 accueils + 4 Contact + 4 Caméras, sans noindex, canonique et hreflang absolus', { timeout: 120_000 }, () => {
   const out = build({ WORKERS_CI_BRANCH: 'main', DOMAIN_LIVE: 'true', SITE_URL: 'https://rs.example' });
-  assert.deepEqual(indexFiles(out), [...HOMES, ...CONTACTS].sort());
+  assert.deepEqual(indexFiles(out), [...HOMES, ...CONTACTS, ...CAMERAS].sort());
   assert.ok(!existsSync(join(out, 'index.html')));
   for (const lang of LANGS) {
     assertLayout(readFileSync(join(out, lang, 'index.html'), 'utf8'), 'home', lang, out, 'https://rs.example', true);
@@ -752,6 +936,11 @@ test('build de main indexable avec SITE_URL : 4 accueils + 4 Contact, sans noind
     assertLayout(html, 'contact', LANGS[i], out, 'https://rs.example', true);
     assertContact(html, LANGS[i], out);
     assertFormHiddenWithoutJs(html, out, file);
+  }
+  for (const [i, file] of CAMERAS.entries()) {
+    const html = readFileSync(join(out, file), 'utf8');
+    assertLayout(html, 'cameras', LANGS[i], out, 'https://rs.example', true);
+    assertCameras(html, LANGS[i], out);
   }
   // Story 1.9 : les 5 404 restent en noindex sur un build indexable ; sitemap et robots absolus.
   assertNotFoundPages(out);

@@ -1,0 +1,93 @@
+---
+// FR2, FR21, FR22, FR23, FR31, AD-2, AD-4, AD-9, AD-13 (story 3.1) : modèle des pages services, piloté par
+// l'id. Ordre : héros clair, trio « pour qui », tuile (si la page en a une), étapes, bloc contact.
+// Textes propres à la page : src/content/pages/{id}.yaml (bloc `service`) ; étapes et libellés : src/i18n.
+// Contexte de page (AD-13) : service et section de navigation de la page, lus dans SERVICE_PAGES ; la barre
+// mobile, le héros et le bloc contact en tirent le message WhatsApp et le lien Devis.
+// Photos importées statiquement, par id (décision D1 : originaux Pexels, src/assets/photos/).
+import type { ImageMetadata } from 'astro';
+import cranePortrait from '../assets/photos/crane-portrait.jpg';
+import crane from '../assets/photos/crane.jpg';
+import domePortrait from '../assets/photos/cameras-dome-portrait.jpg';
+import dome from '../assets/photos/cameras-dome.jpg';
+import ContactBand from '../components/ContactBand.astro';
+import HeroLight from '../components/HeroLight.astro';
+import Steps from '../components/Steps.astro';
+import Tile, { type TileLink } from '../components/Tile.astro';
+import Trio from '../components/Trio.astro';
+import Base from '../layouts/Base.astro';
+import { t } from '../lib/i18n';
+import type { Lang } from '../lib/langs';
+import { createPageContext } from '../lib/page-context';
+import { page } from '../lib/pages';
+import { isEnabled, url } from '../lib/routes';
+
+interface Props {
+  id: string;
+  lang: Lang;
+}
+
+interface ServicePage {
+  /** Code `?service=` (src/content/services.yaml). */
+  service: string;
+  hero: { src: ImageMetadata; portrait: ImageMetadata; focus: 'dome' };
+  /** Tuile sombre de la page ; `link` = id de la page liée, omis tant qu'elle est inactive. */
+  tile?: {
+    src: ImageMetadata;
+    portrait: ImageMetadata;
+    focus: 'crane';
+    scrim: 'crane';
+    motion: 'parallax';
+    size: 'crane';
+    link: string;
+  };
+}
+
+const SERVICE_PAGES: Record<string, ServicePage> = {
+  cameras: {
+    service: 'cameras',
+    hero: { src: dome, portrait: domePortrait, focus: 'dome' },
+    tile: { src: crane, portrait: cranePortrait, focus: 'crane', scrim: 'crane', motion: 'parallax', size: 'crane', link: 'contractors' },
+  },
+};
+
+const { id, lang } = Astro.props;
+const def = SERVICE_PAGES[id];
+const { meta, service: content } = page(id);
+if (!def) throw new Error(`Service : aucune page service « ${id} » dans SERVICE_PAGES`);
+if (!content) throw new Error(`Service : bloc « service » absent de src/content/pages/${id}.yaml`);
+const ctx = createPageContext({ id, lang, service: def.service, navSection: id });
+const tile = def.tile && content.tile ? { def: def.tile, text: content.tile } : undefined;
+// Lien « לפרטים › » de la tuile : seulement si sa page est active (FR23) ; `url` n'est jamais appelé sinon.
+const tileLinks: TileLink[] = tile && isEnabled(tile.def.link) ? [{ href: url(tile.def.link, lang), label: t(lang, 'action.details') }] : [];
+---
+<Base ctx={ctx} title={meta.title[lang]} description={meta.description[lang]}>
+  <HeroLight
+    ctx={ctx}
+    photo={{ ...def.hero, alt: content.hero.alt[lang] }}
+    title={content.hero.title[lang]}
+    subtitle={content.hero.subtitle[lang]}
+  />
+  <Trio
+    id="trio-title"
+    title={content.trio.title[lang]}
+    items={content.trio.items.map((item) => ({ title: item.title[lang], text: item.text[lang] }))}
+  />
+  {tile && (
+    <Tile
+      variant="dark"
+      id="tile-title"
+      level="h2"
+      eyebrow={tile.text.eyebrow?.[lang]}
+      title={tile.text.title[lang]}
+      text={tile.text.text[lang]}
+      links={tileLinks}
+      photo={{ src: tile.def.src, portrait: tile.def.portrait, alt: tile.text.alt[lang], focus: tile.def.focus }}
+      scrim={tile.def.scrim}
+      motion={tile.def.motion}
+      size={tile.def.size}
+    />
+  )}
+  <Steps lang={lang} />
+  <ContactBand ctx={ctx} />
+</Base>

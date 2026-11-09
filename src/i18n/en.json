@@ -75,5 +75,16 @@
   "contact.info.email": "Email",
   "contact.info.zone": "Service area",
   "contact.info.hours": "Opening hours",
-  "placeholder.hours": "opening hours"
+  "placeholder.hours": "opening hours",
+  "action.quote": "Get a quote",
+  "action.details": "Details",
+  "steps.title": "How it works",
+  "steps.call.title": "A call",
+  "steps.call.text": "Call or send a WhatsApp message and tell us what you need.",
+  "steps.visit.title": "Site visit",
+  "steps.visit.text": "A technician comes over, looks at the place and gives you a quote.",
+  "steps.install.title": "Installation",
+  "steps.install.text": "We install, connect and check that everything works.",
+  "steps.service.title": "Handover and service",
+  "steps.service.text": "We show you how to use it, and we stay available after the installation."
 }

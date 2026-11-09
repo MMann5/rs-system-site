@@ -1,0 +1,105 @@
+---
+// FR22, UX-DR20, UX-DR37 (story 3.1) : étapes, contenu identique partout, lu dans src/i18n (steps.*) seulement
+// (DESIGN.md › Components › Étapes ; canvas Steps.dc.html). Section blanche, h2 section-title centré, puis
+// <ol role="list"> de 4 <li> en colonnes minmax(min(100%, 220px), 1fr) : numéro step-number en link dans un
+// élément aria-hidden (la numérotation vient de l'<ol>), h3 700, texte ink-muted. Non interactive.
+// Révélée au défilement (.reveal, base.css).
+import { t } from '../lib/i18n';
+import type { Lang } from '../lib/langs';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+// Ordre des étapes : 1 Appel, 2 Visite technique, 3 Installation, 4 Prise en main et service.
+const STEPS = ['call', 'visit', 'install', 'service'] as const;
+---
+<section class="steps reveal" aria-labelledby="steps-title">
+  <h2 id="steps-title" class="title">{t(lang, 'steps.title')}</h2>
+  <ol role="list" class="list">
+    {STEPS.map((step, i) => (
+      <li class="step">
+        <span class="number" aria-hidden="true">{i + 1}</span>
+        <h3 class="step-title">{t(lang, `steps.${step}.title`)}</h3>
+        <p class="step-text">{t(lang, `steps.${step}.text`)}</p>
+      </li>
+    ))}
+  </ol>
+</section>
+
+<style>
+  /* Seuils (les @media ne lisent pas les tokens) : --bp-menu 960px, --bp-mobile-bar 700px. */
+  .steps {
+    display: flex;
+    flex-direction: column;
+    gap: var(--section-head-gap);
+    padding-block: var(--section-y);
+    padding-inline: var(--page-gutter);
+    background-color: var(--color-surface);
+    color: var(--color-ink);
+  }
+
+  @media (width < 960px) {
+    .steps {
+      padding-block: var(--section-y-tablet);
+    }
+  }
+
+  @media (width < 700px) {
+    .steps {
+      padding-block: var(--section-y-mobile);
+    }
+  }
+
+  .title {
+    margin: 0;
+    font-size: var(--type-section-title-size);
+    font-weight: var(--type-section-title-weight);
+    line-height: var(--type-section-title-leading);
+    text-align: center;
+  }
+
+  .list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--steps-col-min)), 1fr));
+    gap: var(--steps-gap);
+    box-sizing: border-box;
+    inline-size: 100%;
+    max-inline-size: var(--container);
+    margin-block: 0;
+    margin-inline: auto;
+    padding: 0;
+    list-style: none;
+  }
+
+  .step {
+    display: flex;
+    flex-direction: column;
+    gap: var(--stack-gap);
+  }
+
+  /* Chiffres en family-sans, même en page hébraïque ; couleur link (5,78:1). */
+  .number {
+    font-family: var(--type-step-number-family);
+    font-size: var(--type-step-number-size);
+    font-weight: var(--type-step-number-weight);
+    line-height: var(--type-step-number-leading);
+    color: var(--color-link);
+  }
+
+  .step-title {
+    margin: 0;
+    font-size: var(--type-h3-size);
+    font-weight: var(--type-step-title-weight);
+    line-height: var(--type-h3-leading);
+  }
+
+  .step-text {
+    margin: 0;
+    font-size: var(--type-body-size);
+    font-weight: var(--type-body-weight);
+    line-height: var(--type-body-leading);
+    color: var(--color-ink-muted);
+  }
+</style>

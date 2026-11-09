@@ -75,5 +75,16 @@
   "contact.info.email": "אימייל",
   "contact.info.zone": "אזור שירות",
   "contact.info.hours": "שעות פעילות",
-  "placeholder.hours": "שעות פעילות"
+  "placeholder.hours": "שעות פעילות",
+  "action.quote": "הצעת מחיר",
+  "action.details": "לפרטים",
+  "steps.title": "איך זה עובד",
+  "steps.call.title": "שיחה",
+  "steps.call.text": "מתקשרים או שולחים וואטסאפ. מספרים לנו מה צריך.",
+  "steps.visit.title": "סיור טכני",
+  "steps.visit.text": "טכנאי מגיע, בודק את המקום ונותן הצעת מחיר.",
+  "steps.install.title": "התקנה",
+  "steps.install.text": "מתקינים, מחברים ובודקים שהכול עובד.",
+  "steps.service.title": "הדרכה ושירות",
+  "steps.service.text": "מסבירים איך להשתמש, ונשארים זמינים אחרי ההתקנה."
 }

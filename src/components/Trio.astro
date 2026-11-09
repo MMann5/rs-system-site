@@ -1,0 +1,90 @@
+---
+// FR2, UX-DR21, UX-DR37 (story 3.1) : trio « pour qui » des pages services (DESIGN.md › Components › Trio ;
+// canvas Cameras.dc.html). Section blanche, h2 section-title centré, puis 3 colonnes
+// minmax(min(100%, 260px), 1fr) : h3 trio-title, texte 17px ink-muted. Ni picto ni carte, non interactif.
+// Révélée au défilement (.reveal, base.css).
+interface Props {
+  /** Id du h2 (aria-labelledby de la section). */
+  id: string;
+  title: string;
+  items: readonly { title: string; text: string }[];
+}
+
+const { id, title, items } = Astro.props;
+---
+<section class="trio reveal" aria-labelledby={id}>
+  <h2 id={id} class="title">{title}</h2>
+  <div class="grid">
+    {items.map((item) => (
+      <div class="item">
+        <h3 class="item-title">{item.title}</h3>
+        <p class="item-text">{item.text}</p>
+      </div>
+    ))}
+  </div>
+</section>
+
+<style>
+  /* Seuils (les @media ne lisent pas les tokens) : --bp-menu 960px, --bp-mobile-bar 700px. */
+  .trio {
+    display: flex;
+    flex-direction: column;
+    gap: var(--section-head-gap);
+    padding-block: var(--section-y-lg);
+    padding-inline: var(--page-gutter);
+    background-color: var(--color-surface);
+    color: var(--color-ink);
+  }
+
+  @media (width < 960px) {
+    .trio {
+      padding-block: var(--section-y-tablet);
+    }
+  }
+
+  @media (width < 700px) {
+    .trio {
+      padding-block: var(--section-y-mobile);
+    }
+  }
+
+  .title {
+    margin: 0;
+    font-size: var(--type-section-title-size);
+    font-weight: var(--type-section-title-weight);
+    line-height: var(--type-section-title-leading);
+    text-align: center;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--trio-col-min)), 1fr));
+    gap: var(--trio-gap);
+    box-sizing: border-box;
+    inline-size: 100%;
+    max-inline-size: var(--container);
+    margin-inline: auto;
+  }
+
+  .item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--stack-gap);
+    text-align: center;
+  }
+
+  .item-title {
+    margin: 0;
+    font-size: var(--type-trio-title-size);
+    font-weight: var(--type-trio-title-weight);
+    line-height: var(--type-trio-title-leading);
+  }
+
+  .item-text {
+    margin: 0;
+    font-size: var(--type-trio-text-size);
+    font-weight: var(--type-body-weight);
+    line-height: var(--type-body-leading);
+    color: var(--color-ink-muted);
+  }
+</style>
