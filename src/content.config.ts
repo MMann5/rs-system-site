@@ -3,6 +3,7 @@
 import { defineCollection } from 'astro:content';
 import { file, glob } from 'astro/loaders';
 import { z } from 'astro/zod';
+import { citySchema, regionSchema, reviewSchema } from './lib/areas/schema.ts';
 import { KEY_RE } from './lib/i18n/core.ts';
 import { pageSchema, perLang, text } from './lib/page-schema.ts';
 
@@ -43,4 +44,25 @@ const proof = defineCollection({
   }),
 });
 
-export const collections = { pages, i18n, services, proof };
+// Story 4.1 (FR9, AD-2, AD-4) : régions (src/content/regions/{id}.yaml) et villes (src/content/cities/{id}.yaml),
+// id = nom du fichier (id de ville = code `?city=`). Schémas : src/lib/areas/schema.ts ; région connue, ancres
+// uniques et tri : src/lib/areas/core.ts ; slugs et chemins `city:{id}` : registre de routes.
+const regions = defineCollection({
+  loader: glob({ pattern: '*.yaml', base: './src/content/regions', generateId: fileId }),
+  schema: regionSchema,
+});
+
+const cities = defineCollection({
+  loader: glob({ pattern: '*.yaml', base: './src/content/cities', generateId: fileId }),
+  schema: citySchema,
+});
+
+// Story 4.3 (FR41, AD-4, D3, D4) : avis Midrag, un fichier par avis (src/content/reviews/{id}.yaml), id = nom du
+// fichier. Schéma : src/lib/areas/schema.ts ; ≤ 2 avis par ville et provenance : src/lib/areas/core.ts.
+// Aucun avis au lancement (D3) : le dossier ne contient que son README.
+const reviews = defineCollection({
+  loader: glob({ pattern: '*.yaml', base: './src/content/reviews', generateId: fileId }),
+  schema: reviewSchema,
+});
+
+export const collections = { pages, i18n, services, proof, regions, cities, reviews };

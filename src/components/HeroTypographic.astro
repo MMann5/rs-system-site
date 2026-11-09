@@ -1,25 +1,35 @@
 ---
-// UX-DR15, UX-DR38 : héros typographique (DESIGN.md › Components › Héros typographique), repris par la 404
-// et plus tard par Ville et À propos. Fond navy-deep, h1 page-title aligné au début, puis le slot.
-// Arcs de signal au coin de fin (canvas About.dc.html), non retournés en RTL, tracés une fois ;
-// prefers-reduced-motion coupe l'animation (base.css) et laisse les arcs dessinés (repos dashoffset 0).
+// UX-DR15, UX-DR38 : héros typographique (DESIGN.md › Components › Héros typographique), repris par la 404,
+// la page ville (story 4.1) et plus tard À propos. Fond navy-deep, aligné au début : sur-titre (slot `eyebrow`,
+// fil d'Ariane de la ville), h1 (`titleSize` : page-title, ou city-title pour la ville), puis le slot (corps).
+// Arcs de signal (décision D7 de l'epic 4) : les trois ondes du logo, pleines, au coin de fin, jamais retournées
+// en RTL, tracées une fois ; prefers-reduced-motion coupe l'animation (base.css) et laisse les arcs dessinés.
+// Aucun arc derrière un texte ou un lien :
+// - au-dessus de 960px, le corps (sous le h1) réserve à sa fin d'inline la largeur des arcs (--arcs-ink-inline)
+//   et sa hauteur garantit que le haut du dessin (--arcs-ink-block) reste sous le h1 et le sur-titre ;
+// - sous 960px, le texte occupe toute la largeur : les arcs, réduits (--arcs-scale-mobile), sont réservés sous lui.
 interface Props {
   title: string;
+  /** Taille du h1 : `page` (page-title, 404 et À propos) ou `city` (city-title, page ville). */
+  titleSize?: 'page' | 'city';
 }
 
-const { title } = Astro.props;
+const { title, titleSize = 'page' } = Astro.props;
 ---
 <section class="hero-typo" aria-labelledby="page-title" data-surface="navy">
   <div class="arcs">
     <svg aria-hidden="true" focusable="false" viewBox="0 0 480 480">
-      <path class="arc arc-1" pathLength="1" d="M120 360 A128 128 0 0 1 248 232" />
-      <path class="arc arc-2" pathLength="1" d="M120 360 A228 228 0 0 1 348 132" />
-      <path class="arc arc-3" pathLength="1" d="M120 360 A328 328 0 0 1 448 32" />
+      <path class="arc arc-1" pathLength="1" d="M100 270 A110 110 0 0 1 208.9 395.3" />
+      <path class="arc arc-2" pathLength="1" d="M100 205 A175 175 0 0 1 270.5 419.4" />
+      <path class="arc arc-3" pathLength="1" d="M100 138 A242 242 0 0 1 330.2 454.8" />
     </svg>
   </div>
   <div class="content">
-    <h1 id="page-title" class="title">{title}</h1>
-    <slot />
+    <slot name="eyebrow" />
+    <h1 id="page-title" class:list={['title', { city: titleSize === 'city' }]}>{title}</h1>
+    <div class="body">
+      <slot />
+    </div>
   </div>
 </section>
 
@@ -34,18 +44,27 @@ const { title } = Astro.props;
     color: var(--color-white);
   }
 
+  /* Sous 960px, le texte occupe toute la largeur : on réserve sous lui la hauteur visible du dessin réduit
+     (haut du tracé, moins le débord bas, plus la marge), pour qu'aucun arc ne passe derrière un texte ou un lien. */
   @media (width < 960px) {
     .hero-typo {
-      padding-block: var(--section-y-tablet);
+      padding-block: var(--section-y-tablet)
+        calc(
+          var(--section-y-tablet) +
+            (var(--arcs-size) * var(--arcs-ink-block) + var(--arcs-offset-block) + var(--arcs-clearance)) *
+            var(--arcs-scale-mobile)
+        );
     }
   }
 
-  /* Sous 700px, le texte occupe toute la largeur : on réserve sous lui la hauteur visible des arcs
-     (taille réduite moins le débord bas), pour qu'aucun arc ne passe derrière le titre, le numéro ou les liens. */
   @media (width < 700px) {
     .hero-typo {
       padding-block: var(--section-y-mobile)
-        calc(var(--section-y-mobile) + (var(--arcs-size) + var(--arcs-offset-block)) * var(--arcs-scale-mobile));
+        calc(
+          var(--section-y-mobile) +
+            (var(--arcs-size) * var(--arcs-ink-block) + var(--arcs-offset-block) + var(--arcs-clearance)) *
+            var(--arcs-scale-mobile)
+        );
     }
   }
 
@@ -66,7 +85,7 @@ const { title } = Astro.props;
     block-size: var(--arcs-size);
   }
 
-  @media (width < 700px) {
+  @media (width < 960px) {
     .arcs svg {
       inset-inline-end: calc(var(--arcs-offset-inline) * var(--arcs-scale-mobile));
       inset-block-end: calc(var(--arcs-offset-block) * var(--arcs-scale-mobile));
@@ -86,12 +105,10 @@ const { title } = Astro.props;
   }
 
   .arc-2 {
-    opacity: var(--arc-opacity-2);
     animation-delay: var(--arc-delay-2);
   }
 
   .arc-3 {
-    opacity: var(--arc-opacity-3);
     animation-delay: var(--arc-delay-3);
   }
 
@@ -112,6 +129,37 @@ const { title } = Astro.props;
     font-weight: var(--type-page-title-weight);
     line-height: var(--type-page-title-leading);
     color: var(--color-white);
+  }
+
+  /* Page ville : city-title, borne basse 40px ; un nom long passe à la ligne au tiret (base.css : overflow-wrap). */
+  .title.city {
+    max-inline-size: 100%;
+    font-size: var(--type-city-title-size);
+    font-weight: var(--type-city-title-weight);
+    line-height: var(--type-city-title-leading);
+  }
+
+  /* Corps : sous-titre, numéro, liens. Même rythme vertical que la colonne. */
+  .body {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-4);
+    box-sizing: border-box;
+    inline-size: 100%;
+  }
+
+  /* Au-dessus de 960px, les arcs gardent leur taille : le corps s'écarte de leur colonne (fin d'inline, mesurée
+     dans le sens le plus large des deux, LTR) et occupe au moins leur hauteur visible, moins le padding bas. */
+  @media (width >= 960px) {
+    .body {
+      min-block-size: calc(
+        var(--arcs-size) * var(--arcs-ink-block) + var(--arcs-offset-block) + var(--arcs-clearance) - var(--section-y)
+      );
+      padding-inline-end: calc(
+        var(--arcs-size) * var(--arcs-ink-inline) + var(--arcs-offset-inline) + var(--arcs-clearance) - var(--page-gutter)
+      );
+    }
   }
 
   @keyframes arc-draw {

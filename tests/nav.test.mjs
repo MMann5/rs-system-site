@@ -31,6 +31,17 @@ test('buildNav : seuls cameras et blog actifs, navSection blog → 2 items dans 
   ]);
 });
 
+// Story 4.1 (FR9) : sur une page ville (`navSection: 'areas'`), « אזורים » est actif dès que `areas` l'est (4.4).
+test('buildNav : areas actif et navSection areas → lien Zones courant (page ville) ; areas inactif → omis', () => {
+  const items = buildNav(HEADER_NAV_IDS, 'he', deps(['cameras', 'areas', 'contact']), 'areas');
+  assert.deepEqual(items, [
+    { id: 'cameras', href: '/he/cameras/', label: 'he:nav.cameras', current: false },
+    { id: 'areas', href: '/he/areas/', label: 'he:nav.areas', current: true },
+    { id: 'contact', href: '/he/contact/', label: 'he:nav.contact', current: false },
+  ]);
+  assert.ok(!buildNav(HEADER_NAV_IDS, 'he', deps(['cameras', 'contact']), 'areas').some((i) => i.current));
+});
+
 test('buildNav : ids inactifs ou inconnus omis sans erreur ; sans navSection, aucun courant', () => {
   assert.deepEqual(buildNav(HEADER_NAV_IDS, 'he', deps(['home'])), []);
   const items = buildNav(['contact', 'nope'], 'he', deps(['contact']));

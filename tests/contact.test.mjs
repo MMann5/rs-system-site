@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { formLines, invalidContactFields, isValidName, isValidPhone, normalizePhone, PHONE_DISPLAY, resolveCityHe, telHref, waHref } from '../src/lib/contact/core.ts';
-import { buildServiceTable, pageWaInput, SERVICE_CODES } from '../src/lib/contact/table.ts';
+import { buildCityTable, buildServiceTable, pageWaInput, SERVICE_CODES } from '../src/lib/contact/table.ts';
 
 const PREFIX = 'https://wa.me/972509565669?text=';
 const GREETING = 'שלום RS SYSTEM, הגעתי מהאתר.';
@@ -147,9 +147,35 @@ test('pageWaInput : service inconnu → lève', () => {
   assert.throws(() => pageWaInput({ service: 'toString' }, TABLE), { message: 'contact : service inconnu « toString »' });
 });
 
-test('pageWaInput : ville → lève tant que la table des villes est absente (epic 4)', () => {
-  assert.throws(() => pageWaInput({ city: 'modiin' }, TABLE), { message: 'contact : table des villes absente (epic 4)' });
-  assert.throws(() => pageWaInput({ service: 'cameras', city: 'modiin' }, TABLE), { message: 'contact : table des villes absente (epic 4)' });
+// Story 4.1 (FR31, AD-5) : table des villes et ville de la page en hébreu.
+const CITY_ENTRIES = [
+  { id: 'jerusalem', name: { he: 'ירושלים', en: 'Jerusalem', ru: 'Иерусалим', fr: 'Jérusalem' } },
+  { id: 'modiin', name: { he: 'מודיעין', en: 'Modiin', ru: 'Модиин', fr: 'Modiin' } },
+];
+const CITIES_HE = buildCityTable(CITY_ENTRIES, 'he');
+
+test('buildCityTable : { code: { label, he } } dans l’ordre donné, label dans la langue, he hébreu ; doublon → lève', () => {
+  const fr = buildCityTable(CITY_ENTRIES, 'fr');
+  assert.deepEqual(Object.keys(fr), ['jerusalem', 'modiin']);
+  assert.deepEqual(fr.jerusalem, { label: 'Jérusalem', he: 'ירושלים' });
+  assert.deepEqual(buildCityTable(CITY_ENTRIES, 'ru').modiin, { label: 'Модиин', he: 'מודיעין' });
+  assert.deepEqual(buildCityTable([], 'he'), {});
+  assert.throws(() => buildCityTable([...CITY_ENTRIES, CITY_ENTRIES[1]], 'he'), { message: 'labels : ville « modiin » en double' });
+});
+
+test('pageWaInput : ville connue → cityHe hébreu ; message « …הצעת מחיר במודיעין. »', () => {
+  const input = pageWaInput({ id: 'city:modiin', lang: 'fr', city: 'modiin', indexable: false }, TABLE, buildCityTable(CITY_ENTRIES, 'fr'));
+  assert.deepEqual(input, { cityHe: 'מודיעין' });
+  assert.equal(text(waHref(input)), `${GREETING} אשמח לקבל הצעת מחיר במודיעין.`);
+  assert.deepEqual(pageWaInput({ service: 'cameras', city: 'jerusalem' }, TABLE, CITIES_HE), { serviceHe: 'מצלמות אבטחה', cityHe: 'ירושלים' });
+  // Sans ville, la table des villes n'est pas lue.
+  assert.deepEqual(pageWaInput({ service: 'cameras' }, TABLE, {}), { serviceHe: 'מצלמות אבטחה' });
+});
+
+test('pageWaInput : ville inconnue → lève', () => {
+  assert.throws(() => pageWaInput({ city: 'x' }, TABLE, CITIES_HE), { message: 'contact : ville inconnue « x »' });
+  assert.throws(() => pageWaInput({ city: 'toString' }, TABLE, CITIES_HE), { message: 'contact : ville inconnue « toString »' });
+  assert.throws(() => pageWaInput({ city: 'modiin' }, TABLE, {}), { message: 'contact : ville inconnue « modiin »' });
 });
 
 // — Story 2.2 (FR28) : validation du formulaire —

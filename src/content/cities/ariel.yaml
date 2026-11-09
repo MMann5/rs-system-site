@@ -1,0 +1,23 @@
+# Story 4.2 (FR9, AD-4, décision D1 de l'epic 4) : Ariel. Id du fichier = code `?city=`.
+# Intro : phrase du canvas City (« התקנה ב{עיר} והסביבה ») + une phrase propre à la ville, sans chiffre, client,
+# délai ni superlatif (NFR10). Traductions en/ru/fr par l'agent : relecture humaine recommandée.
+# Localités voisines : vides (placeholder) jusqu'à la liste validée par Ran (décision D2).
+name:
+  he: 'אריאל'
+  en: 'Ariel'
+  ru: 'Ариэль'
+  fr: 'Ariel'
+slugs:
+  he: 'אריאל'
+  en: 'ariel'
+  ru: 'ариэль'
+  fr: 'ariel'
+region: 'judea-samaria'
+order: 3
+intro:
+  he: 'מצלמות אבטחה, גלאי עשן, אינטרקום, בית חכם ורשתות. התקנה באריאל והסביבה. עיר בשומרון, עם שכונות של בתים פרטיים ובנייני מגורים, ואוניברסיטה.'
+  en: 'Security cameras, smoke detectors, intercoms, smart home and networks. Installed in Ariel and the surrounding area. A city in Samaria, with neighbourhoods of private houses and apartment buildings, and a university.'
+  ru: 'Камеры видеонаблюдения, датчики дыма, домофоны, умный дом и сети. Установка в Ариэле и окрестностях. Город в Самарии, с кварталами частных и многоквартирных домов и университетом.'
+  fr: "Caméras de surveillance, détecteurs de fumée, interphone, maison connectée et réseaux. Installation à Ariel et dans les environs. Une ville de Samarie, avec des quartiers de maisons individuelles et d'immeubles d'habitation, et une université."
+neighbors: []
+reviews: []

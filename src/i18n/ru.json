@@ -88,5 +88,22 @@
   "steps.install.title": "Установка",
   "steps.install.text": "Устанавливаем, подключаем и проверяем, что всё работает.",
   "steps.service.title": "Обучение и обслуживание",
-  "steps.service.text": "Объясняем, как пользоваться, и остаёмся на связи после установки."
+  "steps.service.text": "Объясняем, как пользоваться, и остаёмся на связи после установки.",
+  "city.meta-title": "Камеры видеонаблюдения — {city} · RS SYSTEM",
+  "city.breadcrumb-label": "Навигационная цепочка",
+  "city.services.title": "Что мы устанавливаем: {city}",
+  "city.service-hint.cameras": "Дома, здания, бизнес и стройплощадки",
+  "city.service-hint.smoke-detectors": "В каждой комнате",
+  "city.service-hint.intercom": "Частные дома и многоквартирные здания",
+  "city.service-hint.smart-home": "Свет, жалюзи и кондиционер",
+  "city.service-hint.networks": "Дом, офис и новостройка",
+  "city.neighbors.title": "Также в окрестных населённых пунктах",
+  "city.reviews.label": "Отзывы: {city} и окрестности",
+  "city.reviews.source": "Мидраг",
+  "placeholder.neighbors": "соседние населённые пункты",
+  "areas.title": "Районы обслуживания",
+  "areas.subtitle": "От Беэр-Шевы до Иерусалима, включая поселения.",
+  "areas.tiles-label": "Районы",
+  "areas.missing": "Не нашли свой населённый пункт?",
+  "placeholder.other-settlements": "другие поселения"
 }

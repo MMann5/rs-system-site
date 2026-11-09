@@ -45,15 +45,22 @@ export function ratingLine(proof: Proof, lang: Lang, t: (key: string) => string)
 }
 
 /**
- * Liens du bloc : Zones (D3) et « Laisser ses coordonnées » vers Contact avec `?service=` du contexte
- * (FR21). Un id inactif n'a pas de lien et `url` n'est jamais appelé pour lui.
+ * Liens du bloc : Zones (D3) et « Laisser ses coordonnées » vers Contact avec `?service=` et `?city=` du
+ * contexte (FR21, FR29 ; story 4.1 : `?city=` des pages ville, après `?service=` s'il y a les deux).
+ * Un id inactif n'a pas de lien et `url` n'est jamais appelé pour lui.
  */
-export function bandLinks({ lang, service }: { lang: Lang; service?: string | undefined }, deps: BandDeps): BandLinks {
+export function bandLinks(
+  { lang, service, city }: { lang: Lang; service?: string | undefined; city?: string | undefined },
+  deps: BandDeps,
+): BandLinks {
   const links: BandLinks = {};
   if (deps.isEnabled('areas')) links.zoneHref = deps.url('areas', lang);
   if (deps.isEnabled('contact')) {
     const base = deps.url('contact', lang);
-    links.detailsHref = service ? `${base}?service=${encodeURIComponent(service)}` : base;
+    const params: string[] = [];
+    if (service) params.push(`service=${encodeURIComponent(service)}`);
+    if (city) params.push(`city=${encodeURIComponent(city)}`);
+    links.detailsHref = params.length > 0 ? `${base}?${params.join('&')}` : base;
   }
   return links;
 }

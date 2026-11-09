@@ -88,5 +88,22 @@
   "steps.install.title": "Installation",
   "steps.install.text": "We install, connect and check that everything works.",
   "steps.service.title": "Handover and service",
-  "steps.service.text": "We show you how to use it, and we stay available after the installation."
+  "steps.service.text": "We show you how to use it, and we stay available after the installation.",
+  "city.meta-title": "Security cameras in {city} · RS SYSTEM",
+  "city.breadcrumb-label": "Breadcrumb",
+  "city.services.title": "What we install in {city}",
+  "city.service-hint.cameras": "Homes, buildings, businesses and building sites",
+  "city.service-hint.smoke-detectors": "In every room",
+  "city.service-hint.intercom": "Private houses and apartment buildings",
+  "city.service-hint.smart-home": "Lighting, shutters and air conditioning",
+  "city.service-hint.networks": "Home, office and new buildings",
+  "city.neighbors.title": "Also in the surrounding localities",
+  "city.reviews.label": "Reviews from {city} and nearby",
+  "city.reviews.source": "Midrag",
+  "placeholder.neighbors": "nearby localities",
+  "areas.title": "Service areas",
+  "areas.subtitle": "From Beer Sheva to Jerusalem, including the settlements.",
+  "areas.tiles-label": "Areas",
+  "areas.missing": "Can't find your town?",
+  "placeholder.other-settlements": "other settlements"
 }

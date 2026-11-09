@@ -1,0 +1,54 @@
+---
+// FR41, UX-DR24, AD-4, AD-7, AD-8, décisions D3 et D4 de l'epic 4 (story 4.3) : avis Midrag d'une page ville
+// (canvas City.dc.html, DESIGN.md › Components › Citation Midrag). Une `figure` par avis, dans l'ordre donné :
+// citation verbatim entre „ ” et légende « auteur · localité · source », dans la langue d'origine de l'avis sur
+// toutes les langues du site (`lang` et `dir` de l'avis sur la figure, jamais en dur). Traductions jamais affichées.
+// La section qui l'entoure (et son absence quand la ville n'a pas d'avis) : src/templates/City.astro.
+import type { Review } from '../lib/areas';
+import { t } from '../lib/i18n';
+import { DIR } from '../lib/langs';
+
+interface Props {
+  reviews: readonly Review[];
+}
+
+const { reviews } = Astro.props;
+---
+<div class="reviews">
+  {reviews.map((r) => (
+    <figure class="review" lang={r.lang} dir={DIR[r.lang]}>
+      <blockquote class="quote">„{r.quote}”</blockquote>
+      <figcaption class="caption">{r.author} · {r.locality} · {t(r.lang, 'city.reviews.source')}</figcaption>
+    </figure>
+  ))}
+</div>
+
+<style>
+  .reviews {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--review-col-min)), 1fr));
+    gap: var(--review-grid-gap);
+  }
+
+  .review {
+    display: flex;
+    flex-direction: column;
+    gap: var(--review-gap);
+    margin: 0;
+  }
+
+  .quote {
+    margin: 0;
+    font-size: var(--type-midrag-quote-size);
+    font-weight: var(--type-midrag-quote-weight);
+    line-height: var(--type-midrag-quote-leading);
+    color: var(--color-ink);
+  }
+
+  .caption {
+    font-size: var(--type-body-size);
+    font-weight: var(--type-body-weight);
+    line-height: var(--type-body-leading);
+    color: var(--color-ink-muted);
+  }
+</style>

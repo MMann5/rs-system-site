@@ -158,6 +158,83 @@ test('completeness : deux pages au même chemin fr → message routes, même ré
   assert.match(errors[0], /^src\/content\/pages\/ : routes : « .+ » et « .+ » \(fr\) : même chemin \/fr\/contact\/$/);
 });
 
+// Story 4.1 : villes au registre (`city:{id}` sous `areas`, inheritActive false) et région connue.
+const AREAS_YAML = "slugs: { he: 'אזורים', en: 'areas', ru: 'районы', fr: 'zones' }\nenabled: false\n";
+const REGION_YAML = "name: { he: 'מרכז', en: 'C', ru: 'Ц', fr: 'C' }\nanchor: 'center-shfela'\norder: 1\n";
+const cityYaml = (fr, ru = 'модиин', regionId = 'center-shfela') =>
+  `slugs: { he: 'מודיעין', en: 'modiin', ru: '${ru}', fr: '${fr}' }\nregion: '${regionId}'\n`;
+
+test('completeness : villes saines acceptées sous areas désactivée', () => {
+  const errors = findCompletenessErrors(
+    completeRoot({
+      'src/content/pages/areas.yaml': AREAS_YAML,
+      'src/content/regions/center-shfela.yaml': REGION_YAML,
+      'src/content/cities/modiin.yaml': cityYaml('modiin'),
+    }),
+  );
+  assert.deepEqual(errors, []);
+});
+
+test('completeness : ville vers une région inconnue → message nommant le fichier', () => {
+  const errors = findCompletenessErrors(
+    completeRoot({
+      'src/content/pages/areas.yaml': AREAS_YAML,
+      'src/content/regions/center-shfela.yaml': REGION_YAML,
+      'src/content/cities/haifa.yaml': cityYaml('haifa', 'хайфа', 'north'),
+    }),
+  );
+  assert.deepEqual(errors, ['areas : src/content/cities/haifa.yaml : région inconnue « north »']);
+});
+
+test('completeness : ville sans slug ru, ou deux villes au même slug fr → message routes', () => {
+  const missing = findCompletenessErrors(
+    completeRoot({
+      'src/content/pages/areas.yaml': AREAS_YAML,
+      'src/content/regions/center-shfela.yaml': REGION_YAML,
+      'src/content/cities/modiin.yaml': "slugs: { he: 'מודיעין', en: 'modiin', fr: 'modiin' }\nregion: 'center-shfela'\n",
+    }),
+  );
+  assert.deepEqual(missing, ['src/content/cities/ : routes : « city:modiin » (ru) : slug manquant']);
+  const dup = findCompletenessErrors(
+    completeRoot({
+      'src/content/pages/areas.yaml': AREAS_YAML,
+      'src/content/regions/center-shfela.yaml': REGION_YAML,
+      'src/content/cities/modiin.yaml': cityYaml('meme'),
+      'src/content/cities/rehovot.yaml': "slugs: { he: 'רחובות', en: 'rehovot', ru: 'реховот', fr: 'meme' }\nregion: 'center-shfela'\n",
+    }),
+  );
+  assert.deepEqual(dup, ['src/content/cities/ : routes : « city:modiin » et « city:rehovot » (fr) : même chemin /fr/zones/meme/']);
+});
+
+// Story 4.3 (FR41, D3) : avis Midrag au lint. Fixtures temporaires hors de src/ du dépôt.
+const reviewYaml = (cityId, locality) => `quote: 'citation de test'\nlang: 'he'\nauthor: 'auteur'\nlocality: '${locality}'\ncity: '${cityId}'\n`;
+const cityWithReviews = (ids) => `${cityYaml('modiin')}name: { he: 'מודיעין', en: 'Modiin', ru: 'Модиин', fr: 'Modiin' }\nreviews: [${ids.map((r) => `'${r}'`).join(', ')}]\n`;
+
+test('completeness : ville à 2 avis de sa ville acceptée ; à 3 avis → message nommant le fichier', () => {
+  const base = {
+    'src/content/pages/areas.yaml': AREAS_YAML,
+    'src/content/regions/center-shfela.yaml': REGION_YAML,
+    'src/content/reviews/m-1.yaml': reviewYaml('modiin', 'מודיעין'),
+    'src/content/reviews/m-2.yaml': reviewYaml('modiin', 'מודיעין'),
+    'src/content/reviews/m-3.yaml': reviewYaml('modiin', 'מודיעין'),
+  };
+  assert.deepEqual(findCompletenessErrors(completeRoot({ ...base, 'src/content/cities/modiin.yaml': cityWithReviews(['m-1', 'm-2']) })), []);
+  const errors = findCompletenessErrors(completeRoot({ ...base, 'src/content/cities/modiin.yaml': cityWithReviews(['m-1', 'm-2', 'm-3']) }));
+  assert.deepEqual(errors, ['areas : src/content/cities/modiin.yaml : 3 avis (au plus 2)']);
+});
+
+test('completeness : avis hors zone → message nommant le fichier de l\'avis', () => {
+  const errors = findCompletenessErrors(
+    completeRoot({
+      'src/content/pages/areas.yaml': AREAS_YAML,
+      'src/content/regions/center-shfela.yaml': REGION_YAML,
+      'src/content/reviews/m-1.yaml': reviewYaml('modiin', 'חיפה'),
+      'src/content/cities/modiin.yaml': cityWithReviews(['m-1']),
+    }),
+  );
+  assert.deepEqual(errors, ['areas : src/content/reviews/m-1.yaml : localité « חיפה » ni modiin ni une de ses voisines (he)']);
+});
+
 test('completeness : le CLI sort en 1 en citant le message', () => {
   const res = cli('completeness', completeRoot({ 'src/i18n/ru.json': JSON.stringify({ 'nav.home': 'ru' }) }));
   assert.equal(res.status, 1);

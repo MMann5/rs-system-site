@@ -208,7 +208,8 @@ const SERVICES = {
   'smart-home': { label: 'Maison connectée', he: 'בית חכם' },
   unsure: { label: 'Pas encore sûr', he: 'עוד לא בטוח' },
 };
-const CITIES = { modiin: { label: 'Modiin', he: 'מודיעין' } };
+// Story 4.2 : Ashdod, une des 13 villes ajoutées (même entrée que #rs-data de la page Contact fr).
+const CITIES = { modiin: { label: 'Modiin', he: 'מודיעין' }, ashdod: { label: 'Ashdod', he: 'אשדוד' } };
 const RS_DATA = { context: { id: 'contact', lang: 'fr', navSection: 'contact', indexable: false }, services: SERVICES, cities: {} };
 
 let round = 0;
@@ -479,9 +480,9 @@ test('envoi valide sur desktop : window.open(waHref attendu, _blank), opener ret
 
 test('envoi valide : unsure et ville libre hors liste → message sans service, ville telle quelle', async () => {
   const dom = await mountIsland();
-  fill(dom, { city: ' Ashdod ' });
+  fill(dom, { city: ' Lod ' });
   dom.submit();
-  const href = waHref({ cityHe: 'Ashdod', lines: formLines({ name: 'Dana', phone: '050-123-4567', message: '' }), quote: true });
+  const href = waHref({ cityHe: 'Lod', lines: formLines({ name: 'Dana', phone: '050-123-4567', message: '' }), quote: true });
   assert.deepEqual(dom.navigations(), [['open', href, '_blank']]);
   assert.deepEqual(dom.events(), [{ name: 'form_submit', data: { lang: 'fr', service: 'unsure', from_service_param: false, city_filled: true } }]);
 });
@@ -494,6 +495,16 @@ test('envoi valide : ville venue de ?city= → hébreu par code ; service choisi
   const href = waHref({ serviceHe: 'גלאי עשן', cityHe: 'מודיעין', lines: formLines({ name: 'Dana', phone: '050-123-4567', message: '' }), quote: true });
   assert.deepEqual(dom.navigations(), [['open', href, '_blank']]);
   assert.deepEqual(dom.events()[0].data, { lang: 'fr', service: 'smoke-detectors', from_service_param: false, city_filled: true });
+});
+
+test('story 4.2 : ?city=ashdod → champ « Ashdod », message WhatsApp « …הצעת מחיר באשדוד. »', async () => {
+  const dom = await mountIsland({ rsData: { ...RS_DATA, cities: CITIES }, search: '?city=ashdod' });
+  assert.equal(dom.city.value, 'Ashdod');
+  fill(dom, { city: dom.city.value });
+  dom.submit();
+  const href = waHref({ cityHe: 'אשדוד', lines: formLines({ name: 'Dana', phone: '050-123-4567', message: '' }), quote: true });
+  assert.deepEqual(dom.navigations(), [['open', href, '_blank']]);
+  assert.ok(decodeURIComponent(href).includes('הצעת מחיר באשדוד.'), 'message WhatsApp');
 });
 
 test('envoi valide sur appareil tactile : location.assign dans le même onglet, rien d’ouvert', async () => {

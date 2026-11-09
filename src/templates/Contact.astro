@@ -5,8 +5,7 @@
 // Story 2.2 (FR28, FR33, UX-DR29) : messages d'erreur sous Nom et Téléphone et résumé d'erreurs (dans un
 // <template>), rendus au build et cachés ; l'îlot src/scripts/contact-form.ts valide à l'envoi, montre les
 // messages, clone le résumé dans #contact-errors (role="alert") et pose aria-invalid / aria-describedby.
-// Story 2.3 (FR29, FR30, AD-5, AD-13) : #rs-data embarque les tables `services` et `cities` (vide avant
-// l'epic 4) ; l'îlot présélectionne par `?service=` / `?city=`, compose le message et ouvre WhatsApp.
+// Story 2.3 (FR29, FR30, AD-5, AD-13) : #rs-data embarque les tables `services` et `cities` ; l'îlot présélectionne par `?service=` / `?city=`, compose le message et ouvre WhatsApp.
 // Story 2.4 (FR33, UX-DR29, AD-5, AD-6) : états d'envoi, de retour et hors ligne, rendus au build et cachés :
 // libellé d'envoi du bouton (.submit-sending, trois points statiques) annoncé par #contact-sending
 // (role="status"), bloc de confirmation #contact-sent (filet success, Réessayer = même lien WhatsApp,
@@ -37,7 +36,7 @@ interface Props {
 const { id, lang } = Astro.props;
 const ctx = createPageContext({ id, lang, navSection: 'contact' });
 const { meta } = page(id);
-const wa = waHref(pageWaInput(ctx, serviceLabels('he')));
+const wa = waHref(pageWaInput(ctx, serviceLabels('he'), cityLabels('he')));
 const services = serviceLabels(lang);
 const optional = t(lang, 'form.optional');
 const nameError = t(lang, 'form.name.error');

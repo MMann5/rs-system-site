@@ -1,0 +1,21 @@
+# Zones (story 4.1 : posée désactivée, parent des pages ville ; activée et construite par la story 4.4, FR8,
+# modèle src/templates/Areas.astro).
+# Slugs : he/ru d'EXPERIENCE.md › exemples d'URL, en `areas`, fr `zones` (traduit, AD-4).
+# Textes en/ru/fr rédigés par l'agent : relecture humaine recommandée.
+slugs:
+  he: 'אזורים'
+  en: 'areas'
+  ru: 'районы'
+  fr: 'zones'
+enabled: true
+meta:
+  title:
+    he: 'אזורי שירות · RS SYSTEM'
+    en: 'Service areas · RS SYSTEM'
+    ru: 'Районы обслуживания · RS SYSTEM'
+    fr: "Zones d'intervention · RS SYSTEM"
+  description:
+    he: 'מבאר שבע ועד ירושלים, כולל היישובים. מצלמות אבטחה, גלאי עשן, אינטרקום, בית חכם ורשתות.'
+    en: 'From Beer Sheva to Jerusalem, including the settlements. Security cameras, smoke detectors, intercoms, smart home and networks.'
+    ru: 'От Беэр-Шевы до Иерусалима, включая поселения. Камеры видеонаблюдения, датчики дыма, домофоны, умный дом и сети.'
+    fr: 'De Beer-Sheva à Jérusalem, yishouvim compris. Caméras de surveillance, détecteurs de fumée, interphone, maison connectée et réseaux.'

@@ -1,0 +1,23 @@
+# Story 4.2 (FR9, AD-4, décision D1 de l'epic 4) : Beit Shemesh. Id du fichier = code `?city=`.
+# Intro : phrase du canvas City (« התקנה ב{עיר} והסביבה ») + une phrase propre à la ville, sans chiffre, client,
+# délai ni superlatif (NFR10). Traductions en/ru/fr par l'agent : relecture humaine recommandée.
+# Localités voisines : vides (placeholder) jusqu'à la liste validée par Ran (décision D2).
+name:
+  he: 'בית שמש'
+  en: 'Beit Shemesh'
+  ru: 'Бейт-Шемеш'
+  fr: 'Beit Shemesh'
+slugs:
+  he: 'בית-שמש'
+  en: 'beit-shemesh'
+  ru: 'бейт-шемеш'
+  fr: 'beit-shemesh'
+region: 'jerusalem-area'
+order: 2
+intro:
+  he: 'מצלמות אבטחה, גלאי עשן, אינטרקום, בית חכם ורשתות. התקנה בבית שמש והסביבה. עיר בין הרי ירושלים לשפלה, עם שכונות ותיקות ושכונות חדשות.'
+  en: 'Security cameras, smoke detectors, intercoms, smart home and networks. Installed in Beit Shemesh and the surrounding area. A city between the Jerusalem hills and the Shfela, with long-established and new neighbourhoods.'
+  ru: 'Камеры видеонаблюдения, датчики дыма, домофоны, умный дом и сети. Установка в Бейт-Шемеше и окрестностях. Город между Иерусалимскими горами и Шфелой, со старыми и новыми районами.'
+  fr: 'Caméras de surveillance, détecteurs de fumée, interphone, maison connectée et réseaux. Installation à Beit Shemesh et dans les environs. Une ville entre les collines de Jérusalem et la Shfela, avec des quartiers anciens et des quartiers neufs.'
+neighbors: []
+reviews: []

@@ -32,6 +32,11 @@ export interface RouteSource {
   enabled: boolean;
   previewOnly?: boolean;
   parent?: string;
+  /**
+   * Story 4.1 : `false` = le parent donne le chemin, pas l'activité (villes sous `areas`, encore désactivée).
+   * Défaut (absent ou `true`) : parent inactif ⇒ enfant inactif.
+   */
+  inheritActive?: boolean;
 }
 
 export interface RouteEntry {
@@ -131,7 +136,7 @@ export function buildRegistry(sources: readonly RouteSource[], options: Registry
   }
   if (errors.length > 0) fail(errors);
 
-  // 3. Chemins complets et activité (le parent doit être actif).
+  // 3. Chemins complets et activité (le parent doit être actif, sauf `inheritActive: false`).
   const resolved = new Map<string, Resolved>();
   const resolve = (id: string): Resolved => {
     const done = resolved.get(id);
@@ -145,7 +150,8 @@ export function buildRegistry(sources: readonly RouteSource[], options: Registry
       const base = parent ? parent.segments[lang] : [];
       segments[lang] = slugs[lang] === '' ? [...base] : [...base, slugs[lang]];
     }
-    const entry: Resolved = { source, active: selfActive && (parent ? parent.active : true), segments };
+    const parentActive = parent === undefined || source.inheritActive === false ? true : parent.active;
+    const entry: Resolved = { source, active: selfActive && parentActive, segments };
     resolved.set(id, entry);
     return entry;
   };

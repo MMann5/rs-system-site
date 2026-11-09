@@ -1,0 +1,23 @@
+# Story 4.2 (FR9, AD-4, décision D1 de l'epic 4) : Rehovot. Id du fichier = code `?city=`.
+# Intro : phrase du canvas City (« התקנה ב{עיר} והסביבה ») + une phrase propre à la ville, sans chiffre, client,
+# délai ni superlatif (NFR10). Traductions en/ru/fr par l'agent : relecture humaine recommandée.
+# Localités voisines : vides (placeholder) jusqu'à la liste validée par Ran (décision D2).
+name:
+  he: 'רחובות'
+  en: 'Rehovot'
+  ru: 'Реховот'
+  fr: 'Rehovot'
+slugs:
+  he: 'רחובות'
+  en: 'rehovot'
+  ru: 'реховот'
+  fr: 'rehovot'
+region: 'center-shfela'
+order: 2
+intro:
+  he: 'מצלמות אבטחה, גלאי עשן, אינטרקום, בית חכם ורשתות. התקנה ברחובות והסביבה. עיר ותיקה בשפלה, עם מרכז ישן, שכונות חדשות ובתים פרטיים.'
+  en: 'Security cameras, smoke detectors, intercoms, smart home and networks. Installed in Rehovot and the surrounding area. A long-established city in the Shfela, with an old centre, new neighbourhoods and private houses.'
+  ru: 'Камеры видеонаблюдения, датчики дыма, домофоны, умный дом и сети. Установка в Реховоте и окрестностях. Давно сложившийся город в Шфеле: исторический центр, новые районы и частные дома.'
+  fr: 'Caméras de surveillance, détecteurs de fumée, interphone, maison connectée et réseaux. Installation à Rehovot et dans les environs. Une ville établie de longue date dans la Shfela, avec un vieux centre, des quartiers neufs et des maisons individuelles.'
+neighbors: []
+reviews: []

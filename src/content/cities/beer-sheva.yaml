@@ -1,0 +1,23 @@
+# Story 4.2 (FR9, AD-4, décision D1 de l'epic 4) : Beer-Sheva. Id du fichier = code `?city=`.
+# Intro : phrase du canvas City (« התקנה ב{עיר} והסביבה ») + une phrase propre à la ville, sans chiffre, client,
+# délai ni superlatif (NFR10). Traductions en/ru/fr par l'agent : relecture humaine recommandée.
+# Localités voisines : vides (placeholder) jusqu'à la liste validée par Ran (décision D2).
+name:
+  he: 'באר שבע'
+  en: 'Beer Sheva'
+  ru: 'Беэр-Шева'
+  fr: 'Beer-Sheva'
+slugs:
+  he: 'באר-שבע'
+  en: 'beer-sheva'
+  ru: 'беэр-шева'
+  fr: 'beer-sheva'
+region: 'south'
+order: 1
+intro:
+  he: 'מצלמות אבטחה, גלאי עשן, אינטרקום, בית חכם ורשתות. התקנה בבאר שבע והסביבה. בירת הנגב, עם שכונות ותיקות, שכונות של בתים צמודי קרקע ומרכזי עסקים.'
+  en: 'Security cameras, smoke detectors, intercoms, smart home and networks. Installed in Beer Sheva and the surrounding area. The capital of the Negev, with long-established neighbourhoods, areas of private houses and business centres.'
+  ru: 'Камеры видеонаблюдения, датчики дыма, домофоны, умный дом и сети. Установка в Беэр-Шеве и окрестностях. Столица Негева: старые районы, кварталы частных домов и деловые центры.'
+  fr: "Caméras de surveillance, détecteurs de fumée, interphone, maison connectée et réseaux. Installation à Beer-Sheva et dans les environs. La capitale du Néguev, avec des quartiers anciens, des secteurs de maisons individuelles et des centres d'affaires."
+neighbors: []
+reviews: []

@@ -1,0 +1,243 @@
+---
+// FR8, FR19, FR27, UX-DR22, UX-DR23, AD-2, AD-4, AD-5, AD-6, AD-7, AD-8, AD-11, AD-13, AD-14, décisions D2 et D6 de
+// l'epic 4 (story 4.4) : page Zones (canvas Zones.dc.html, sauf le damier). Ordre de <main> : en-tête blanc centré
+// (h1 page-title, sous-titre), tuiles de région dans l'ordre des données (h2 porteur de l'ancre, non cliquable,
+// villes en lignes entièrement cliquables, « autres yishouvim » en placeholder si la région a `others`), phrase
+// « localité absente » + Appeler › (telHref), bloc contact. Une région ajoutée aux données (YAML de région + villes)
+// apparaît sans code.
+// Damier (D6) : tons calculés au build par `regionTones` (deux attributs par tuile, lus en CSS) ; la grille passe
+// d'1 à 2 colonnes à un seuil fixe (960px) pour que le ton suive les colonnes réelles.
+import ContactBand from '../components/ContactBand.astro';
+import Placeholder from '../components/Placeholder.astro';
+import TextLink from '../components/TextLink.astro';
+import Base from '../layouts/Base.astro';
+import { CITIES, REGIONS } from '../lib/areas';
+import { regionTones } from '../lib/areas/core';
+import { telHref } from '../lib/contact/core';
+import { t } from '../lib/i18n';
+import type { Lang } from '../lib/langs';
+import { createPageContext } from '../lib/page-context';
+import { page } from '../lib/pages';
+import { url } from '../lib/routes';
+
+interface Props {
+  id: string;
+  lang: Lang;
+}
+
+const { id, lang } = Astro.props;
+const ctx = createPageContext({ id, lang, navSection: 'areas' });
+const { meta } = page(id);
+const tones = regionTones(REGIONS.length);
+const tiles = REGIONS.map((region, i) => ({
+  region,
+  tone: tones[i] as (typeof tones)[number],
+  cities: CITIES.filter((c) => c.region === region.id).map((c) => ({ id: c.id, href: url(`city:${c.id}`, lang), name: c.name[lang] })),
+}));
+---
+<Base ctx={ctx} title={meta.title[lang]} description={meta.description[lang]}>
+  <section class="head" aria-labelledby="areas-title">
+    <h1 id="areas-title" class="title">{t(lang, 'areas.title')}</h1>
+    <p class="subtitle">{t(lang, 'areas.subtitle')}</p>
+  </section>
+
+  <section class="tiles reveal" aria-label={t(lang, 'areas.tiles-label')}>
+    <div class="grid">
+      {tiles.map(({ region, tone, cities }) => (
+        <section class="tile" data-tone-wide={tone.wide} data-tone-narrow={tone.narrow} data-span={tone.span ? '' : undefined}>
+          <h2 id={region.anchor} class="region-title">{region.name[lang]}</h2>
+          {(cities.length > 0 || region.others) && (
+            <ul role="list" class="cities">
+              {cities.map((c) => (
+                <li>
+                  <a href={c.href} class="city-row"><span class="city-name">{c.name}</span><span aria-hidden="true">›</span></a>
+                </li>
+              ))}
+              {region.others && (
+                <li>
+                  <span class="city-row"><Placeholder text={t(lang, 'placeholder.other-settlements')} /></span>
+                </li>
+              )}
+            </ul>
+          )}
+        </section>
+      ))}
+    </div>
+    <p class="missing">
+      {t(lang, 'areas.missing')}{' '}<TextLink href={telHref()} label={t(lang, 'action.call')} tone="light" track="call_click" placement="tile" />
+    </p>
+  </section>
+
+  <ContactBand ctx={ctx} />
+</Base>
+
+<style>
+  /* Seuils (les @media ne lisent pas les tokens) : --bp-menu 960px, --bp-mobile-bar 700px. */
+
+  /* — En-tête blanc centré (canvas Zones.dc.html) : h1 page-title, sous-titre section-subhead ink-muted — */
+  .head {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--areas-head-gap);
+    padding-block: var(--areas-head-pad-top) var(--areas-head-pad-end);
+    padding-inline: var(--page-gutter);
+    background-color: var(--color-surface);
+    color: var(--color-ink);
+    text-align: center;
+  }
+
+  .title {
+    margin: 0;
+    font-size: var(--type-page-title-size);
+    font-weight: var(--type-page-title-weight);
+    line-height: var(--type-page-title-leading);
+  }
+
+  .subtitle {
+    margin: 0;
+    font-size: var(--type-section-subhead-size);
+    font-weight: var(--type-section-subhead-weight);
+    line-height: var(--type-section-subhead-leading);
+    color: var(--color-ink-muted);
+  }
+
+  /* — Tuiles : 1 colonne sous 960px (ton narrow), 2 colonnes au-delà (ton wide, tuile span pleine largeur) — */
+  .tiles {
+    padding-block: 0 var(--section-y-lg);
+    padding-inline: var(--tile-gutter);
+    background-color: var(--color-surface);
+  }
+
+  @media (width < 960px) {
+    .tiles {
+      padding-block-end: var(--section-y-tablet);
+    }
+  }
+
+  @media (width < 700px) {
+    .tiles {
+      padding-block-end: var(--section-y-mobile);
+    }
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--tile-gutter);
+  }
+
+  /* Ton clair par défaut ; le ton sombre redéfinit fond, encre, filets et anneau de focus (UX-DR6). */
+  .tile {
+    --tile-bg: var(--color-surface-alt);
+    --tile-ink: var(--color-ink);
+    --tile-line: var(--color-line);
+    --tile-pad-block: var(--region-tile-pad);
+    --tile-pad-inline: var(--region-tile-pad);
+
+    display: flex;
+    flex-direction: column;
+    gap: var(--region-tile-gap);
+    box-sizing: border-box;
+    min-inline-size: 0;
+    padding-block: var(--tile-pad-block);
+    padding-inline: var(--tile-pad-inline);
+    background-color: var(--tile-bg);
+    color: var(--tile-ink);
+  }
+
+  @media (width >= 960px) {
+    .grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .tile {
+      min-block-size: var(--region-tile-min);
+    }
+
+    .tile[data-span] {
+      grid-column: 1 / -1;
+    }
+
+    .tile[data-tone-wide="dark"] {
+      --tile-bg: var(--color-navy-deep);
+      --tile-ink: var(--color-white);
+      --tile-line: var(--color-line-dark);
+      --focus-ring: var(--color-focus-ring-dark);
+    }
+  }
+
+  @media (width < 960px) {
+    .tile {
+      --tile-pad-block: var(--region-tile-pad-tablet);
+      --tile-pad-inline: var(--region-tile-pad-tablet);
+    }
+
+    .tile[data-tone-narrow="dark"] {
+      --tile-bg: var(--color-navy-deep);
+      --tile-ink: var(--color-white);
+      --tile-line: var(--color-line-dark);
+      --focus-ring: var(--color-focus-ring-dark);
+    }
+  }
+
+  @media (width < 700px) {
+    .tile {
+      --tile-pad-block: var(--region-tile-pad-mobile-block);
+      --tile-pad-inline: var(--region-tile-pad-mobile-inline);
+    }
+  }
+
+  /* Ancre (#south…) : html garde la place du header collant (scroll-padding) ; la marge remonte jusqu'au haut
+     de la tuile, pour que le titre arrive avec son fond, sous le header. */
+  .region-title {
+    margin: 0;
+    scroll-margin-block-start: var(--tile-pad-block);
+    font-size: var(--type-region-title-size);
+    font-weight: var(--type-region-title-weight);
+    line-height: var(--type-region-title-leading);
+  }
+
+  .cities {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* Ligne entière cliquable ≥ 56px (UX-DR22) : filet en haut, et en bas pour la dernière ; nom 20px au début,
+     chevron « › » (retourné par le bidi) à la fin. La ligne placeholder a la même boîte, sans lien. */
+  .city-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    box-sizing: border-box;
+    min-block-size: var(--row-min-height);
+    padding-block: var(--city-row-pad-block);
+    border-block-start: var(--row-rule-width) solid var(--tile-line);
+    font-size: var(--type-city-row-size);
+    line-height: var(--type-body-leading);
+    color: var(--tile-ink);
+    text-decoration: none;
+  }
+
+  li:last-child .city-row {
+    border-block-end: var(--row-rule-width) solid var(--tile-line);
+  }
+
+  a.city-row:hover .city-name,
+  a.city-row:focus-visible .city-name {
+    text-decoration: underline;
+  }
+
+  /* — Phrase d'impasse : texte ink-muted, puis Appeler › (telHref) — */
+  .missing {
+    max-inline-size: var(--areas-missing-max);
+    margin-block: var(--areas-missing-gap) 0;
+    margin-inline: auto;
+    font-size: var(--type-body-lg-size);
+    line-height: var(--type-body-lg-leading);
+    color: var(--color-ink-muted);
+    text-align: center;
+  }
+</style>

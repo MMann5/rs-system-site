@@ -4,7 +4,7 @@
 // Syntaxe TypeScript effaçable uniquement : Node l'importe directement (tests).
 import type { Lang } from '../langs.ts';
 import type { PageContext } from '../page-context.ts';
-import type { WaInput } from './core.ts';
+import type { LabelTable, WaInput } from './core.ts';
 
 /** Les 7 codes du formulaire (`?service=`), dans l'ordre du sélecteur. */
 export const SERVICE_CODES = ['cameras', 'smoke-detectors', 'smart-home', 'networks', 'intercom', 'crane-cameras', 'unsure'] as const;
@@ -51,17 +51,33 @@ export function buildServiceTable(entries: readonly ServiceEntry[], lang: Lang):
 }
 
 /**
- * Entrée de `waHref()` pour la page `ctx` (FR31) : service de la page hôte en hébreu, sans service
- * pour `unsure` ou une page sans service. Lève sur un code inconnu, et sur une ville tant que la table
- * des villes n'existe pas (epic 4) : mieux vaut un build en échec qu'un message sans sa ville.
+ * Story 4.1 (AD-5) : table des villes `{ code: { label, he } }` dans l'ordre donné (région puis ville,
+ * src/lib/areas) ; `label` = nom dans la langue demandée, `he` = nom hébreu du message WhatsApp.
  */
-export function pageWaInput(ctx: Pick<PageContext, 'service' | 'city'>, table: ServiceTable): WaInput {
+export function buildCityTable(cities: readonly { id: string; name: Record<Lang, string> }[], lang: Lang): LabelTable {
+  const table: Record<string, { label: string; he: string }> = {};
+  for (const { id, name } of cities) {
+    if (Object.hasOwn(table, id)) throw new Error(`labels : ville « ${id} » en double`);
+    table[id] = { label: name[lang], he: name.he };
+  }
+  return table;
+}
+
+/**
+ * Entrée de `waHref()` pour la page `ctx` (FR31) : service de la page hôte en hébreu, sans service
+ * pour `unsure` ou une page sans service ; ville de la page (story 4.1) en hébreu, lue dans `cities`.
+ * Lève sur un code de service ou de ville inconnu : mieux vaut un build en échec qu'un message faux.
+ */
+export function pageWaInput(ctx: Pick<PageContext, 'service' | 'city'>, table: ServiceTable, cities: LabelTable): WaInput {
   const input: WaInput = {};
   const { service, city } = ctx;
   if (service !== undefined && service !== 'unsure') {
     if (!Object.hasOwn(table, service)) throw new Error(`contact : service inconnu « ${service} »`);
     input.serviceHe = table[service as ServiceCode].he;
   }
-  if (city !== undefined) throw new Error('contact : table des villes absente (epic 4)');
+  if (city !== undefined) {
+    if (!cities || !Object.hasOwn(cities, city)) throw new Error(`contact : ville inconnue « ${city} »`);
+    input.cityHe = (cities[city] as { he: string }).he;
+  }
   return input;
 }

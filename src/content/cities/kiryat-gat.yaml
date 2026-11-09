@@ -1,0 +1,23 @@
+# Story 4.2 (FR9, AD-4, décision D1 de l'epic 4) : Kiryat Gat. Id du fichier = code `?city=`.
+# Intro : phrase du canvas City (« התקנה ב{עיר} והסביבה ») + une phrase propre à la ville, sans chiffre, client,
+# délai ni superlatif (NFR10). Traductions en/ru/fr par l'agent : relecture humaine recommandée.
+# Localités voisines : vides (placeholder) jusqu'à la liste validée par Ran (décision D2).
+name:
+  he: 'קריית גת'
+  en: 'Kiryat Gat'
+  ru: 'Кирьят-Гат'
+  fr: 'Kiryat Gat'
+slugs:
+  he: 'קריית-גת'
+  en: 'kiryat-gat'
+  ru: 'кирьят-гат'
+  fr: 'kiryat-gat'
+region: 'south'
+order: 3
+intro:
+  he: 'מצלמות אבטחה, גלאי עשן, אינטרקום, בית חכם ורשתות. התקנה בקריית גת והסביבה. עיר בדרום השפלה, עם שכונות מגורים חדשות ואזור תעשייה.'
+  en: 'Security cameras, smoke detectors, intercoms, smart home and networks. Installed in Kiryat Gat and the surrounding area. A city in the southern Shfela, with new residential neighbourhoods and an industrial zone.'
+  ru: 'Камеры видеонаблюдения, датчики дыма, домофоны, умный дом и сети. Установка в Кирьят-Гате и окрестностях. Город на юге Шфелы, с новыми жилыми кварталами и промышленной зоной.'
+  fr: 'Caméras de surveillance, détecteurs de fumée, interphone, maison connectée et réseaux. Installation à Kiryat Gat et dans les environs. Une ville du sud de la Shfela, avec de nouveaux quartiers résidentiels et une zone industrielle.'
+neighbors: []
+reviews: []
