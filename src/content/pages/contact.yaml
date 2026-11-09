@@ -1,0 +1,20 @@
+# Contact (story 2.1, FR13) : slugs traduits des décisions de l'epic 2 ; titre selon EXPERIENCE.md ›
+# Référencement « Contact · {marque} · 050-956-5669 » ; description = numéro, WhatsApp, zone.
+# Textes hébreux nouveaux et traductions en/ru/fr rédigés par l'agent : relecture humaine recommandée.
+slugs:
+  he: 'צור-קשר'
+  en: 'contact'
+  ru: 'контакты'
+  fr: 'contact'
+enabled: true
+meta:
+  title:
+    he: 'צור קשר · RS SYSTEM · 050-956-5669'
+    en: 'Contact · RS SYSTEM · 050-956-5669'
+    ru: 'Контакты · RS SYSTEM · 050-956-5669'
+    fr: 'Contact · RS SYSTEM · 050-956-5669'
+  description:
+    he: 'התקשרו או כתבו בוואטסאפ: 050-956-5669. מבאר שבע ועד ירושלים, כולל היישובים.'
+    en: 'Call or WhatsApp 050-956-5669. From Beer Sheva to Jerusalem, including the settlements.'
+    ru: 'Звоните или пишите в WhatsApp: 050-956-5669. От Беэр-Шевы до Иерусалима, включая поселения.'
+    fr: 'Appel ou WhatsApp : 050-956-5669. De Beer-Sheva à Jérusalem, yishouvim compris.'

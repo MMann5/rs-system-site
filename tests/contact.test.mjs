@@ -1,9 +1,10 @@
 // Stories 1.5 et 1.6 (AD-5, AD-13, FR31) : noyau des liens Appeler / WhatsApp, table des services,
-// entrée WhatsApp d'une page (pageWaInput).
+// entrée WhatsApp d'une page (pageWaInput). Story 2.2 (FR28) : règles de validation du formulaire.
+// Story 2.3 (FR30) : lignes du formulaire (formLines), ville en hébreu (resolveCityHe), 4 combinaisons du message.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { PHONE_DISPLAY, telHref, waHref } from '../src/lib/contact/core.ts';
+import { formLines, invalidContactFields, isValidName, isValidPhone, normalizePhone, PHONE_DISPLAY, resolveCityHe, telHref, waHref } from '../src/lib/contact/core.ts';
 import { buildServiceTable, pageWaInput, SERVICE_CODES } from '../src/lib/contact/table.ts';
 
 const PREFIX = 'https://wa.me/972509565669?text=';
@@ -149,4 +150,110 @@ test('pageWaInput : service inconnu → lève', () => {
 test('pageWaInput : ville → lève tant que la table des villes est absente (epic 4)', () => {
   assert.throws(() => pageWaInput({ city: 'modiin' }, TABLE), { message: 'contact : table des villes absente (epic 4)' });
   assert.throws(() => pageWaInput({ service: 'cameras', city: 'modiin' }, TABLE), { message: 'contact : table des villes absente (epic 4)' });
+});
+
+// — Story 2.2 (FR28) : validation du formulaire —
+
+test('normalizePhone retire espaces, tirets, points et parenthèses, rien d’autre', () => {
+  assert.equal(normalizePhone(' (02) 123-4567 '), '021234567');
+  assert.equal(normalizePhone('+972 50\t123.4567'), '+972501234567');
+  assert.equal(normalizePhone('05O-12'), '05O12');
+  assert.equal(normalizePhone('050–123'), '050–123', 'tiret Unicode conservé');
+});
+
+test('isValidPhone : formes valides', () => {
+  for (const value of ['050-123-4567', '+972 50 123 4567', '(02) 123-4567', '+33 6 12 34 56 78', '02.123.4567', ' 0501234567 ', '021234567', '+97221234567']) {
+    assert.equal(isValidPhone(value), true, value);
+  }
+});
+
+test('isValidPhone : formes invalides', () => {
+  for (const value of ['12345', '', '   ', '050-123', '+12345', '0501234567890', '05O1234567', '+972 50 abc', '+1234567890123456', '0050']) {
+    assert.equal(isValidPhone(value), false, value);
+  }
+});
+
+test('isValidName : vide ou espaces → invalide ; texte → valide', () => {
+  for (const value of ['', '   ', '\t', '\n ']) assert.equal(isValidName(value), false, JSON.stringify(value));
+  for (const value of ['דנה', ' a ', 'Иван']) assert.equal(isValidName(value), true, JSON.stringify(value));
+});
+
+test('invalidContactFields : liste ordonnée Nom puis Téléphone', () => {
+  assert.deepEqual(invalidContactFields({ name: '', phone: '12345' }), ['name', 'phone']);
+  assert.deepEqual(invalidContactFields({ name: 'דנה', phone: '' }), ['phone']);
+  assert.deepEqual(invalidContactFields({ name: ' ', phone: '050-123-4567' }), ['name']);
+  assert.deepEqual(invalidContactFields({ name: 'דנה', phone: '050-123-4567' }), []);
+});
+
+// — Story 2.3 (FR30) : formLines, resolveCityHe, message du formulaire —
+
+const LINES = 'שם: דנה\nטלפון: 050-123-4567\nהודעה: 6 מצלמות';
+const CITIES = Object.freeze({ modiin: { label: 'Modiin', he: 'מודיעין' }, ashkelon: { label: 'Ashkelon', he: 'אשקלון' } });
+const formInput = { name: ' דנה ', phone: ' 050-123-4567 ', message: ' 6 מצלמות ' };
+
+test('formLines : 3 lignes hébraïques, valeurs trimées ; message vide ou espaces → —', () => {
+  assert.deepEqual(formLines(formInput), ['שם: דנה', 'טלפון: 050-123-4567', 'הודעה: 6 מצלמות']);
+  for (const message of ['', '   ', '\n\t']) {
+    assert.deepEqual(formLines({ name: 'Dana', phone: '0501234567', message }), ['שם: Dana', 'טלפון: 0501234567', 'הודעה: —'], JSON.stringify(message));
+  }
+});
+
+test('message du formulaire : service + ville', () => {
+  const href = waHref({ serviceHe: 'מצלמות אבטחה', cityHe: resolveCityHe('מודיעין', {}), lines: formLines(formInput) });
+  assert.equal(text(href), `${GREETING} אשמח לקבל הצעת מחיר למצלמות אבטחה במודיעין.\n${LINES}`);
+});
+
+test('message du formulaire : service seul (ville vide)', () => {
+  const href = waHref({ serviceHe: 'גלאי עשן', cityHe: resolveCityHe('', {}), lines: formLines(formInput) });
+  assert.equal(text(href), `${GREETING} אשמח לקבל הצעת מחיר לגלאי עשן.\n${LINES}`);
+});
+
+test('message du formulaire : ville seule, libre hors liste, insérée telle quelle', () => {
+  const href = waHref({ serviceHe: undefined, cityHe: resolveCityHe(' Ashdod ', CITIES), lines: formLines(formInput) });
+  assert.equal(text(href), `${GREETING} אשמח לקבל הצעת מחיר בAshdod.\n${LINES}`);
+});
+
+test('message du formulaire : ni service ni ville (espaces) → phrase de devis gardée (D5)', () => {
+  const href = waHref({ serviceHe: undefined, cityHe: resolveCityHe('   ', CITIES), lines: formLines({ name: 'Dana', phone: '0501234567', message: '' }), quote: true });
+  assert.equal(text(href), `${GREETING} אשמח לקבל הצעת מחיר.\nשם: Dana\nטלפון: 0501234567\nהודעה: —`);
+});
+
+test('quote : sans effet quand un service ou une ville est présent ; absent → salutation seule (liens hors formulaire)', () => {
+  assert.equal(text(waHref({ serviceHe: 'גלאי עשן', quote: true })), `${GREETING} אשמח לקבל הצעת מחיר לגלאי עשן.`);
+  assert.equal(text(waHref({ cityHe: 'מודיעין', quote: true })), `${GREETING} אשמח לקבל הצעת מחיר במודיעין.`);
+  assert.equal(text(waHref({})), GREETING);
+  assert.equal(text(waHref({ quote: false })), GREETING);
+});
+
+test('resolveCityHe : vide ou espaces → undefined', () => {
+  for (const value of ['', '  ', '\t']) assert.equal(resolveCityHe(value, CITIES), undefined, JSON.stringify(value));
+  assert.equal(resolveCityHe(' ', CITIES, 'modiin'), undefined);
+});
+
+test('resolveCityHe : par code ?city= quand le texte est toujours son libellé', () => {
+  assert.equal(resolveCityHe('Modiin', CITIES, 'modiin'), 'מודיעין');
+  assert.equal(text(waHref({ cityHe: resolveCityHe('Modiin', CITIES, 'modiin') })), `${GREETING} אשמח לקבל הצעת מחיר במודיעין.`);
+  // Texte modifié par le visiteur : le code ne s'applique plus, la correspondance de nom prend le relais.
+  assert.equal(resolveCityHe('Ashkelon', CITIES, 'modiin'), 'אשקלון');
+  assert.equal(resolveCityHe('Tel Aviv', CITIES, 'modiin'), 'Tel Aviv');
+});
+
+test('resolveCityHe : par nom (libellé ou hébreu), sans tenir compte de la casse, après NFC', () => {
+  assert.equal(resolveCityHe('modiin', CITIES), 'מודיעין');
+  assert.equal(resolveCityHe('  MODIIN ', CITIES), 'מודיעין');
+  assert.equal(resolveCityHe('מודיעין', CITIES), 'מודיעין');
+  const accented = { lod: { label: 'Lôd', he: 'לוד' } };
+  assert.equal(resolveCityHe('LO\u0302D', accented), 'לוד', 'forme décomposée');
+});
+
+test('resolveCityHe : ville libre hors liste → texte trimé tel quel ; table vide', () => {
+  assert.equal(resolveCityHe(' Ashdod ', CITIES), 'Ashdod');
+  assert.equal(resolveCityHe('Ashdod', {}), 'Ashdod');
+  assert.equal(resolveCityHe('Ashdod', {}, 'ashdod'), 'Ashdod');
+});
+
+test('resolveCityHe : codes hérités (toString, __proto__) jamais résolus', () => {
+  assert.equal(resolveCityHe('toString', CITIES, 'toString'), 'toString');
+  assert.equal(resolveCityHe('x', CITIES, '__proto__'), 'x');
+  assert.equal(resolveCityHe('[object Object]', CITIES, 'constructor'), '[object Object]');
 });
