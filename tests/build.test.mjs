@@ -1,4 +1,4 @@
-// Stories 1.3 à 1.9, 2.1 à 2.4, 3.1 : sortie réelle du build, sur une branche puis sur main (registre, layout Base.astro).
+// Stories 1.3 à 1.9, 2.1 à 2.4, 3.1, 3.2 : sortie réelle du build, sur une branche puis sur main (registre, layout Base.astro).
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
@@ -20,6 +20,11 @@ const CONTACTS = LANGS.map((lang) => `${lang}/${CONTACT_SLUGS[lang]}/index.html`
 // Story 3.1 : page Caméras, slugs des décisions de l'epic 3.
 const CAMERAS_SLUGS = { he: 'מצלמות', en: 'cameras', ru: 'камеры', fr: 'cameras' };
 const CAMERAS = LANGS.map((lang) => `${lang}/${CAMERAS_SLUGS[lang]}/index.html`);
+// Story 3.2 : page Détecteurs de fumée, slugs des décisions de l'epic 3.
+const SMOKE_SLUGS = { he: 'גלאי-עשן', en: 'smoke-detectors', ru: 'датчики-дыма', fr: 'detecteurs-de-fumee' };
+const SMOKES = LANGS.map((lang) => `${lang}/${SMOKE_SLUGS[lang]}/index.html`);
+/** Story 3.2 : ids des pages services actives (modèle Service). */
+const SERVICE_IDS = ['cameras', 'smoke-detectors'];
 const dirs = [];
 
 // Étapes du script `build` de package.json : `astro build`, puis chaque `node <script>` lancé sur le dossier
@@ -74,7 +79,7 @@ function metaField(id, field) {
 }
 
 const META = Object.fromEntries(
-  ['home', 'path-probe', 'contact', 'cameras'].map((id) => [id, { title: metaField(id, 'title'), description: metaField(id, 'description') }]),
+  ['home', 'path-probe', 'contact', 'cameras', 'smoke-detectors'].map((id) => [id, { title: metaField(id, 'title'), description: metaField(id, 'description') }]),
 );
 const titles = META.home.title;
 
@@ -88,9 +93,10 @@ const PAGE_HREFS = {
   ),
   contact: Object.fromEntries(LANGS.map((lang) => [lang, `/${lang}/${encodeURIComponent(CONTACT_SLUGS[lang])}/`])),
   cameras: Object.fromEntries(LANGS.map((lang) => [lang, `/${lang}/${encodeURIComponent(CAMERAS_SLUGS[lang])}/`])),
+  'smoke-detectors': Object.fromEntries(LANGS.map((lang) => [lang, `/${lang}/${encodeURIComponent(SMOKE_SLUGS[lang])}/`])),
 };
-/** Story 3.1 : ids actifs du header, dans l'ordre de nav.ts (HEADER_NAV_IDS). */
-const HEADER_IDS = ['cameras', 'contact'];
+/** Stories 3.1 et 3.2 : ids actifs du header, dans l'ordre de nav.ts (HEADER_NAV_IDS). */
+const HEADER_IDS = ['cameras', 'smoke-detectors', 'contact'];
 // Story 1.6 : chaînes i18n du menu, du sélecteur et de la barre mobile.
 const MENU_LABEL = { he: 'תפריט', en: 'Menu', ru: 'Меню', fr: 'Menu' };
 const SWITCHER_LABEL = { he: 'שפה', en: 'Language', ru: 'Язык', fr: 'Langue' };
@@ -107,14 +113,14 @@ const BASELINE_BDI = /<bdi lang="he" dir="rtl"[^>]*>/g;
 const RATING_BDI = /<bdi dir="ltr"[^>]*>[\d.,]+<\/bdi>/g;
 const FOCUSABLE = /<(?:a\b[^>]*\shref=|button\b|input\b|select\b|textarea\b|[a-z][\w-]*\b[^>]*\stabindex=)[^>]*>/i;
 
-/** Story 1.7 (FR19, UX-DR33, D1), stories 2.1 et 3.1 : footer avec `cameras` et `contact` seuls actifs
- * (colonne Services = Caméras, colonne RS SYSTEM = Contact). */
+/** Story 1.7 (FR19, UX-DR33, D1), stories 2.1, 3.1 et 3.2 : footer avec `cameras`, `smoke-detectors` et
+ * `contact` seuls actifs (colonne Services = Caméras puis Détecteurs, colonne RS SYSTEM = Contact). */
 function assertFooter(footer, lang, where) {
   const dict = I18N[lang];
   const contact = dict['footer.col.contact'];
   const company = dict['footer.col.company'];
   const services = dict['footer.col.services'];
-  // Quatre <nav> : Services (seul lien : Caméras), RS SYSTEM (seul lien : Contact), la colonne Contact, puis le
+  // Quatre <nav> : Services (Caméras puis Détecteurs), RS SYSTEM (seul lien : Contact), la colonne Contact, puis le
   // sélecteur ; ni colonne Pour les entreprises ni Zones (pages inactives), aucun <nav> légal.
   const navs = footer.match(/<nav\b[^>]*>/g) ?? [];
   assert.equal(navs.length, 4, `${where} : <nav> du footer ${navs}`);
@@ -126,7 +132,7 @@ function assertFooter(footer, lang, where) {
   const linksOf = (col) => [...col.matchAll(/<a href="([^"]*)"[^>]*>([^<]*)<\/a>/g)].map((m) => [m[1], m[2]]);
   const servicesCol = column(navs[0]);
   assert.equal(servicesCol.match(/<h2\b[^>]*>([^<]*)<\/h2>/)?.[1], services, `${where} : <h2> Services`);
-  assert.deepEqual(linksOf(servicesCol), [[PAGE_HREFS.cameras[lang], dict['nav.cameras']]], `${where} : liens Services`);
+  assert.deepEqual(linksOf(servicesCol), SERVICE_IDS.map((sid) => [PAGE_HREFS[sid][lang], dict[`nav.${sid}`]]), `${where} : liens Services`);
   const companyCol = column(navs[1]);
   assert.equal(companyCol.match(/<h2\b[^>]*>([^<]*)<\/h2>/)?.[1], company, `${where} : <h2> RS SYSTEM`);
   assert.deepEqual(linksOf(companyCol), [[PAGE_HREFS.contact[lang], dict['nav.contact']]], `${where} : liens RS SYSTEM`);
@@ -185,9 +191,9 @@ function assertLayout(html, id, lang, out, site = '', indexable = false) {
       assert.deepEqual(data.services[code], { label: serviceLabel(code, lang), he: serviceLabel(code, 'he') }, `${where} : service ${code}`);
     }
     assert.deepEqual(data.cities, {}, `${where} : cities`);
-  } else if (id === 'cameras') {
-    // Story 3.1 (AD-13) : le modèle Service fixe le service et la section de navigation.
-    assert.deepEqual(JSON.parse(json), { context: { id, lang, service: 'cameras', navSection: 'cameras', indexable } }, where);
+  } else if (SERVICE_IDS.includes(id)) {
+    // Stories 3.1 et 3.2 (AD-13) : le modèle Service fixe le service et la section de navigation (= id de la page).
+    assert.deepEqual(JSON.parse(json), { context: { id, lang, service: id, navSection: id, indexable } }, where);
   } else {
     assert.deepEqual(JSON.parse(json), { context: { id, lang, indexable } }, where);
   }
@@ -221,7 +227,7 @@ function assertLayout(html, id, lang, out, site = '', indexable = false) {
     assert.ok(buttons[0].includes(` ${attr}`), `${where} : ${attr} absent de ${buttons[0]}`);
   }
   assert.ok(header.indexOf('<button') > header.indexOf('href="tel:'), `${where} : bouton pas après le numéro`);
-  // Panneau #mobile-menu après la barre. Stories 2.1 et 3.1 : `cameras` et `contact` seuls ids de nav actifs ;
+  // Panneau #mobile-menu après la barre. Stories 2.1, 3.1 et 3.2 : `cameras`, `smoke-detectors` et `contact` seuls ids de nav actifs ;
   // trois <nav> dans le header : liens de la barre (avant le panneau), puis dans le panneau les mêmes liens et le sélecteur.
   assert.equal(header.match(/\sid="mobile-menu"/g)?.length, 1, `${where} : #mobile-menu`);
   const menu = header.slice(header.indexOf(' id="mobile-menu"'));
@@ -276,7 +282,7 @@ function assertLayout(html, id, lang, out, site = '', indexable = false) {
   assert.equal(actions[0]?.[1], 'tel:+972509565669', `${where} : lien Appeler`);
   const barWa = waHref(pageWaInput(context, HE_SERVICES));
   assert.equal(actions[1]?.[1], barWa.replaceAll('&', '&amp;'), `${where} : lien WhatsApp`);
-  if (id === 'cameras') assert.ok(decodeURIComponent(barWa).includes(serviceLabel('cameras', 'he')), `${where} : service dans le message de la barre`);
+  if (SERVICE_IDS.includes(id)) assert.ok(decodeURIComponent(barWa).includes(serviceLabel(id, 'he')), `${where} : service dans le message de la barre`);
   for (const [[, , attrs, inner], event, label] of [[actions[0], 'call_click', CALL_LABEL[lang]], [actions[1], 'whatsapp_click', WA_LABEL[lang]]]) {
     assert.match(attrs, new RegExp(`\\sdata-track="${event}"`), `${where} : data-track ${event}`);
     assert.match(attrs, /\sdata-placement="mobile_bar"/, `${where} : data-placement ${event}`);
@@ -872,13 +878,116 @@ function assertCameras(html, lang, out) {
   assert.ok(!html.includes('data-umami'), `${where} : data-umami-*`);
 }
 
-/** Story 1.9 (FR39), stories 2.1 et 3.1 : sitemap dans l'ordre du registre (ids triés : Caméras, Contact, accueil ;
- * 4 <url> chacun, 5 xhtml:link chacun), robots.txt, icônes et manifeste. */
-const SITEMAP_IDS = ['cameras', 'contact', 'home'];
+/** Story 3.2 : contenu de src/content/pages/smoke-detectors.yaml (bloc `service`). */
+const SMOKE_PAGE = parse(readFileSync(join(ROOT, 'src/content/pages/smoke-detectors.yaml'), 'utf8')).service;
+
+/** CSS servie par une page : feuilles liées puis <style> inline. */
+function servedCss(html, out) {
+  const css = [...html.matchAll(/<link rel="stylesheet" href="([^"]+)"/g)].map(([, href]) => readFileSync(join(out, href), 'utf8'));
+  css.push(...[...html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/g)].map((m) => m[1]));
+  return css.join('\n');
+}
+
+/** Story 3.2 (FR3, FR21, FR22, FR31, NFR7, UX-DR14, UX-DR17, UX-DR20, UX-DR34, UX-DR37, UX-DR38) : page Détecteurs en `lang`. */
+function assertSmokeDetectors(html, lang, out) {
+  const where = `smoke-detectors (${lang})`;
+  const dict = I18N[lang];
+  const tel = 'tel:+972509565669';
+  const wa = waHref({ serviceHe: serviceLabel('smoke-detectors', 'he') });
+  const quote = `${PAGE_HREFS.contact[lang]}?service=smoke-detectors`;
+  const main = html.match(/<main id="content"[^>]*>([\s\S]*?)<\/main>/)?.[1] ?? '';
+  // Ordre de <main> : héros clair illustré, trio, étapes, bloc contact ; pas de tuile.
+  const sections = [...main.matchAll(/<section class="([^"]*)"/g)].map((m) => m[1]);
+  assert.deepEqual(sections, ['hero', 'trio reveal', 'steps reveal', 'band'], `${where} : sections de <main>`);
+  assert.match(main, /^<section class="hero"/, `${where} : héros en tête`);
+  const sectionAt = (cls) => main.match(new RegExp(`<section class="${cls}"[\\s\\S]*?</section>`))?.[0] ?? '';
+  const [hero, trio, steps, band] = sections.map(sectionAt);
+  assert.equal(html.match(/<h1[\s>]/g)?.length, 1, `${where} : <h1>`);
+  const levels = [...html.matchAll(/<h([1-6])[\s>]/g)].map((m) => Number(m[1]));
+  assert.equal(levels[0], 1, `${where} : premier titre ${levels}`);
+  levels.forEach((level, i) => assert.ok(i === 0 || level <= levels[i - 1] + 1, `${where} : saut de titre ${levels}`));
+  // Héros clair : h1, sous-titre, Appeler › WhatsApp › Devis › (ton clair).
+  assert.match(hero, /^<section class="hero" aria-labelledby="hero-title"[\s>]/, `${where} : héros`);
+  assert.ok(!/\sdata-surface=/.test(hero.match(/^<section\b[^>]*>/)[0]), `${where} : héros clair sans data-surface`);
+  assert.equal(hero.match(/<h1 id="hero-title"[^>]*>([^<]*)<\/h1>/)?.[1], escaped(SMOKE_PAGE.hero.title[lang]), `${where} : h1`);
+  assert.equal(hero.match(/<p class="subtitle"[^>]*>([^<]*)<\/p>/)?.[1], escaped(SMOKE_PAGE.hero.subtitle[lang]), `${where} : sous-titre`);
+  const heroLinks = [...hero.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)];
+  assert.equal(heroLinks.length, 3, `${where} : liens du héros`);
+  assertTextLink(heroLinks[0], tel, dict['action.call'], 'call_click', 'hero', `${where} : héros Appeler`);
+  assertTextLink(heroLinks[1], wa, dict['action.whatsapp'], 'whatsapp_click', 'hero', `${where} : héros WhatsApp`);
+  assertTextLink(heroLinks[2], quote, escaped(dict['action.quote']), undefined, undefined, `${where} : héros Devis`);
+  for (const [, attrs] of heroLinks) assert.match(attrs, /\sclass="text-link light"/, `${where} : ton clair`);
+  // Aucune photo : pas de <picture>, seul <img> = logo, rien de prioritaire.
+  assert.ok(!/<picture[\s>]/.test(html), `${where} : <picture>`);
+  assert.equal(html.match(/<img\b/g)?.length, 1, `${where} : <img> (logo seul)`);
+  assert.ok(!html.includes('fetchpriority'), `${where} : fetchpriority`);
+  // Détecteur illustré dans le héros, après les liens : décoratif, taille lg, qui monte, avec grille et LED.
+  const detectors = html.match(/<div class="detector\b[^"]*"[^>]*>/g) ?? [];
+  assert.equal(detectors.length, 1, `${where} : détecteur`);
+  assert.ok(hero.includes(detectors[0]), `${where} : détecteur hors du héros`);
+  assert.equal(attr(detectors[0], 'class'), 'detector lg rise', `${where} : classes du détecteur`);
+  assert.equal(attr(detectors[0], 'aria-hidden'), 'true', `${where} : aria-hidden du détecteur`);
+  assert.ok(hero.indexOf(detectors[0]) > hero.lastIndexOf('</a>'), `${where} : détecteur après les liens`);
+  const detector = hero.slice(hero.indexOf(detectors[0]));
+  assert.match(detector, /^<div class="detector[^>]*><div class="grille"[^>]*><div class="led"[^>]*><\/div><\/div><\/div>/, `${where} : grille et LED`);
+  // Parent direct du détecteur : le conteneur d'illustration du héros (à la place du cadre photo).
+  assert.match(hero, new RegExp(`<div class="illustration"[^>]*>${detectors[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`), `${where} : détecteur hors de .illustration`);
+  // Trio : h2 puis 3 h3 (YAML), aucun lien.
+  assert.match(trio, /^<section class="trio reveal" aria-labelledby="trio-title"[\s>]/, `${where} : trio`);
+  assert.equal(trio.match(/<h2 id="trio-title"[^>]*>([^<]*)<\/h2>/)?.[1], escaped(SMOKE_PAGE.trio.title[lang]), `${where} : h2 du trio`);
+  const trioItems = [...trio.matchAll(/<h3\b[^>]*>([^<]*)<\/h3><p\b[^>]*>([^<]*)<\/p>/g)].map((m) => [m[1], m[2]]);
+  assert.deepEqual(trioItems, SMOKE_PAGE.trio.items.map((item) => [escaped(item.title[lang]), escaped(item.text[lang])]), `${where} : 3 h3 du trio`);
+  assert.ok(!/<a\b|<svg\b|<img\b/.test(trio), `${where} : lien, picto ou image dans le trio`);
+  // Étapes : i18n.
+  assert.equal(steps.match(/<h2 id="steps-title"[^>]*>([^<]*)<\/h2>/)?.[1], escaped(dict['steps.title']), `${where} : h2 des étapes`);
+  const ol = steps.match(/<ol\b([^>]*)>([\s\S]*?)<\/ol>/);
+  const items = [...(ol?.[2] ?? '').matchAll(/<li\b[^>]*><span class="number" aria-hidden="true"[^>]*>(\d)<\/span><h3\b[^>]*>([^<]*)<\/h3><p\b[^>]*>([^<]*)<\/p><\/li>/g)].map((m) => m.slice(1));
+  assert.deepEqual(items, STEP_KEYS.map((key, i) => [String(i + 1), escaped(dict[`steps.${key}.title`]), escaped(dict[`steps.${key}.text`])]), `${where} : 4 étapes`);
+  // Bloc contact : WhatsApp avec « גלאי עשן », « Laisser ses coordonnées » vers Contact avec ?service=smoke-detectors.
+  const bandLinks = [...band.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)];
+  assert.equal(bandLinks.length, 4, `${where} : liens du bloc`);
+  assertTextLink(bandLinks[2], wa, dict['action.whatsapp'], 'whatsapp_click', 'contact_band', `${where} : bloc WhatsApp`);
+  assertTextLink(bandLinks[3], quote, escaped(dict['contact-band.leave-details']), undefined, undefined, `${where} : bloc leave-details`);
+  assert.ok(decodeURIComponent(wa).includes('גלאי עשן'), `${where} : service dans le message`);
+  // CSS servie (UX-DR34, UX-DR38) : seule ombre = jetons --shadow-detector-* ; LED en 2 pulsations, jamais en boucle.
+  const all = servedCss(html, out);
+  const shadows = [...all.replace(/--[\w-]+:[^;}]*/g, '').matchAll(/box-shadow:\s*([^;}]+)/g)].map((m) => m[1].trim());
+  assert.ok(shadows.length >= 1, `${where} : box-shadow du détecteur`);
+  for (const value of shadows) assert.match(value, /^var\(--shadow-detector-(?:lg|md|sm)\)$/, `${where} : box-shadow ${value}`);
+  assert.ok(!/\binfinite\b/.test(all), `${where} : animation infinite`);
+  const led = all.match(/\.led\[[^\]]*\]\s*\{([^}]*)\}/)?.[1] ?? '';
+  assert.match(led, /animation:[^;}]*led-pulse[^;}]*var\(--led-pulse-count\)/, `${where} : animation de la LED`);
+  // La LED attend la fin de la montée : délai = délai + durée de la montée, porté par .rise et lu par .led.
+  assert.match(led, /animation:[^;}]*var\(--led-delay/, `${where} : délai de la LED`);
+  const riseRule = all.match(/\.rise\[[^\]]*\]\s*\{([^}]*)\}/)?.[1] ?? '';
+  assert.match(riseRule, /--led-delay:\s*calc\(\s*var\(--detector-rise-delay\)\s*\+\s*var\(--detector-rise-duration\)\s*\)/, `${where} : --led-delay de .rise`);
+  // Espacements du héros illustré (canvas Smoke.dc.html : 72px au-dessus, 112px en bas).
+  const illustration = all.match(/\.illustration\[[^\]]*\]\s*\{([^}]*)\}/)?.[1] ?? '';
+  assert.match(illustration, /var\(--hero-light-illustration-gap\)/, `${where} : marge haute de l'illustration`);
+  assert.match(illustration, /var\(--hero-light-illustration-pad-end\)/, `${where} : padding bas de l'illustration`);
+  // Mouvement réduit (règle globale de base.css : animation: none) : l'état au repos est l'état final,
+  // détecteur en place et LED allumée — ni opacité, ni transform, ni fill-mode hors des @keyframes.
+  for (const cls of ['detector', 'led']) {
+    const rule = all.match(new RegExp(`\\.${cls}\\[[^\\]]*\\]\\s*\\{([^}]*)\\}`))?.[1] ?? '';
+    assert.ok(rule, `${where} : règle .${cls}`);
+    assert.ok(!/(?:^|;)\s*(?:opacity|transform)\s*:/.test(rule), `${where} : .${cls} déplacé ou estompé au repos`);
+    assert.ok(!/\b(?:both|forwards|backwards)\b/.test(rule), `${where} : fill-mode sur .${cls}`);
+  }
+  const token = (name) => all.match(new RegExp(`${name}:\\s*([^;}]+)`))?.[1]?.trim();
+  assert.equal(token('--led-pulse-count'), '2', `${where} : 2 pulsations`);
+  assert.equal(token('--led-pulse-duration'), '2.4s', `${where} : pulsation de 2,4 s`);
+  assert.deepEqual(['lg', 'md', 'sm'].map((s) => token(`--detector-size-${s}`)), ['380px', '260px', '150px'], `${where} : tailles du détecteur`);
+  assert.match(all, /\.rise\[[^\]]*\]\s*\{[^}]*animation:[^;}]*detector-rise[^;}]*var\(--detector-rise-duration\)[^;}]*var\(--detector-rise-delay\)/, `${where} : montée du détecteur`);
+  assert.ok(!html.includes('data-umami'), `${where} : data-umami-*`);
+}
+
+/** Story 1.9 (FR39), stories 2.1, 3.1 et 3.2 : sitemap dans l'ordre du registre (ids triés : Caméras, Contact,
+ * accueil, Détecteurs ; 4 <url> chacun, 5 xhtml:link chacun), robots.txt, icônes et manifeste. */
+const SITEMAP_IDS = ['cameras', 'contact', 'home', 'smoke-detectors'];
 function assertSeoFiles(out, site, indexable) {
   const xml = readFileSync(join(out, 'sitemap.xml'), 'utf8');
   const blocks = [...xml.matchAll(/<url>([\s\S]*?)<\/url>/g)].map((m) => m[1]);
-  assert.equal(blocks.length, 12, 'sitemap : <url>');
+  assert.equal(blocks.length, 16, 'sitemap : <url>');
   blocks.forEach((block, i) => {
     const hrefs = PAGE_HREFS[SITEMAP_IDS[Math.floor(i / 4)]];
     const lang = LANGS[i % 4];
@@ -894,9 +1003,9 @@ function assertSeoFiles(out, site, indexable) {
   assert.deepEqual(manifest.icons, [{ src: '/rs-icon-512.png', sizes: '512x512', type: 'image/png' }], 'manifeste : icône 512');
 }
 
-test('build de branche : 4 accueils + 4 Contact + 4 Caméras + 4 path-probe, layout Base (lang/dir, #rs-data, évitement, repères, hreflang relatifs), _redirects', { timeout: 120_000 }, () => {
+test('build de branche : 4 accueils + 4 Contact + 4 Caméras + 4 Détecteurs + 4 path-probe, layout Base (lang/dir, #rs-data, évitement, repères, hreflang relatifs), _redirects', { timeout: 120_000 }, () => {
   const out = build({});
-  assert.deepEqual(indexFiles(out), [...HOMES, ...CONTACTS, ...CAMERAS, ...PROBES].sort());
+  assert.deepEqual(indexFiles(out), [...HOMES, ...CONTACTS, ...CAMERAS, ...SMOKES, ...PROBES].sort());
   assert.ok(existsSync(join(out, '_redirects')), '_redirects absent');
   assert.ok(!existsSync(join(out, 'index.html')), 'index.html racine présent');
   assert.deepEqual(Object.keys(titles), LANGS);
@@ -920,13 +1029,18 @@ test('build de branche : 4 accueils + 4 Contact + 4 Caméras + 4 path-probe, lay
     assertLayout(html, 'cameras', LANGS[i], out);
     assertCameras(html, LANGS[i], out);
   }
+  for (const [i, file] of SMOKES.entries()) {
+    const html = readFileSync(join(out, file), 'utf8');
+    assertLayout(html, 'smoke-detectors', LANGS[i], out);
+    assertSmokeDetectors(html, LANGS[i], out);
+  }
   assertNotFoundPages(out);
   assertSeoFiles(out, '', false);
 });
 
-test('build de main indexable avec SITE_URL : 4 accueils + 4 Contact + 4 Caméras, sans noindex, canonique et hreflang absolus', { timeout: 120_000 }, () => {
+test('build de main indexable avec SITE_URL : 4 accueils + 4 Contact + 4 Caméras + 4 Détecteurs, sans noindex, canonique et hreflang absolus', { timeout: 120_000 }, () => {
   const out = build({ WORKERS_CI_BRANCH: 'main', DOMAIN_LIVE: 'true', SITE_URL: 'https://rs.example' });
-  assert.deepEqual(indexFiles(out), [...HOMES, ...CONTACTS, ...CAMERAS].sort());
+  assert.deepEqual(indexFiles(out), [...HOMES, ...CONTACTS, ...CAMERAS, ...SMOKES].sort());
   assert.ok(!existsSync(join(out, 'index.html')));
   for (const lang of LANGS) {
     assertLayout(readFileSync(join(out, lang, 'index.html'), 'utf8'), 'home', lang, out, 'https://rs.example', true);
@@ -941,6 +1055,11 @@ test('build de main indexable avec SITE_URL : 4 accueils + 4 Contact + 4 Caméra
     const html = readFileSync(join(out, file), 'utf8');
     assertLayout(html, 'cameras', LANGS[i], out, 'https://rs.example', true);
     assertCameras(html, LANGS[i], out);
+  }
+  for (const [i, file] of SMOKES.entries()) {
+    const html = readFileSync(join(out, file), 'utf8');
+    assertLayout(html, 'smoke-detectors', LANGS[i], out, 'https://rs.example', true);
+    assertSmokeDetectors(html, LANGS[i], out);
   }
   // Story 1.9 : les 5 404 restent en noindex sur un build indexable ; sitemap et robots absolus.
   assertNotFoundPages(out);

@@ -62,3 +62,31 @@ test('page service : la tuile et son sur-titre sont facultatifs', () => {
   delete noEyebrow.service.tile.eyebrow;
   assert.ok(!refused(noEyebrow));
 });
+
+// Story 3.2 (AD-4) : héros illustré sans photo, donc sans `alt` ; Service.astro l'exige pour un héros à photo.
+test('page service : hero.alt facultatif (héros illustré), mais complet s’il est présent', () => {
+  const noAlt = cameras();
+  delete noAlt.service.hero.alt;
+  assert.ok(!refused(noAlt));
+  const partial = cameras();
+  delete partial.service.hero.alt.ru;
+  assert.ok(refused(partial));
+});
+
+test('smoke-detectors.yaml : héros sans alt, trio de 3 du canvas, sans tuile', () => {
+  const { service, slugs, enabled } = pageSchema.parse(parse(readFileSync(join(PAGES, 'smoke-detectors.yaml'), 'utf8')));
+  assert.equal(enabled, true);
+  assert.deepEqual(slugs, { he: 'גלאי-עשן', en: 'smoke-detectors', ru: 'датчики-дыма', fr: 'detecteurs-de-fumee' });
+  assert.equal(service.hero.title.he, 'גלאי עשן');
+  assert.equal(service.hero.subtitle.he, 'מזהים עשן מוקדם, בכל חדר.');
+  assert.equal(service.hero.alt, undefined);
+  assert.equal(service.tile, undefined);
+  assert.deepEqual(
+    service.trio.items.map((item) => [item.title.he, item.text.he]),
+    [
+      ['לבית', 'גלאי בכל חדר שינה, בסלון ובמטבח.'],
+      ['לבניין', 'חדרי מדרגות, חניון ומחסנים.'],
+      ['לעסק', 'משרד, חנות או מחסן.'],
+    ],
+  );
+});

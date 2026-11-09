@@ -7,6 +7,8 @@
 // Photo encadrée sous le texte : 600px de haut dans --container au-dessus de 960px, 16:9 de 700 à 960px,
 // source 4:5 dédiée sous 700px. Entrée : dézoom de la photo, montée décalée du texte (le h1 sans opacité) ;
 // coupées par prefers-reduced-motion (base.css).
+// Story 3.2 (FR3) : `photo` facultatif ; sans photo, l'illustration passée en slot (détecteur de la page
+// Détecteurs) prend la place du cadre : 72px sous les liens, 112px avant la fin du héros (canvas Smoke.dc.html).
 import type { ImageMetadata } from 'astro';
 import { bandLinks } from '../lib/contact/band';
 import { telHref, waHref } from '../lib/contact/core';
@@ -21,8 +23,8 @@ import TextLink from './TextLink.astro';
 
 interface Props {
   ctx: PageContext;
-  /** `focus` : point focal, jeton --photo-focus-{focus} de tokens.css. */
-  photo: { src: ImageMetadata; portrait: ImageMetadata; alt: string; focus: 'dome' };
+  /** `focus` : point focal, jeton --photo-focus-{focus} de tokens.css. Absente : l'illustration du slot. */
+  photo?: { src: ImageMetadata; portrait: ImageMetadata; alt: string; focus: 'dome' };
   title: string;
   subtitle: string;
 }
@@ -40,9 +42,15 @@ const { detailsHref: quoteHref } = bandLinks({ lang, service: ctx.service }, { i
     <TextLink href={wa} label={t(lang, 'action.whatsapp')} tone="light" track="whatsapp_click" placement="hero" />
     {quoteHref && <TextLink href={quoteHref} label={t(lang, 'action.quote')} tone="light" />}
   </div>
-  <div class="frame" style={`--photo-position: var(--photo-focus-${photo.focus})`}>
-    <ResponsivePhoto src={photo.src} portrait={photo.portrait} alt={photo.alt} sizes={FRAMED_PHOTO_SIZES} priority class="photo" />
-  </div>
+  {photo ? (
+    <div class="frame" style={`--photo-position: var(--photo-focus-${photo.focus})`}>
+      <ResponsivePhoto src={photo.src} portrait={photo.portrait} alt={photo.alt} sizes={FRAMED_PHOTO_SIZES} priority class="photo" />
+    </div>
+  ) : (
+    <div class="illustration">
+      <slot />
+    </div>
+  )}
 </section>
 
 <style>
@@ -120,6 +128,15 @@ const { detailsHref: quoteHref } = bandLinks({ lang, service: ctx.service }, { i
     .frame {
       aspect-ratio: var(--photo-ratio-portrait);
     }
+  }
+
+  /* Illustration sans photo : le héros garde padding-block-end 0, l'espace du bas est porté ici. */
+  .illustration {
+    display: flex;
+    justify-content: center;
+    inline-size: 100%;
+    margin-block-start: calc(var(--hero-light-illustration-gap) - var(--space-2));
+    padding-block-end: var(--hero-light-illustration-pad-end);
   }
 
   .frame :global(picture) {

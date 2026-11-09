@@ -413,4 +413,39 @@
   --drift-from: -7%;
   --drift-to: 7%;
   --drift-scale: 1.16;
+  /* — Story 3.2 : détecteur de fumée illustré et page Détecteurs (canvas Smoke.dc.html, Main.dc.html, Blog.dc.html) — */
+  /* DESIGN.md › Components › Détecteur illustré : « 260px (accueil) / 380px max 80vw (page détecteurs) / 150px (carte blog) » */
+  --detector-size-lg: 380px;
+  --detector-size-md: 260px;
+  --detector-size-sm: 150px;
+  --detector-max-lg: 80vw;
+  /* Canvas Smoke.dc.html : grille « width: 58% » du disque (Main 150/260, Blog 86/150) ; rebord « border: 1px » */
+  --detector-grille-ratio: 58%;
+  --detector-rim-width: 1px;
+  /* DESIGN.md › Components › Détecteur illustré : « LED 10–12px » (canvas Smoke 12px, Main 10px) */
+  --detector-led-lg: 12px;
+  --detector-led: 10px;
+  /* Canvas : repeating-radial-gradient « 0 7px, 7px 8px » (Smoke), « 0 6px, 6px 7px » (Main), « 0 5px, 5px 6px » (Blog) */
+  --detector-grille-step-lg: 7px;
+  --detector-grille-pitch-lg: 8px;
+  --detector-grille-step-md: 6px;
+  --detector-grille-pitch-md: 7px;
+  --detector-grille-step-sm: 5px;
+  --detector-grille-pitch-sm: 6px;
+  /* DESIGN.md › Élévation : seule ombre du site ; canvas Smoke (380px), Main (260px), Blog (150px), navy 9,39,71 */
+  --shadow-detector-lg: 0 40px 80px rgba(9,39,71,.16), inset 0 -8px 18px rgba(9,39,71,.06);
+  --shadow-detector-md: 0 30px 60px rgba(9,39,71,.14), inset 0 -6px 14px rgba(9,39,71,.06);
+  --shadow-detector-sm: 0 20px 40px rgba(9,39,71,.14);
+  /* UX-DR38 : montée du détecteur « 1,4 s, délai 0,5 s » ; canvas Smoke.dc.html @keyframes up : translateY(60px) scale(.94) */
+  --detector-rise-distance: 60px;
+  --detector-rise-scale: 0.94;
+  --detector-rise-duration: 1.4s;
+  --detector-rise-delay: 0.5s;
+  /* UX-DR38 : LED « 2 pulsations de 2,4 s puis allumée fixe » ; canvas @keyframes pl : opacité 0,3 à mi-course */
+  --led-pulse-duration: 2.4s;
+  --led-pulse-min: 0.3;
+  --led-pulse-count: 2;
+  /* Canvas Smoke.dc.html › héros : détecteur « margin-top: 72px », section « padding: 72px 22px 112px » */
+  --hero-light-illustration-gap: 72px;
+  --hero-light-illustration-pad-end: 112px;
 }
