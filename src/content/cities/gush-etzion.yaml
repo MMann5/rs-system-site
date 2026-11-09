@@ -1,0 +1,23 @@
+# Story 4.2 (FR9, AD-4, décision D1 de l'epic 4) : Goush Etzion. Id du fichier = code `?city=`.
+# Intro : phrase du canvas City (« התקנה ב{עיר} והסביבה ») + une phrase propre à la ville, sans chiffre, client,
+# délai ni superlatif (NFR10). Traductions en/ru/fr par l'agent : relecture humaine recommandée.
+# Localités voisines : vides (placeholder) jusqu'à la liste validée par Ran (décision D2).
+name:
+  he: 'גוש עציון'
+  en: 'Gush Etzion'
+  ru: 'Гуш-Эцион'
+  fr: 'Goush Etzion'
+slugs:
+  he: 'גוש-עציון'
+  en: 'gush-etzion'
+  ru: 'гуш-эцион'
+  fr: 'goush-etzion'
+region: 'judea-samaria'
+order: 1
+intro:
+  he: 'מצלמות אבטחה, גלאי עשן, אינטרקום, בית חכם ורשתות. התקנה בגוש עציון והסביבה. גוש יישובים בהרי יהודה מדרום לירושלים, רובם בתים פרטיים.'
+  en: 'Security cameras, smoke detectors, intercoms, smart home and networks. Installed in Gush Etzion and the surrounding area. A bloc of communities in the Judean hills south of Jerusalem, mostly private houses.'
+  ru: 'Камеры видеонаблюдения, датчики дыма, домофоны, умный дом и сети. Установка в Гуш-Эционе и окрестностях. Группа поселений в Иудейских горах к югу от Иерусалима, в основном частные дома.'
+  fr: 'Caméras de surveillance, détecteurs de fumée, interphone, maison connectée et réseaux. Installation dans le Goush Etzion et dans les environs. Un ensemble de yishouvim dans les monts de Judée, au sud de Jérusalem, surtout des maisons individuelles.'
+neighbors: []
+reviews: []

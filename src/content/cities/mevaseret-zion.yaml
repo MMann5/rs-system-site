@@ -1,0 +1,23 @@
+# Story 4.2 (FR9, AD-4, décision D1 de l'epic 4) : Mevasseret Zion. Id du fichier = code `?city=`.
+# Intro : phrase du canvas City (« התקנה ב{עיר} והסביבה ») + une phrase propre à la ville, sans chiffre, client,
+# délai ni superlatif (NFR10). Traductions en/ru/fr par l'agent : relecture humaine recommandée.
+# Localités voisines : vides (placeholder) jusqu'à la liste validée par Ran (décision D2).
+name:
+  he: 'מבשרת ציון'
+  en: 'Mevaseret Zion'
+  ru: 'Мевасерет-Цион'
+  fr: 'Mevasseret Zion'
+slugs:
+  he: 'מבשרת-ציון'
+  en: 'mevaseret-zion'
+  ru: 'мевасерет-цион'
+  fr: 'mevasseret-zion'
+region: 'jerusalem-area'
+order: 3
+intro:
+  he: 'מצלמות אבטחה, גלאי עשן, אינטרקום, בית חכם ורשתות. התקנה במבשרת ציון והסביבה. יישוב על ההרים שממערב לירושלים, רובו בתים פרטיים ובנייני מגורים נמוכים.'
+  en: 'Security cameras, smoke detectors, intercoms, smart home and networks. Installed in Mevaseret Zion and the surrounding area. A town on the hills west of Jerusalem, mostly private houses and low-rise apartment buildings.'
+  ru: 'Камеры видеонаблюдения, датчики дыма, домофоны, умный дом и сети. Установка в Мевасерет-Ционе и окрестностях. Посёлок на холмах к западу от Иерусалима, в основном частные дома и невысокие жилые здания.'
+  fr: "Caméras de surveillance, détecteurs de fumée, interphone, maison connectée et réseaux. Installation à Mevasseret Zion et dans les environs. Une localité sur les collines à l'ouest de Jérusalem, surtout des maisons individuelles et des immeubles bas."
+neighbors: []
+reviews: []

@@ -1,5 +1,5 @@
 // Story 4.1 (FR9, AD-2, AD-4) : régions et villes — cœur pur (validation, tri, sources du registre), schémas Zod
-// et contenus du dépôt (Modiin, Jérusalem et leurs deux régions).
+// et contenus du dépôt (story 4.2 : les 15 villes et leurs 4 régions).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
@@ -79,23 +79,56 @@ test('schémas : champ inconnu, langue manquante, ancre invalide refusés ; neig
   assert.ok(!regionSchema.safeParse({ name: four('r'), anchor: 'a', order: 1.5 }).success, 'ordre non entier');
 });
 
-test('contenus : 2 régions (noms = nav.region.*), Modiin et Jérusalem valides, slugs et régions attendus', () => {
+// Story 4.2 : noms (he, en, ru, fr) et slugs (he, ru, fr ; en = id) des 15 villes, dans l'ordre région puis ville
+// d'EXP › Régions et villes.
+const CITY_TABLE = {
+  'jerusalem-area': {
+    jerusalem: [['ירושלים', 'Jerusalem', 'Иерусалим', 'Jérusalem'], ['ירושלים', 'иерусалим', 'jerusalem']],
+    'beit-shemesh': [['בית שמש', 'Beit Shemesh', 'Бейт-Шемеш', 'Beit Shemesh'], ['בית-שמש', 'бейт-шемеш', 'beit-shemesh']],
+    'mevaseret-zion': [['מבשרת ציון', 'Mevaseret Zion', 'Мевасерет-Цион', 'Mevasseret Zion'], ['מבשרת-ציון', 'мевасерет-цион', 'mevasseret-zion']],
+    'maale-adumim': [['מעלה אדומים', 'Maale Adumim', 'Маале-Адумим', 'Maalé Adoumim'], ['מעלה-אדומים', 'маале-адумим', 'maale-adoumim']],
+  },
+  'center-shfela': {
+    modiin: [['מודיעין', 'Modiin', 'Модиин', 'Modiin'], ['מודיעין', 'модиин', 'modiin']],
+    rehovot: [['רחובות', 'Rehovot', 'Реховот', 'Rehovot'], ['רחובות', 'реховот', 'rehovot']],
+    'rishon-lezion': [['ראשון לציון', 'Rishon LeZion', 'Ришон-ле-Цион', 'Rishon LeZion'], ['ראשון-לציון', 'ришон-ле-цион', 'rishon-lezion']],
+    ashdod: [['אשדוד', 'Ashdod', 'Ашдод', 'Ashdod'], ['אשדוד', 'ашдод', 'ashdod']],
+  },
+  south: {
+    'beer-sheva': [['באר שבע', 'Beer Sheva', 'Беэр-Шева', 'Beer-Sheva'], ['באר-שבע', 'беэр-шева', 'beer-sheva']],
+    ashkelon: [['אשקלון', 'Ashkelon', 'Ашкелон', 'Ashkelon'], ['אשקלון', 'ашкелон', 'ashkelon']],
+    'kiryat-gat': [['קריית גת', 'Kiryat Gat', 'Кирьят-Гат', 'Kiryat Gat'], ['קריית-גת', 'кирьят-гат', 'kiryat-gat']],
+    ofakim: [['אופקים', 'Ofakim', 'Офаким', 'Ofakim'], ['אופקים', 'офаким', 'ofakim']],
+  },
+  'judea-samaria': {
+    'gush-etzion': [['גוש עציון', 'Gush Etzion', 'Гуш-Эцион', 'Goush Etzion'], ['גוש-עציון', 'гуш-эцион', 'goush-etzion']],
+    efrat: [['אפרת', 'Efrat', 'Эфрат', 'Efrat'], ['אפרת', 'эфрат', 'efrat']],
+    ariel: [['אריאל', 'Ariel', 'Ариэль', 'Ariel'], ['אריאל', 'ариэль', 'ariel']],
+  },
+};
+// Slugs anglais d'EXP, dans l'ordre (= ids de fichier = codes `?city=`).
+const EXP_SLUGS = ['jerusalem', 'beit-shemesh', 'mevaseret-zion', 'maale-adumim', 'modiin', 'rehovot', 'rishon-lezion', 'ashdod', 'beer-sheva', 'ashkelon', 'kiryat-gat', 'ofakim', 'gush-etzion', 'efrat', 'ariel'];
+
+test('contenus : 4 régions (noms = nav.region.*), 15 villes valides dans l\'ordre région → ville, slugs et noms d\'EXP', () => {
   const regions = readDir('regions').map(({ id, raw }) => ({ id, data: regionSchema.parse(raw) }));
   const cities = readDir('cities').map(({ id, raw }) => ({ id, data: citySchema.parse(raw) }));
-  assert.deepEqual(regions.map((r) => r.id), ['center-shfela', 'jerusalem-area']);
   for (const { id, data } of regions) {
     assert.equal(data.anchor, id, `${id} : ancre`);
     for (const lang of ['he', 'en', 'ru', 'fr']) assert.equal(data.name[lang], I18N[lang][`nav.region.${id}`], `${id} (${lang})`);
   }
   const areas = buildAreas(regions, cities);
-  assert.deepEqual(areas.regions.map((r) => [r.id, r.order]), [['jerusalem-area', 1], ['center-shfela', 2]]);
-  assert.deepEqual(areas.cities.map((c) => c.id), ['jerusalem', 'modiin']);
-  assert.deepEqual(areas.city('modiin').slugs, { he: 'מודיעין', en: 'modiin', ru: 'модиин', fr: 'modiin' });
-  assert.deepEqual(areas.city('jerusalem').slugs, { he: 'ירושלים', en: 'jerusalem', ru: 'иерусалим', fr: 'jerusalem' });
-  assert.deepEqual(areas.city('modiin').name, { he: 'מודיעין', en: 'Modiin', ru: 'Модиин', fr: 'Modiin' });
-  assert.deepEqual(areas.city('jerusalem').name, { he: 'ירושלים', en: 'Jerusalem', ru: 'Иерусалим', fr: 'Jérusalem' });
-  assert.equal(areas.city('modiin').region, 'center-shfela');
-  assert.equal(areas.city('jerusalem').region, 'jerusalem-area');
+  assert.deepEqual(areas.regions.map((r) => [r.id, r.order]), [['jerusalem-area', 1], ['center-shfela', 2], ['south', 3], ['judea-samaria', 4]]);
+  assert.deepEqual(areas.cities.map((c) => c.id), EXP_SLUGS);
+  assert.deepEqual(Object.values(CITY_TABLE).flatMap((r) => Object.keys(r)), EXP_SLUGS, 'table = liste d\'EXP');
+  for (const [rid, table] of Object.entries(CITY_TABLE)) {
+    Object.entries(table).forEach(([cid, [[he, en, ru, fr], [she, sru, sfr]]], i) => {
+      const c = areas.city(cid);
+      assert.equal(c.region, rid, `${cid} : région`);
+      assert.equal(c.order, i + 1, `${cid} : ordre dans la région`);
+      assert.deepEqual(c.name, { he, en, ru, fr }, `${cid} : noms`);
+      assert.deepEqual(c.slugs, { he: she, en: cid, ru: sru, fr: sfr }, `${cid} : slugs`);
+    });
+  }
 });
 
 test('intros (D1, NFR10) : phrase du canvas « התקנה ב{עיר} והסביבה », sans chiffre, emoji ni « ! », toutes différentes', () => {

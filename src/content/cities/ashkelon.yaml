@@ -1,0 +1,23 @@
+# Story 4.2 (FR9, AD-4, décision D1 de l'epic 4) : Ashkelon. Id du fichier = code `?city=`.
+# Intro : phrase du canvas City (« התקנה ב{עיר} והסביבה ») + une phrase propre à la ville, sans chiffre, client,
+# délai ni superlatif (NFR10). Traductions en/ru/fr par l'agent : relecture humaine recommandée.
+# Localités voisines : vides (placeholder) jusqu'à la liste validée par Ran (décision D2).
+name:
+  he: 'אשקלון'
+  en: 'Ashkelon'
+  ru: 'Ашкелон'
+  fr: 'Ashkelon'
+slugs:
+  he: 'אשקלון'
+  en: 'ashkelon'
+  ru: 'ашкелон'
+  fr: 'ashkelon'
+region: 'south'
+order: 2
+intro:
+  he: 'מצלמות אבטחה, גלאי עשן, אינטרקום, בית חכם ורשתות. התקנה באשקלון והסביבה. עיר חוף בדרום, עם שכונות של בניינים ובתים פרטיים לאורך הים.'
+  en: 'Security cameras, smoke detectors, intercoms, smart home and networks. Installed in Ashkelon and the surrounding area. A coastal city in the south, with neighbourhoods of apartment buildings and private houses along the sea.'
+  ru: 'Камеры видеонаблюдения, датчики дыма, домофоны, умный дом и сети. Установка в Ашкелоне и окрестностях. Приморский город на юге, с кварталами многоквартирных и частных домов вдоль моря.'
+  fr: "Caméras de surveillance, détecteurs de fumée, interphone, maison connectée et réseaux. Installation à Ashkelon et dans les environs. Une ville côtière du Sud, avec des quartiers d'immeubles et de maisons individuelles le long de la mer."
+neighbors: []
+reviews: []

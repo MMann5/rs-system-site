@@ -1,0 +1,23 @@
+# Story 4.2 (FR9, AD-4, décision D1 de l'epic 4) : Rishon LeZion. Id du fichier = code `?city=`.
+# Intro : phrase du canvas City (« התקנה ב{עיר} והסביבה ») + une phrase propre à la ville, sans chiffre, client,
+# délai ni superlatif (NFR10). Traductions en/ru/fr par l'agent : relecture humaine recommandée.
+# Localités voisines : vides (placeholder) jusqu'à la liste validée par Ran (décision D2).
+name:
+  he: 'ראשון לציון'
+  en: 'Rishon LeZion'
+  ru: 'Ришон-ле-Цион'
+  fr: 'Rishon LeZion'
+slugs:
+  he: 'ראשון-לציון'
+  en: 'rishon-lezion'
+  ru: 'ришон-ле-цион'
+  fr: 'rishon-lezion'
+region: 'center-shfela'
+order: 3
+intro:
+  he: 'מצלמות אבטחה, גלאי עשן, אינטרקום, בית חכם ורשתות. התקנה בראשון לציון והסביבה. מהמושבה הוותיקה ועד שכונות המגדלים החדשות, לצד אזורי מסחר ותעשייה.'
+  en: 'Security cameras, smoke detectors, intercoms, smart home and networks. Installed in Rishon LeZion and the surrounding area. From the old moshava to the new high-rise neighbourhoods, alongside commercial and industrial zones.'
+  ru: 'Камеры видеонаблюдения, датчики дыма, домофоны, умный дом и сети. Установка в Ришон-ле-Ционе и окрестностях. От старой мошавы до новых кварталов высоток, а также торговые и промышленные зоны.'
+  fr: "Caméras de surveillance, détecteurs de fumée, interphone, maison connectée et réseaux. Installation à Rishon LeZion et dans les environs. De l'ancienne moshava aux nouveaux quartiers de tours, en passant par les zones commerciales et industrielles."
+neighbors: []
+reviews: []

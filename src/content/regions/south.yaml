@@ -1,0 +1,9 @@
+# Story 4.2 (FR9, AD-4) : région « Beer-Sheva et le Sud ». Nom = valeurs de nav.region.south (src/i18n),
+# ancre identique dans les 4 langues (footer, page Zones). Ordre : 3e région.
+name:
+  he: 'באר שבע והדרום'
+  en: 'Beer Sheva and the South'
+  ru: 'Беэр-Шева и юг'
+  fr: 'Beer-Sheva et le Sud'
+anchor: 'south'
+order: 3

@@ -1,0 +1,9 @@
+# Story 4.2 (FR9, AD-4) : région « Judée-Samarie ». Nom = valeurs de nav.region.judea-samaria (src/i18n),
+# ancre identique dans les 4 langues (footer, page Zones). Ordre : 4e région.
+name:
+  he: 'יהודה ושומרון'
+  en: 'Judea and Samaria'
+  ru: 'Иудея и Самария'
+  fr: 'Judée-Samarie'
+anchor: 'judea-samaria'
+order: 4

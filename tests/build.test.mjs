@@ -1,4 +1,4 @@
-// Stories 1.3 à 1.9, 2.1 à 2.4, 3.1 à 3.5, 4.1 : sortie réelle du build, sur une branche puis sur main (registre, layout Base.astro).
+// Stories 1.3 à 1.9, 2.1 à 2.4, 3.1 à 3.5, 4.1, 4.2 : sortie réelle du build, sur une branche puis sur main (registre, layout Base.astro).
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
@@ -7,6 +7,8 @@ import { tmpdir } from 'node:os';
 import { join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
+import { buildAreas } from '../src/lib/areas/core.ts';
+import { citySchema, regionSchema } from '../src/lib/areas/schema.ts';
 import { waHref } from '../src/lib/contact/core.ts';
 import { buildCityTable, buildServiceTable, pageWaInput } from '../src/lib/contact/table.ts';
 
@@ -37,11 +39,18 @@ const CONTRACTORS = LANGS.map((lang) => `${lang}/${CONTRACTOR_SLUGS[lang]}/index
 const SERVICE_IDS = ['cameras', 'smoke-detectors', 'smart-home', 'networks', 'intercom'];
 /** Story 3.4 : service du contexte de chaque page du modèle Service (= id, sauf Entrepreneurs → `crane-cameras`). */
 const PAGE_SERVICE = { ...Object.fromEntries(SERVICE_IDS.map((sid) => [sid, sid])), contractors: 'crane-cameras' };
-// Story 4.1 : pages ville sous le slug de `areas` (désactivée, jamais générée), dans l'ordre région puis ville.
+// Stories 4.1 et 4.2 : pages ville sous le slug de `areas` (désactivée, jamais générée), dans l'ordre région puis
+// ville. Régions et villes lues dans src/content/{regions,cities} et ordonnées par buildAreas (comme le site).
 const AREAS_SLUGS = { he: 'אזורים', en: 'areas', ru: 'районы', fr: 'zones' };
-const CITY_DATA = Object.fromEntries(
-  ['jerusalem', 'modiin'].map((cid) => [cid, parse(readFileSync(join(ROOT, `src/content/cities/${cid}.yaml`), 'utf8'))]),
+const readContentDir = (dir, schema) =>
+  readdirSync(join(ROOT, 'src/content', dir))
+    .filter((n) => n.endsWith('.yaml'))
+    .map((n) => ({ id: n.replace(/\.yaml$/, ''), data: schema.parse(parse(readFileSync(join(ROOT, 'src/content', dir, n), 'utf8'))) }));
+const AREAS = buildAreas(
+  readContentDir('regions', regionSchema),
+  readContentDir('cities', citySchema),
 );
+const CITY_DATA = Object.fromEntries(AREAS.cities.map((c) => [c.id, c]));
 const CITY_IDS = Object.keys(CITY_DATA);
 const CITY_FILES = CITY_IDS.flatMap((cid) => LANGS.map((lang) => `${lang}/${AREAS_SLUGS[lang]}/${CITY_DATA[cid].slugs[lang]}/index.html`));
 /** Table des villes en hébreu (message WhatsApp), comme src/lib/contact/labels.ts. */
@@ -234,6 +243,9 @@ function assertLayout(html, id, lang, out, site = '', indexable = false) {
       assert.deepEqual(data.services[code], { label: serviceLabel(code, lang), he: serviceLabel(code, 'he') }, `${where} : service ${code}`);
     }
     assert.deepEqual(Object.keys(data.cities), CITY_IDS, `${where} : codes de villes`);
+    assert.equal(CITY_IDS.length, 15, `${where} : 15 villes`);
+    // Story 4.2 (FR29) : preuve Ashdod.
+    if (lang === 'fr') assert.deepEqual(data.cities.ashdod, { label: 'Ashdod', he: 'אשדוד' }, `${where} : ville ashdod`);
     for (const cid of CITY_IDS) {
       assert.deepEqual(data.cities[cid], { label: CITY_DATA[cid].name[lang], he: CITY_DATA[cid].name.he }, `${where} : ville ${cid}`);
     }
@@ -1429,9 +1441,7 @@ function assertContractors(html, lang, out) {
 
 /** Story 4.1 (FR9, FR29, FR31, NFR2, UX-DR15, UX-DR22, D5, D7) : page ville `cid` en `lang`. */
 const SERVICE_ROWS = ['cameras', 'smoke-detectors', 'intercom', 'smart-home', 'networks'];
-const REGIONS = Object.fromEntries(
-  ['jerusalem-area', 'center-shfela'].map((rid) => [rid, parse(readFileSync(join(ROOT, `src/content/regions/${rid}.yaml`), 'utf8'))]),
-);
+const REGIONS = Object.fromEntries(AREAS.regions.map((r) => [r.id, r]));
 function assertCity(html, cid, lang) {
   const id = `city:${cid}`;
   const where = `${id} (${lang})`;
@@ -1522,7 +1532,7 @@ function assertSeoFiles(out, site, indexable) {
   const xml = readFileSync(join(out, 'sitemap.xml'), 'utf8');
   const blocks = [...xml.matchAll(/<url>([\s\S]*?)<\/url>/g)].map((m) => m[1]);
   assert.equal(blocks.length, SITEMAP_IDS.length * 4, 'sitemap : <url>');
-  assert.equal(blocks.length, 40, 'sitemap : <url> (8 pages fixes et 2 villes × 4 langues)');
+  assert.equal(blocks.length, 92, 'sitemap : <url> (8 pages fixes et 15 villes × 4 langues)');
   assert.ok(!LANGS.some((l) => xml.includes(`/${encodeURIComponent(AREAS_SLUGS[l])}/<`)), 'sitemap : Zones');
   blocks.forEach((block, i) => {
     const hrefs = PAGE_HREFS[SITEMAP_IDS[Math.floor(i / 4)]];
@@ -1541,7 +1551,7 @@ function assertSeoFiles(out, site, indexable) {
   assert.deepEqual(manifest.icons, [{ src: '/rs-icon-512.png', sizes: '512x512', type: 'image/png' }], 'manifeste : icône 512');
 }
 
-test('build de branche : 4 accueils complets (tuiles de services) + 4 Contact + 4 Caméras + 4 Détecteurs + 4 Maison connectée + 4 Réseaux + 4 Interphone + 4 Entrepreneurs + 8 pages ville + 4 path-probe, layout Base (lang/dir, #rs-data, évitement, repères, hreflang relatifs), _redirects', { timeout: 120_000 }, () => {
+test('build de branche : 4 accueils complets (tuiles de services) + 4 Contact + 4 Caméras + 4 Détecteurs + 4 Maison connectée + 4 Réseaux + 4 Interphone + 4 Entrepreneurs + 60 pages ville + 4 path-probe, layout Base (lang/dir, #rs-data, évitement, repères, hreflang relatifs), _redirects', { timeout: 120_000 }, () => {
   const out = build({});
   assert.deepEqual(indexFiles(out), [...HOMES, ...CONTACTS, ...CAMERAS, ...SMOKES, ...SMARTS, ...NETWORKS, ...INTERCOMS, ...CONTRACTORS, ...CITY_FILES, ...PROBES].sort());
   assert.ok(existsSync(join(out, '_redirects')), '_redirects absent');
@@ -1605,7 +1615,7 @@ test('build de branche : 4 accueils complets (tuiles de services) + 4 Contact + 
   assertSeoFiles(out, '', false);
 });
 
-test('build de main indexable avec SITE_URL : 4 accueils complets (tuiles de services) + 4 Contact + 4 Caméras + 4 Détecteurs + 4 Maison connectée + 4 Réseaux + 4 Interphone + 4 Entrepreneurs + 8 pages ville, sans noindex, canonique et hreflang absolus', { timeout: 120_000 }, () => {
+test('build de main indexable avec SITE_URL : 4 accueils complets (tuiles de services) + 4 Contact + 4 Caméras + 4 Détecteurs + 4 Maison connectée + 4 Réseaux + 4 Interphone + 4 Entrepreneurs + 60 pages ville, sans noindex, canonique et hreflang absolus', { timeout: 120_000 }, () => {
   const out = build({ WORKERS_CI_BRANCH: 'main', DOMAIN_LIVE: 'true', SITE_URL: 'https://rs.example' });
   assert.deepEqual(indexFiles(out), [...HOMES, ...CONTACTS, ...CAMERAS, ...SMOKES, ...SMARTS, ...NETWORKS, ...INTERCOMS, ...CONTRACTORS, ...CITY_FILES].sort());
   assert.ok(!existsSync(join(out, 'index.html')));

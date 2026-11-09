@@ -1,0 +1,23 @@
+# Story 4.2 (FR9, AD-4, décision D1 de l'epic 4) : Maalé Adoumim. Id du fichier = code `?city=`.
+# Intro : phrase du canvas City (« התקנה ב{עיר} והסביבה ») + une phrase propre à la ville, sans chiffre, client,
+# délai ni superlatif (NFR10). Traductions en/ru/fr par l'agent : relecture humaine recommandée.
+# Localités voisines : vides (placeholder) jusqu'à la liste validée par Ran (décision D2).
+name:
+  he: 'מעלה אדומים'
+  en: 'Maale Adumim'
+  ru: 'Маале-Адумим'
+  fr: 'Maalé Adoumim'
+slugs:
+  he: 'מעלה-אדומים'
+  en: 'maale-adumim'
+  ru: 'маале-адумим'
+  fr: 'maale-adoumim'
+region: 'jerusalem-area'
+order: 4
+intro:
+  he: 'מצלמות אבטחה, גלאי עשן, אינטרקום, בית חכם ורשתות. התקנה במעלה אדומים והסביבה. עיר בקצה מדבר יהודה, ממזרח לירושלים, עם שכונות של בניינים ובתים.'
+  en: 'Security cameras, smoke detectors, intercoms, smart home and networks. Installed in Maale Adumim and the surrounding area. A city on the edge of the Judean Desert, east of Jerusalem, with neighbourhoods of apartment buildings and houses.'
+  ru: 'Камеры видеонаблюдения, датчики дыма, домофоны, умный дом и сети. Установка в Маале-Адумиме и окрестностях. Город на краю Иудейской пустыни, к востоку от Иерусалима, с кварталами многоквартирных и частных домов.'
+  fr: "Caméras de surveillance, détecteurs de fumée, interphone, maison connectée et réseaux. Installation à Maalé Adoumim et dans les environs. Une ville au bord du désert de Judée, à l'est de Jérusalem, avec des quartiers d'immeubles et de maisons."
+neighbors: []
+reviews: []
