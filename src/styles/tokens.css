@@ -448,4 +448,15 @@
   /* Canvas Smoke.dc.html › héros : détecteur « margin-top: 72px », section « padding: 72px 22px 112px » */
   --hero-light-illustration-gap: 72px;
   --hero-light-illustration-pad-end: 112px;
+  /* — Story 3.3 : pages Maison connectée et Interphone (canvas Smart.dc.html, Intercom.dc.html) — */
+  /* DESIGN.md › Photographie : Interphone et Maison connectée « 4:3 » sous 700px (cadre du héros clair) */
+  --photo-ratio-mobile-landscape: 4 / 3;
+  /* DESIGN.md › Photographie : points focaux « interrupteur center 50% », « interphone center 55% », « immeuble center 70% » */
+  --photo-focus-switch: center 50%;
+  --photo-focus-intercom: center 55%;
+  --photo-focus-building: center 70%;
+  /* DESIGN.md › Layout › Par point de rupture › Tuile pleine largeur immeuble : « 620px », « 560px », « 520px » */
+  --tile-building-min: 620px;
+  --tile-building-min-tablet: 560px;
+  --tile-building-min-mobile: 520px;
 }

@@ -6,11 +6,19 @@
 // mobile, le héros et le bloc contact en tirent le message WhatsApp et le lien Devis.
 // Photos importées statiquement, par id (décision D1 : originaux Pexels, src/assets/photos/).
 // Story 3.2 (FR3) : héros discriminé, photo encadrée ou détecteur illustré (Détecteurs, sans photo ni tuile).
+// Story 3.3 (FR4, FR6) : Maison connectée (photo interrupteur, cadre 4:3 sous 700px, sans tuile) et Interphone
+// (photo interphone, 4:3 sous 700px, tuile immeuble navy-deep avec « תיאום סיור טכני › » → Contact ?service=intercom).
 import type { ImageMetadata } from 'astro';
+import buildingPortrait from '../assets/photos/building-night-portrait.jpg';
+import building from '../assets/photos/building-night.jpg';
 import cranePortrait from '../assets/photos/crane-portrait.jpg';
 import crane from '../assets/photos/crane.jpg';
 import domePortrait from '../assets/photos/cameras-dome-portrait.jpg';
 import dome from '../assets/photos/cameras-dome.jpg';
+import intercomMobile from '../assets/photos/intercom-panel-mobile.jpg';
+import intercomPanel from '../assets/photos/intercom-panel.jpg';
+import switchMobile from '../assets/photos/smart-switch-mobile.jpg';
+import smartSwitch from '../assets/photos/smart-switch.jpg';
 import ContactBand from '../components/ContactBand.astro';
 import HeroLight from '../components/HeroLight.astro';
 import SmokeDetector from '../components/SmokeDetector.astro';
@@ -18,6 +26,7 @@ import Steps from '../components/Steps.astro';
 import Tile, { type TileLink } from '../components/Tile.astro';
 import Trio from '../components/Trio.astro';
 import Base from '../layouts/Base.astro';
+import { bandLinks } from '../lib/contact/band';
 import { t } from '../lib/i18n';
 import type { Lang } from '../lib/langs';
 import { createPageContext } from '../lib/page-context';
@@ -35,27 +44,63 @@ interface ServicePage {
   service: string;
   /** Héros clair : photo encadrée (`alt` requis dans le YAML) ou détecteur illustré de 380px qui monte. */
   hero: HeroDef<ImageMetadata>;
-  /** Tuile sombre de la page ; `link` = id de la page liée, omis tant qu'elle est inactive. */
+  /** Tuile sombre de la page (lien discriminé, voir TileLinkDef). */
   tile?: {
     src: ImageMetadata;
     portrait: ImageMetadata;
-    focus: 'crane';
-    scrim: 'crane';
-    motion: 'parallax';
-    size: 'crane';
-    link: string;
+    focus: 'crane' | 'building';
+    background: 'tile-night' | 'navy-deep';
+    scrim: 'crane' | 'tile';
+    motion: 'parallax' | 'zoom';
+    size: 'crane' | 'building';
+    link: TileLinkDef;
   };
 }
+
+/**
+ * Lien unique de la tuile :
+ * - `details` : « לפרטים › » vers la page `page`, omis tant qu'elle est inactive (tuile grue de Caméras) ;
+ * - `visit` : « תיאום סיור טכני › » vers Contact avec `?service=` de la page, construit par bandLinks comme le
+ *   Devis du héros, omis si `contact` est inactif (tuile immeuble d'Interphone).
+ */
+type TileLinkDef = { kind: 'details'; page: string } | { kind: 'visit' };
 
 const SERVICE_PAGES: Record<string, ServicePage> = {
   cameras: {
     service: 'cameras',
     hero: { kind: 'photo', src: dome, portrait: domePortrait, focus: 'dome' },
-    tile: { src: crane, portrait: cranePortrait, focus: 'crane', scrim: 'crane', motion: 'parallax', size: 'crane', link: 'contractors' },
+    tile: {
+      src: crane,
+      portrait: cranePortrait,
+      focus: 'crane',
+      background: 'tile-night',
+      scrim: 'crane',
+      motion: 'parallax',
+      size: 'crane',
+      link: { kind: 'details', page: 'contractors' },
+    },
   },
   'smoke-detectors': {
     service: 'smoke-detectors',
     hero: { kind: 'detector' },
+  },
+  'smart-home': {
+    service: 'smart-home',
+    hero: { kind: 'photo', src: smartSwitch, portrait: switchMobile, focus: 'switch', mobile: 'landscape' },
+  },
+  intercom: {
+    service: 'intercom',
+    hero: { kind: 'photo', src: intercomPanel, portrait: intercomMobile, focus: 'intercom', mobile: 'landscape' },
+    tile: {
+      src: building,
+      portrait: buildingPortrait,
+      focus: 'building',
+      background: 'navy-deep',
+      scrim: 'tile',
+      motion: 'zoom',
+      size: 'building',
+      link: { kind: 'visit' },
+    },
   },
 };
 
@@ -68,8 +113,15 @@ if (!content) throw new Error(`Service : bloc « service » absent de src/conten
 const photo = heroPhoto(id, def.hero, content.hero.alt, lang);
 const ctx = createPageContext({ id, lang, service: def.service, navSection: id });
 const tile = def.tile && content.tile ? { def: def.tile, text: content.tile } : undefined;
-// Lien « לפרטים › » de la tuile : seulement si sa page est active (FR23) ; `url` n'est jamais appelé sinon.
-const tileLinks: TileLink[] = tile && isEnabled(tile.def.link) ? [{ href: url(tile.def.link, lang), label: t(lang, 'action.details') }] : [];
+// Lien de la tuile : seulement si sa cible est active (FR23) ; `url` n'est jamais appelé sinon.
+function tileLinksOf(link: TileLinkDef): TileLink[] {
+  if (link.kind === 'details') {
+    return isEnabled(link.page) ? [{ href: url(link.page, lang), label: t(lang, 'action.details') }] : [];
+  }
+  const { detailsHref } = bandLinks({ lang, service: ctx.service }, { isEnabled, url });
+  return detailsHref ? [{ href: detailsHref, label: t(lang, 'action.site-visit') }] : [];
+}
+const tileLinks: TileLink[] = tile ? tileLinksOf(tile.def.link) : [];
 ---
 <Base ctx={ctx} title={meta.title[lang]} description={meta.description[lang]}>
   <HeroLight ctx={ctx} photo={photo} title={content.hero.title[lang]} subtitle={content.hero.subtitle[lang]}>
@@ -90,6 +142,7 @@ const tileLinks: TileLink[] = tile && isEnabled(tile.def.link) ? [{ href: url(ti
       text={tile.text.text[lang]}
       links={tileLinks}
       photo={{ src: tile.def.src, portrait: tile.def.portrait, alt: tile.text.alt[lang], focus: tile.def.focus }}
+      background={tile.def.background}
       scrim={tile.def.scrim}
       motion={tile.def.motion}
       size={tile.def.size}
