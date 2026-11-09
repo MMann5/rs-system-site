@@ -11,11 +11,12 @@ const anchor = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
 /** Id kebab-case (ville, avis). */
 const kebabId = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
 
-/** src/content/regions/{id}.yaml : nom × 4, ancre, ordre. */
+/** src/content/regions/{id}.yaml : nom × 4, ancre, ordre ; `others` (story 4.4, D2) : ligne « autres yishouvim ». */
 export const regionSchema = z.strictObject({
   name: perLang(text),
   anchor,
   order: z.number().int(),
+  others: z.boolean().default(false),
 });
 
 /** src/content/cities/{id}.yaml : id du fichier = id de la ville = code `?city=`. */

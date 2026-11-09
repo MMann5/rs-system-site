@@ -1,4 +1,4 @@
-// Stories 1.3 à 1.9, 2.1 à 2.4, 3.1 à 3.5, 4.1, 4.2 : sortie réelle du build, sur une branche puis sur main (registre, layout Base.astro).
+// Stories 1.3 à 1.9, 2.1 à 2.4, 3.1 à 3.5, 4.1, 4.2, 4.4 : sortie réelle du build, sur une branche puis sur main (registre, layout Base.astro).
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
@@ -39,8 +39,8 @@ const CONTRACTORS = LANGS.map((lang) => `${lang}/${CONTRACTOR_SLUGS[lang]}/index
 const SERVICE_IDS = ['cameras', 'smoke-detectors', 'smart-home', 'networks', 'intercom'];
 /** Story 3.4 : service du contexte de chaque page du modèle Service (= id, sauf Entrepreneurs → `crane-cameras`). */
 const PAGE_SERVICE = { ...Object.fromEntries(SERVICE_IDS.map((sid) => [sid, sid])), contractors: 'crane-cameras' };
-// Stories 4.1 et 4.2 : pages ville sous le slug de `areas` (désactivée, jamais générée), dans l'ordre région puis
-// ville. Régions et villes lues dans src/content/{regions,cities} et ordonnées par buildAreas (comme le site).
+// Stories 4.1 et 4.2 : pages ville sous le slug de `areas` (story 4.4 : activée, page Zones générée), dans l'ordre
+// région puis ville. Régions et villes lues dans src/content/{regions,cities} et ordonnées par buildAreas (comme le site).
 const AREAS_SLUGS = { he: 'אזורים', en: 'areas', ru: 'районы', fr: 'zones' };
 const readContentDir = (dir, schema) =>
   readdirSync(join(ROOT, 'src/content', dir))
@@ -52,6 +52,8 @@ const AREAS = buildAreas(
 );
 const CITY_DATA = Object.fromEntries(AREAS.cities.map((c) => [c.id, c]));
 const CITY_IDS = Object.keys(CITY_DATA);
+// Story 4.4 : page Zones dans les 4 langues.
+const AREAS_FILES = LANGS.map((lang) => `${lang}/${AREAS_SLUGS[lang]}/index.html`);
 const CITY_FILES = CITY_IDS.flatMap((cid) => LANGS.map((lang) => `${lang}/${AREAS_SLUGS[lang]}/${CITY_DATA[cid].slugs[lang]}/index.html`));
 /** Table des villes en hébreu (message WhatsApp), comme src/lib/contact/labels.ts. */
 const HE_CITIES = buildCityTable(CITY_IDS.map((cid) => ({ id: cid, name: CITY_DATA[cid].name })), 'he');
@@ -136,8 +138,8 @@ const PAGE_HREFS = {
     ]),
   ),
 };
-/** Stories 3.1 à 3.4 : ids actifs du header, dans l'ordre de nav.ts (HEADER_NAV_IDS). */
-const HEADER_IDS = ['cameras', 'smoke-detectors', 'smart-home', 'networks', 'intercom', 'contractors', 'contact'];
+/** Stories 3.1 à 3.4, 4.4 : ids actifs du header, dans l'ordre de nav.ts (HEADER_NAV_IDS). */
+const HEADER_IDS = ['cameras', 'smoke-detectors', 'smart-home', 'networks', 'intercom', 'contractors', 'areas', 'contact'];
 // Story 1.6 : chaînes i18n du menu, du sélecteur et de la barre mobile.
 const MENU_LABEL = { he: 'תפריט', en: 'Menu', ru: 'Меню', fr: 'Menu' };
 const SWITCHER_LABEL = { he: 'שפה', en: 'Language', ru: 'Язык', fr: 'Langue' };
@@ -154,8 +156,8 @@ const BASELINE_BDI = /<bdi lang="he" dir="rtl"[^>]*>/g;
 const RATING_BDI = /<bdi dir="ltr"[^>]*>[\d.,]+<\/bdi>/g;
 const FOCUSABLE = /<(?:a\b[^>]*\shref=|button\b|input\b|select\b|textarea\b|[a-z][\w-]*\b[^>]*\stabindex=)[^>]*>/i;
 
-/** Story 1.7 (FR19, UX-DR33, D1), stories 2.1, 3.1 à 3.4 : footer avec les 5 services, `contractors` et
- * `contact` seuls actifs (colonne Services = les 5 services dans l'ordre, colonne Pour les entreprises =
+/** Story 1.7 (FR19, UX-DR33, D1), stories 2.1, 3.1 à 3.4, 4.4 : footer avec les 5 services, `contractors`, `areas`
+ * (colonne Zones : 4 régions → `areas#{ancre}`) et `contact` actifs (colonne Services = les 5 services dans l'ordre, colonne Pour les entreprises =
  * « Caméras de grue » → Entrepreneurs puis « sociétés de gestion » → Interphone, colonne RS SYSTEM = Contact). */
 function assertFooter(footer, lang, where) {
   const dict = I18N[lang];
@@ -163,14 +165,16 @@ function assertFooter(footer, lang, where) {
   const company = dict['footer.col.company'];
   const services = dict['footer.col.services'];
   const business = dict['footer.col.business'];
-  // Cinq <nav> : Services, Pour les entreprises (Entrepreneurs puis Interphone), RS SYSTEM (seul lien : Contact), la
-  // colonne Contact, puis le sélecteur ; ni Zones (page inactive), aucun <nav> légal.
+  const areas = dict['footer.col.areas'];
+  // Six <nav> : Services, Pour les entreprises (Entrepreneurs puis Interphone), Zones (story 4.4 : 4 régions), RS SYSTEM
+  // (seul lien : Contact), la colonne Contact, puis le sélecteur ; aucun <nav> légal.
   const navs = footer.match(/<nav\b[^>]*>/g) ?? [];
-  assert.equal(navs.length, 5, `${where} : <nav> du footer ${navs}`);
+  assert.equal(navs.length, 6, `${where} : <nav> du footer ${navs}`);
   assert.match(navs[0], new RegExp(`^<nav aria-label="${services}"[\\s>]`), `${where} : <nav> Services`);
   assert.match(navs[1], new RegExp(`^<nav aria-label="${business}"[\\s>]`), `${where} : <nav> Pour les entreprises`);
-  assert.match(navs[2], new RegExp(`^<nav aria-label="${company}"[\\s>]`), `${where} : <nav> RS SYSTEM`);
-  assert.match(navs[3], new RegExp(`^<nav aria-label="${contact}"[\\s>]`), `${where} : <nav> Contact`);
+  assert.match(navs[2], new RegExp(`^<nav aria-label="${areas}"[\\s>]`), `${where} : <nav> Zones`);
+  assert.match(navs[3], new RegExp(`^<nav aria-label="${company}"[\\s>]`), `${where} : <nav> RS SYSTEM`);
+  assert.match(navs[4], new RegExp(`^<nav aria-label="${contact}"[\\s>]`), `${where} : <nav> Contact`);
   assert.ok(!navs.some((n) => n.includes(`aria-label="${dict['footer.legal-label']}"`)), `${where} : <nav> légal`);
   const column = (nav) => footer.slice(footer.indexOf(nav), footer.indexOf('</nav>', footer.indexOf(nav)));
   const linksOf = (col) => [...col.matchAll(/<a href="([^"]*)"[^>]*>([^<]*)<\/a>/g)].map((m) => [m[1], m[2]]);
@@ -184,12 +188,21 @@ function assertFooter(footer, lang, where) {
     [[PAGE_HREFS.contractors[lang], escaped(dict['nav.footer.crane-cameras'])], [PAGE_HREFS.intercom[lang], escaped(dict['nav.footer.management'])]],
     `${where} : liens Pour les entreprises`,
   );
-  const companyCol = column(navs[2]);
+  // Story 4.4 (FR19) : colonne Zones, une ligne par région → /{lang}/{slug}/#{ancre}, dans l'ordre des régions.
+  const areasCol = column(navs[2]);
+  assert.equal(areasCol.match(/<h2\b[^>]*>([^<]*)<\/h2>/)?.[1], escaped(areas), `${where} : <h2> Zones`);
+  assert.deepEqual(
+    linksOf(areasCol),
+    AREAS.regions.map((r) => [`${PAGE_HREFS.areas[lang]}#${r.anchor}`, escaped(dict[`nav.region.${r.id}`])]),
+    `${where} : liens Zones`,
+  );
+  assert.deepEqual(AREAS.regions.map((r) => r.anchor), ['jerusalem-area', 'center-shfela', 'south', 'judea-samaria'], `${where} : ancres`);
+  const companyCol = column(navs[3]);
   assert.equal(companyCol.match(/<h2\b[^>]*>([^<]*)<\/h2>/)?.[1], company, `${where} : <h2> RS SYSTEM`);
   assert.deepEqual(linksOf(companyCol), [[PAGE_HREFS.contact[lang], dict['nav.contact']]], `${where} : liens RS SYSTEM`);
-  const col = column(navs[3]);
+  const col = column(navs[4]);
   assert.equal(col.match(/<h2\b[^>]*>([^<]*)<\/h2>/)?.[1], contact, `${where} : <h2> Contact`);
-  assert.equal(footer.match(/<h2[\s>]/g)?.length, 4, `${where} : <h2> du footer`);
+  assert.equal(footer.match(/<h2[\s>]/g)?.length, 5, `${where} : <h2> du footer`);
   // Numéro : lien d'appel mesuré (AD-5, AD-6), isolé en LTR.
   const calls = [...col.matchAll(/<a href="tel:\+972509565669"([^>]*)>([\s\S]*?)<\/a>/g)];
   assert.equal(calls.length, 1, `${where} : lien d'appel du footer`);
@@ -205,7 +218,7 @@ function assertFooter(footer, lang, where) {
   const tagline = lang === 'he' ? baseline : `<bdi lang="he" dir="rtl"[^>]*>${baseline}</bdi>`;
   assert.match(footer, new RegExp(`<p\\b[^>]*>${dict['footer.copyright']} · ${tagline}</p>`), `${where} : ligne basse`);
   // Ordre de lecture : colonnes, puis ligne basse, puis sélecteur.
-  assert.ok(footer.indexOf(navs[3]) < footer.indexOf('<p') && footer.indexOf('<p') < footer.indexOf(navs[4]), `${where} : ordre du footer`);
+  assert.ok(footer.indexOf(navs[4]) < footer.indexOf('<p') && footer.indexOf('<p') < footer.indexOf(navs[5]), `${where} : ordre du footer`);
 }
 
 /** Story 1.4 : sortie du layout unique pour la page `id` en `lang` ; `out` = dossier du build, `site` = SITE_URL. */
@@ -249,6 +262,9 @@ function assertLayout(html, id, lang, out, site = '', indexable = false) {
     for (const cid of CITY_IDS) {
       assert.deepEqual(data.cities[cid], { label: CITY_DATA[cid].name[lang], he: CITY_DATA[cid].name.he }, `${where} : ville ${cid}`);
     }
+  } else if (id === 'areas') {
+    // Story 4.4 (AD-13) : Zones fixe la section de navigation `areas`.
+    assert.deepEqual(JSON.parse(json), { context: { id, lang, navSection: 'areas', indexable } }, where);
   } else if (id.startsWith('city:')) {
     // Story 4.1 (AD-13) : le modèle City fixe la ville (id = code `?city=`) et la section de navigation `areas`.
     assert.deepEqual(JSON.parse(json), { context: { id, lang, city: id.slice(5), navSection: 'areas', indexable } }, where);
@@ -297,6 +313,8 @@ function assertLayout(html, id, lang, out, site = '', indexable = false) {
   assert.equal(header.match(/<nav[\s>]/g)?.length, 3, `${where} : <nav> du header`);
   assert.equal(menu.match(/<nav[\s>]/g)?.length, 2, `${where} : <nav> du panneau`);
   const navLabel = I18N[lang]['nav.main-label'];
+  // Story 4.4 (FR16) : une page ville active « אזורים », comme Zones.
+  const currentNav = id.startsWith('city:') ? 'areas' : id;
   const mainNavs = [...header.matchAll(new RegExp(`<nav aria-label="${navLabel}"[^>]*>([\\s\\S]*?)</nav>`, 'g'))];
   assert.equal(mainNavs.length, 2, `${where} : <nav> principaux`);
   for (const [, inner] of mainNavs) {
@@ -305,7 +323,7 @@ function assertLayout(html, id, lang, out, site = '', indexable = false) {
     HEADER_IDS.forEach((navId, i) => {
       assert.equal(attr(`<a${links[i][1]}>`, 'href'), PAGE_HREFS[navId][lang], `${where} : href ${navId} du header`);
       assert.equal(links[i][2], I18N[lang][`nav.${navId}`], `${where} : libellé ${navId} du header`);
-      assert.equal(attr(`<a${links[i][1]}>`, 'aria-current'), id === navId ? 'page' : undefined, `${where} : aria-current ${navId}`);
+      assert.equal(attr(`<a${links[i][1]}>`, 'aria-current'), currentNav === navId ? 'page' : undefined, `${where} : aria-current ${navId}`);
     });
   }
   assert.match(menu, new RegExp(`<nav aria-label="${SWITCHER_LABEL[lang]}"[^>]*\\sdata-lang-switcher[\\s>]`), `${where} : <nav> du sélecteur`);
@@ -394,6 +412,12 @@ function assertTextLink(match, href, label, track, placement, where) {
   assert.equal(attr(`<a${attrs}>`, 'data-track'), track, `${where} : data-track`);
   assert.equal(attr(`<a${attrs}>`, 'data-placement'), placement, `${where} : data-placement`);
   assert.match(inner, new RegExp(`^${label}${CHEVRON}$`), `${where} : libellé et chevron ${inner}`);
+}
+
+/** Story 4.4 (FR21, FR27) : 1er lien du bloc contact = phrase de zone vers Zones, ton nuit, non mesuré. */
+function assertBandZone(link, lang, where) {
+  assertTextLink(link, PAGE_HREFS.areas[lang], escaped(I18N[lang]['contact.zone']), undefined, undefined, `${where} : bloc zone`);
+  assert.match(link[1], /\sclass="text-link night"/, `${where} : ton nuit du lien zone`);
 }
 
 /** Story 3.5 : contenu de src/content/pages/home.yaml (bloc `home`). */
@@ -576,30 +600,30 @@ function assertHome(html, lang, out) {
     const size = statSync(join(out, file)).size;
     assert.ok(size <= budget, `${where} : ${file} ${size} > ${budget}`);
   }
-  // Bloc contact, dans l'ordre : h2 masqué, note, ligne, zone (texte simple), numéro, Appeler, WhatsApp.
+  // Bloc contact, dans l'ordre : h2 masqué, note, ligne, zone (story 4.4 : lien vers Zones), numéro, Appeler, WhatsApp.
   const h2 = band.match(/<h2 id="contact-band-title" class="visually-hidden"[^>]*>([^<]*)<\/h2>/);
   assert.equal(h2?.[1], dict['contact-band.title'], `${where} : h2 du bloc`);
   const score = band.match(/<p class="score"[^>]*><bdi dir="ltr"[^>]*>([^<]*)<\/bdi><\/p>/);
   assert.equal(score?.[1], lang === 'he' || lang === 'en' ? '9.94' : '9,94', `${where} : note`);
   const line = band.match(/<p class="rating-line"[^>]*>([^<]*)<\/p>/);
   assert.equal(line?.[1], dict['contact-band.midrag'], `${where} : ligne Midrag`);
-  const zone = band.match(/<p class="zone"[^>]*>([^<]*)<\/p>/);
-  assert.equal(zone?.[1], dict['contact.zone'], `${where} : zone`);
+  assert.ok(!band.includes('<p class="zone"'), `${where} : zone en texte simple`);
   const links = [...band.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)];
-  assert.equal(links.length, 4, `${where} : liens du bloc`);
-  assert.equal(attr(`<a${links[0][1]}>`, 'href'), 'tel:+972509565669', `${where} : numéro`);
-  assert.equal(attr(`<a${links[0][1]}>`, 'data-track'), 'call_click', `${where} : numéro data-track`);
-  assert.equal(attr(`<a${links[0][1]}>`, 'data-placement'), 'contact_band', `${where} : numéro data-placement`);
-  assert.equal(links[0][2], PHONE_BDI, `${where} : numéro du bloc`);
-  assertTextLink(links[1], 'tel:+972509565669', dict['action.call'], 'call_click', 'contact_band', `${where} : bloc Appeler`);
-  assertTextLink(links[2], waHref(), dict['action.whatsapp'], 'whatsapp_click', 'contact_band', `${where} : bloc WhatsApp`);
+  assert.equal(links.length, 5, `${where} : liens du bloc`);
+  assertBandZone(links[0], lang, where);
+  assert.equal(attr(`<a${links[1][1]}>`, 'href'), 'tel:+972509565669', `${where} : numéro`);
+  assert.equal(attr(`<a${links[1][1]}>`, 'data-track'), 'call_click', `${where} : numéro data-track`);
+  assert.equal(attr(`<a${links[1][1]}>`, 'data-placement'), 'contact_band', `${where} : numéro data-placement`);
+  assert.equal(links[1][2], PHONE_BDI, `${where} : numéro du bloc`);
+  assertTextLink(links[2], 'tel:+972509565669', dict['action.call'], 'call_click', 'contact_band', `${where} : bloc Appeler`);
+  assertTextLink(links[3], waHref(), dict['action.whatsapp'], 'whatsapp_click', 'contact_band', `${where} : bloc WhatsApp`);
   // Story 2.1 (FR21, FR29) : 3e action « Laisser ses coordonnées » vers Contact, sans paramètre (accueil sans service).
-  assertTextLink(links[3], PAGE_HREFS.contact[lang], escaped(dict['contact-band.leave-details']), undefined, undefined, `${where} : bloc leave-details`);
-  assert.ok(!attr(`<a${links[3][1]}>`, 'href').includes('?'), `${where} : leave-details sans paramètre`);
-  for (const [, attrs] of links.slice(1)) assert.match(attrs, /\sclass="text-link night"/, `${where} : ton nuit`);
-  const order = [h2.index, score.index, line.index, zone.index, links[0].index, links[1].index, links[2].index, links[3].index];
+  assertTextLink(links[4], PAGE_HREFS.contact[lang], escaped(dict['contact-band.leave-details']), undefined, undefined, `${where} : bloc leave-details`);
+  assert.ok(!attr(`<a${links[4][1]}>`, 'href').includes('?'), `${where} : leave-details sans paramètre`);
+  for (const [, attrs] of [links[0], ...links.slice(2)]) assert.match(attrs, /\sclass="text-link night"/, `${where} : ton nuit`);
+  const order = [h2.index, score.index, line.index, ...links.map((l) => l.index)];
   assert.deepEqual(order, [...order].sort((a, b) => a - b), `${where} : ordre du bloc`);
-  // Aucun lien Zones (areas inactif), aucun placeholder dans le bloc.
+  // Aucun placeholder dans le bloc.
   assert.ok(!band.includes('data-placeholder'), `${where} : placeholder dans le bloc`);
 }
 
@@ -629,9 +653,9 @@ function assertNotFound(html, lang, where) {
   assert.equal(svgs.length, 1, `${where} : <svg>`);
   assert.match(svgs[0], /^<svg aria-hidden="true"/, `${where} : svg aria-hidden`);
   assert.equal(svgs[0].match(/<path\b[^>]*\spathLength="1"/g)?.length, 3, `${where} : 3 arcs`);
-  // Numéro, Appeler, WhatsApp (404), puis Accueil et Contact (story 2.1) ; areas inactif.
+  // Numéro, Appeler, WhatsApp (404), puis Accueil, Zones (story 4.4) et Contact (story 2.1).
   const links = [...main.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)];
-  assert.equal(links.length, 5, `${where} : liens de la 404`);
+  assert.equal(links.length, 6, `${where} : liens de la 404`);
   assert.equal(attr(`<a${links[0][1]}>`, 'href'), 'tel:+972509565669', `${where} : numéro`);
   assert.equal(attr(`<a${links[0][1]}>`, 'data-track'), 'call_click', `${where} : numéro data-track`);
   assert.equal(attr(`<a${links[0][1]}>`, 'data-placement'), '404', `${where} : numéro data-placement`);
@@ -639,7 +663,8 @@ function assertNotFound(html, lang, where) {
   assertTextLink(links[1], 'tel:+972509565669', dict['action.call'], 'call_click', '404', `${where} : Appeler`);
   assertTextLink(links[2], waHref(), dict['action.whatsapp'], 'whatsapp_click', '404', `${where} : WhatsApp`);
   assertTextLink(links[3], `/${lang}/`, escaped(dict['not-found.home']), undefined, undefined, `${where} : Accueil`);
-  assertTextLink(links[4], PAGE_HREFS.contact[lang], escaped(dict['nav.contact']), undefined, undefined, `${where} : Contact`);
+  assertTextLink(links[4], PAGE_HREFS.areas[lang], escaped(dict['nav.areas']), undefined, undefined, `${where} : Zones`);
+  assertTextLink(links[5], PAGE_HREFS.contact[lang], escaped(dict['nav.contact']), undefined, undefined, `${where} : Contact`);
   for (const [, attrs] of links.slice(1)) assert.match(attrs, /\sclass="text-link night"/, `${where} : ton nuit`);
   // Aucun lien de header actif, pas de bloc contact.
   assert.ok(!html.includes('aria-current="page"'), `${where} : aria-current="page"`);
@@ -1033,9 +1058,10 @@ function assertCameras(html, lang, out) {
   assert.equal((ol?.[2] ?? '').match(/<li[\s>]/g)?.length, 4, `${where} : <li> des étapes`);
   // Bloc contact : WhatsApp avec le service, « Laisser ses coordonnées » vers Contact avec ?service=cameras.
   const bandLinks = [...band.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)];
-  assert.equal(bandLinks.length, 4, `${where} : liens du bloc`);
-  assertTextLink(bandLinks[2], wa, dict['action.whatsapp'], 'whatsapp_click', 'contact_band', `${where} : bloc WhatsApp`);
-  assertTextLink(bandLinks[3], quote, escaped(dict['contact-band.leave-details']), undefined, undefined, `${where} : bloc leave-details`);
+  assert.equal(bandLinks.length, 5, `${where} : liens du bloc`);
+  assertBandZone(bandLinks[0], lang, where);
+  assertTextLink(bandLinks[3], wa, dict['action.whatsapp'], 'whatsapp_click', 'contact_band', `${where} : bloc WhatsApp`);
+  assertTextLink(bandLinks[4], quote, escaped(dict['contact-band.leave-details']), undefined, undefined, `${where} : bloc leave-details`);
   assert.ok(decodeURIComponent(wa).includes(serviceLabel('cameras', 'he')), `${where} : service dans le message`);
   // CSS servie : mouvement au défilement seulement sous @supports (animation-timeline: view()).
   const css = [...html.matchAll(/<link rel="stylesheet" href="([^"]+)"/g)].map(([, href]) => readFileSync(join(out, href), 'utf8'));
@@ -1153,9 +1179,10 @@ function assertSmokeDetectors(html, lang, out) {
   assert.deepEqual(items, STEP_KEYS.map((key, i) => [String(i + 1), escaped(dict[`steps.${key}.title`]), escaped(dict[`steps.${key}.text`])]), `${where} : 4 étapes`);
   // Bloc contact : WhatsApp avec « גלאי עשן », « Laisser ses coordonnées » vers Contact avec ?service=smoke-detectors.
   const bandLinks = [...band.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)];
-  assert.equal(bandLinks.length, 4, `${where} : liens du bloc`);
-  assertTextLink(bandLinks[2], wa, dict['action.whatsapp'], 'whatsapp_click', 'contact_band', `${where} : bloc WhatsApp`);
-  assertTextLink(bandLinks[3], quote, escaped(dict['contact-band.leave-details']), undefined, undefined, `${where} : bloc leave-details`);
+  assert.equal(bandLinks.length, 5, `${where} : liens du bloc`);
+  assertBandZone(bandLinks[0], lang, where);
+  assertTextLink(bandLinks[3], wa, dict['action.whatsapp'], 'whatsapp_click', 'contact_band', `${where} : bloc WhatsApp`);
+  assertTextLink(bandLinks[4], quote, escaped(dict['contact-band.leave-details']), undefined, undefined, `${where} : bloc leave-details`);
   assert.ok(decodeURIComponent(wa).includes('גלאי עשן'), `${where} : service dans le message`);
   // CSS servie (UX-DR34, UX-DR38) : seule ombre = jetons --shadow-detector-* ; LED en 2 pulsations, jamais en boucle.
   const all = servedCss(html, out);
@@ -1292,9 +1319,10 @@ function assertPhotoService(html, lang, out, { id, content, focus, tile: withTil
   assert.deepEqual(items, STEP_KEYS.map((key, i) => [String(i + 1), escaped(dict[`steps.${key}.title`]), escaped(dict[`steps.${key}.text`])]), `${where} : 4 étapes`);
   // Bloc contact : WhatsApp avec le libellé hébreu du service, « Laisser ses coordonnées » vers Contact ?service={id}.
   const bandLinks = [...band.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)];
-  assert.equal(bandLinks.length, 4, `${where} : liens du bloc`);
-  assertTextLink(bandLinks[2], wa, dict['action.whatsapp'], 'whatsapp_click', 'contact_band', `${where} : bloc WhatsApp`);
-  assertTextLink(bandLinks[3], quote, escaped(dict['contact-band.leave-details']), undefined, undefined, `${where} : bloc leave-details`);
+  assert.equal(bandLinks.length, 5, `${where} : liens du bloc`);
+  assertBandZone(bandLinks[0], lang, where);
+  assertTextLink(bandLinks[3], wa, dict['action.whatsapp'], 'whatsapp_click', 'contact_band', `${where} : bloc WhatsApp`);
+  assertTextLink(bandLinks[4], quote, escaped(dict['contact-band.leave-details']), undefined, undefined, `${where} : bloc leave-details`);
   assert.ok(decodeURIComponent(wa).includes(serviceLabel(id, 'he')), `${where} : service dans le message`);
   assert.ok(!html.includes('data-umami'), `${where} : data-umami-*`);
 }
@@ -1423,9 +1451,10 @@ function assertCoverService(html, lang, out, { id, service, content, focus, scri
   assert.deepEqual(items, STEP_KEYS.map((key, i) => [String(i + 1), escaped(dict[`steps.${key}.title`]), escaped(dict[`steps.${key}.text`])]), `${where} : 4 étapes`);
   // Bloc contact : WhatsApp avec le libellé hébreu du service, « Laisser ses coordonnées » vers Contact ?service=.
   const bandLinks = [...band.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)];
-  assert.equal(bandLinks.length, 4, `${where} : liens du bloc`);
-  assertTextLink(bandLinks[2], wa, dict['action.whatsapp'], 'whatsapp_click', 'contact_band', `${where} : bloc WhatsApp`);
-  assertTextLink(bandLinks[3], quote, escaped(dict['contact-band.leave-details']), undefined, undefined, `${where} : bloc leave-details`);
+  assert.equal(bandLinks.length, 5, `${where} : liens du bloc`);
+  assertBandZone(bandLinks[0], lang, where);
+  assertTextLink(bandLinks[3], wa, dict['action.whatsapp'], 'whatsapp_click', 'contact_band', `${where} : bloc WhatsApp`);
+  assertTextLink(bandLinks[4], quote, escaped(dict['contact-band.leave-details']), undefined, undefined, `${where} : bloc leave-details`);
   assert.ok(!html.includes('data-umami'), `${where} : data-umami-*`);
 }
 
@@ -1473,19 +1502,27 @@ function assertCity(html, cid, lang) {
     assert.equal(reviewSection[2].match(/<figure\b/g)?.length, data.reviews.length, `${where} : une figure par avis`);
     assert.ok(main.indexOf('city-services-title') < reviewSection.index && reviewSection.index < main.indexOf('city-neighbors-title'), `${where} : avis entre services et localités`);
   }
-  // Héros : fil d'Ariane = nom de la région en texte (areas inactive), h1, intro, liens Appeler › WhatsApp › Devis ›.
+  // Héros : fil d'Ariane (story 4.4 : lien « Zones › région » vers areas#{ancre de la région}), h1, intro, liens
+  // Appeler › WhatsApp › Devis ›.
   const hero = main.slice(0, main.indexOf('</section>'));
   assert.equal((hero.match(/<svg\b[\s\S]*?<\/svg>/)?.[0].match(/<path\b[^>]*\spathLength="1"/g) ?? []).length, 3, `${where} : 3 arcs`);
-  // areas inactive : sur-titre en <p> simple, sans landmark <nav> vide.
-  assert.ok(!hero.includes('<nav'), `${where} : <nav> sans lien dans le héros`);
-  assert.equal(hero.match(/<p class="crumb crumb-text">([^<]*)<\/p>/)?.[1], escaped(REGIONS[data.region].name[lang]), `${where} : région sans lien`);
+  const region = REGIONS[data.region];
+  const crumb = hero.match(/<nav class="crumb" aria-label="([^"]*)"><a href="([^"]*)" class="crumb-link">([^<]*)<span aria-hidden="true"> › <\/span>([^<]*)<\/a><\/nav>/);
+  assert.ok(crumb, `${where} : fil d'Ariane en <nav>`);
+  assert.deepEqual(
+    crumb.slice(1),
+    [dict['city.breadcrumb-label'], `${PAGE_HREFS.areas[lang]}#${region.anchor}`, escaped(dict['nav.areas']), escaped(region.name[lang])],
+    `${where} : fil d'Ariane vers areas#${region.anchor}`,
+  );
+  assert.ok(!hero.includes('crumb-text'), `${where} : région en texte simple`);
   assert.equal(hero.match(/<h1 id="page-title" class="title city">([^<]*)<\/h1>/)?.[1], escaped(name), `${where} : h1`);
   assert.ok(hero.indexOf('class="crumb"') < hero.indexOf('<h1'), `${where} : fil avant le h1`);
   assert.equal(hero.match(/<p class="subtitle">([^<]*)<\/p>/)?.[1], escaped(data.intro[lang]), `${where} : intro`);
   const wa = waHref(pageWaInput({ city: cid }, HE_SERVICES, HE_CITIES));
   assert.ok(decodeURIComponent(wa).endsWith(`אשמח לקבל הצעת מחיר ב${data.name.he}.`), `${where} : message WhatsApp`);
   const quote = `${PAGE_HREFS.contact[lang]}?city=${cid}`;
-  const heroLinks = [...hero.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)];
+  // Liens du héros après le fil d'Ariane.
+  const heroLinks = [...hero.slice(hero.indexOf('<h1')).matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)];
   assert.equal(heroLinks.length, 3, `${where} : liens du héros`);
   assertTextLink(heroLinks[0], 'tel:+972509565669', escaped(dict['action.call']), 'call_click', 'hero', `${where} : Appeler`);
   assertTextLink(heroLinks[1], wa, escaped(dict['action.whatsapp']), 'whatsapp_click', 'hero', `${where} : WhatsApp`);
@@ -1509,24 +1546,107 @@ function assertCity(html, cid, lang) {
   // Bloc contact : WhatsApp avec la ville, « Laisser ses coordonnées » avec ?city=.
   const band = main.slice(main.indexOf('<section class="band"'));
   const bandLinks = [...band.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)];
-  assert.equal(bandLinks.length, 4, `${where} : liens du bloc`);
-  assertTextLink(bandLinks[2], wa, dict['action.whatsapp'], 'whatsapp_click', 'contact_band', `${where} : bloc WhatsApp`);
-  assertTextLink(bandLinks[3], quote, escaped(dict['contact-band.leave-details']), undefined, undefined, `${where} : bloc leave-details`);
+  assert.equal(bandLinks.length, 5, `${where} : liens du bloc`);
+  assertBandZone(bandLinks[0], lang, where);
+  assertTextLink(bandLinks[3], wa, dict['action.whatsapp'], 'whatsapp_click', 'contact_band', `${where} : bloc WhatsApp`);
+  assertTextLink(bandLinks[4], quote, escaped(dict['contact-band.leave-details']), undefined, undefined, `${where} : bloc leave-details`);
   // Les liens WhatsApp de la page (héros, barre mobile, bloc) contiennent « ב{nom hébreu} » encodé ; aucun autre message.
   const cityEncoded = encodeURIComponent(`ב${data.name.he}`);
   const waLinks = [...html.matchAll(/href="(https:\/\/wa\.me\/[^"]*)"/g)].map((m) => m[1]);
   assert.equal(waLinks.length, 3, `${where} : liens WhatsApp`);
   for (const href of waLinks) assert.ok(href.includes(cityEncoded), `${where} : ${href} sans la ville`);
   if (cid === 'modiin') assert.ok(waLinks.every((href) => href.includes('%D7%91%D7%9E%D7%95%D7%93%D7%99%D7%A2%D7%99%D7%9F')), `${where} : « במודיעין » encodé`);
-  // Aucun lien vers Zones (areas désactivée) ; liens Contact de la page avec ?city=.
+  // Story 4.4 : liens vers Zones permis (fil d'Ariane, header, bloc contact, footer) ; liens Contact avec ?city=.
   const hrefs = [...html.matchAll(/\shref="([^"]*)"/g)].map((m) => m[1]);
-  assert.ok(!hrefs.some((h) => LANGS.some((l) => h === PAGE_HREFS.areas[l] || h.startsWith(`${PAGE_HREFS.areas[l]}#`))), `${where} : lien vers Zones`);
+  assert.ok(hrefs.includes(`${PAGE_HREFS.areas[lang]}#${region.anchor}`), `${where} : lien vers la région sur Zones`);
   assert.deepEqual(hrefs.filter((h) => h.startsWith(`${PAGE_HREFS.contact[lang]}?`)), [quote, quote], `${where} : liens Contact ?city=`);
+}
+
+/**
+ * Story 4.4 (FR8, UX-DR22, UX-DR23, AD-6, D2, D6) : page Zones en `lang`. En-tête (h1, sous-titre), une tuile par
+ * région dans l'ordre des données (h2 porteur de l'ancre, damier de la spine, villes en lignes entièrement
+ * cliquables, « autres yishouvim » en placeholder seulement en Judée-Samarie), phrase d'impasse + Appeler › (tel:
+ * mesuré, emplacement `tile`), puis bloc contact.
+ */
+const REGION_TONES = { wide: ['light', 'dark', 'dark', 'light'], narrow: ['light', 'dark', 'light', 'dark'] };
+function assertAreas(html, lang, out) {
+  const where = `areas (${lang})`;
+  const dict = I18N[lang];
+  const main = (html.match(/<main id="content"[^>]*>([\s\S]*?)<\/main>/)?.[1] ?? '').replace(/ data-astro-cid-[\w-]+(?:="")?/g, '');
+  // Ordre de <main> : en-tête, section des tuiles (aria-label), bloc contact ; rien d'autre au premier niveau.
+  const top = [...main.matchAll(/<section class="([^"]*)"/g)].map((m) => m[1]);
+  assert.deepEqual(top, ['head', 'tiles reveal', 'tile', 'tile', 'tile', 'tile', 'band'], `${where} : sections de <main>`);
+  // Un seul h1, puis un h2 par région (ancres dans l'ordre), puis le h2 du bloc contact ; aucun saut de titre.
+  assert.equal(html.match(/<h1[\s>]/g)?.length, 1, `${where} : <h1>`);
+  const levels = [...main.matchAll(/<h([1-6])[\s>]/g)].map((m) => Number(m[1]));
+  assert.deepEqual(levels, [1, 2, 2, 2, 2, 2], `${where} : niveaux de titres`);
+  const head = main.match(/^<section class="head" aria-labelledby="areas-title">([\s\S]*?)<\/section>/)?.[1] ?? '';
+  assert.equal(head.match(/^<h1 id="areas-title" class="title">([^<]*)<\/h1>/)?.[1], escaped(dict['areas.title']), `${where} : h1`);
+  assert.equal(head.match(/<\/h1><p class="subtitle">([^<]*)<\/p>$/)?.[1], escaped(dict['areas.subtitle']), `${where} : sous-titre`);
+  const section = main.match(/<section class="tiles reveal" aria-label="([^"]*)"><div class="grid">([\s\S]*?)<\/div>(<p class="missing">[\s\S]*?<\/p>)<\/section>/);
+  assert.ok(section, `${where} : section des tuiles`);
+  assert.equal(section[1], dict['areas.tiles-label'], `${where} : aria-label des tuiles`);
+  const tiles = [...section[2].matchAll(/<section class="tile"([^>]*)>([\s\S]*?)<\/section>/g)];
+  assert.equal(tiles.length, AREAS.regions.length, `${where} : une tuile par région`);
+  assert.deepEqual(AREAS.regions.map((r) => r.anchor), ['jerusalem-area', 'center-shfela', 'south', 'judea-samaria'], `${where} : ancres`);
+  let cityLinks = 0;
+  AREAS.regions.forEach((region, i) => {
+    const at = `${where} : tuile ${region.id}`;
+    const [, attrs, body] = tiles[i];
+    // Damier D6 (pas le canvas) : 2 colonnes clair/sombre/sombre/clair, 1 colonne alternée ; 4 régions → aucun span.
+    assert.equal(attr(`<section${attrs}>`, 'data-tone-wide'), REGION_TONES.wide[i], `${at} : ton 2 colonnes`);
+    assert.equal(attr(`<section${attrs}>`, 'data-tone-narrow'), REGION_TONES.narrow[i], `${at} : ton 1 colonne`);
+    assert.ok(!attrs.includes('data-span'), `${at} : data-span`);
+    assert.ok(!/\sstyle=/.test(attrs), `${at} : style inline`);
+    // Titre non cliquable porteur de l'ancre, puis la liste.
+    assert.equal(body.match(/^<h2 id="([^"]*)" class="region-title">([^<]*)<\/h2>/)?.slice(1).join('|'), `${region.anchor}|${escaped(region.name[lang])}`, `${at} : h2`);
+    const list = body.match(/<\/h2><ul role="list" class="cities">([\s\S]*)<\/ul>$/)?.[1];
+    assert.ok(list !== undefined, `${at} : liste de villes`);
+    const items = list.match(/<li>[\s\S]*?<\/li>/g) ?? [];
+    const cities = AREAS.cities.filter((c) => c.region === region.id);
+    const rows = cities.map((c) => `<li><a href="${PAGE_HREFS[`city:${c.id}`][lang]}" class="city-row"><span class="city-name">${escaped(c.name[lang])}</span><span aria-hidden="true">›</span></a></li>`);
+    // D2 : « autres yishouvim » en dernière ligne de Judée-Samarie seulement, sans lien ni chevron.
+    if (region.id === 'judea-samaria') rows.push(`<li><span class="city-row"><span data-placeholder>[${escaped(dict['placeholder.other-settlements'])}]</span></span></li>`);
+    assert.deepEqual(items, rows, `${at} : lignes`);
+    assert.equal(region.others, region.id === 'judea-samaria', `${at} : others`);
+    assert.equal(list.match(/<a\b/g)?.length, cities.length, `${at} : un seul <a> par ville`);
+    cityLinks += cities.length;
+  });
+  assert.equal(cityLinks, 15, `${where} : 15 liens de ville`);
+  assert.equal(main.match(/data-placeholder/g)?.length, 1, `${where} : un seul placeholder (Judée-Samarie)`);
+  // Phrase d'impasse : texte, puis Appeler › (tel: mesuré, emplacement tile, ton clair).
+  const missing = section[3].match(/^<p class="missing">([^<]*) (<a\b([^>]*)>([\s\S]*?)<\/a>)<\/p>$/);
+  assert.equal(missing?.[1], escaped(dict['areas.missing']), `${where} : phrase d'impasse`);
+  assertTextLink([missing[2], missing[3], missing[4]], 'tel:+972509565669', escaped(dict['action.call']), 'call_click', 'tile', `${where} : Appeler de l'impasse`);
+  assert.match(missing[3], /\sclass="text-link light"/, `${where} : ton clair`);
+  // Bloc contact après les tuiles : lien zone vers Zones (cette page), WhatsApp générique, coordonnées sans paramètre.
+  const band = main.slice(main.indexOf('<section class="band"'));
+  assert.ok(main.indexOf('<section class="band"') > main.indexOf('<p class="missing">'), `${where} : bloc contact après la phrase`);
+  const bandLinks = [...band.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)];
+  assert.equal(bandLinks.length, 5, `${where} : liens du bloc`);
+  assertBandZone(bandLinks[0], lang, where);
+  assertTextLink(bandLinks[3], waHref(), escaped(dict['action.whatsapp']), 'whatsapp_click', 'contact_band', `${where} : bloc WhatsApp`);
+  assertTextLink(bandLinks[4], PAGE_HREFS.contact[lang], escaped(dict['contact-band.leave-details']), undefined, undefined, `${where} : bloc leave-details`);
+  // CSS servie : 1 colonne, 2 colonnes à 960px, span pleine largeur, tons sombres lus sur les attributs, tailles.
+  const flat = servedCss(html, out).replace(/\s+/g, '').replace(/\[data-astro-cid-[\w-]+\]/g, '');
+  assert.match(flat, /\.grid\{[^}]*grid-template-columns:minmax\(0,1fr\)/, `${where} : 1 colonne`);
+  assert.match(flat, /@media\(width>=960px\)\{\.grid\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)\}\.tile\{min-block-size:var\(--region-tile-min\)\}\.tile\[data-span\]\{grid-column:1\/-1\}\.tile\[data-tone-wide=dark\]\{--tile-bg:var\(--color-navy-deep\);--tile-ink:var\(--color-white\);--tile-line:var\(--color-line-dark\);--focus-ring:var\(--color-focus-ring-dark\)\}/, `${where} : 2 colonnes à 960px`);
+  assert.match(flat, /@media\(width<960px\)\{\.tile\{--tile-pad-block:var\(--region-tile-pad-tablet\);--tile-pad-inline:var\(--region-tile-pad-tablet\)\}\.tile\[data-tone-narrow=dark\]\{--tile-bg:var\(--color-navy-deep\);--tile-ink:var\(--color-white\);--tile-line:var\(--color-line-dark\);--focus-ring:var\(--color-focus-ring-dark\)\}/, `${where} : 1 colonne sous 960px`);
+  assert.match(flat, /@media\(width<700px\)\{\.tile\{--tile-pad-block:var\(--region-tile-pad-mobile-block\);--tile-pad-inline:var\(--region-tile-pad-mobile-inline\)\}/, `${where} : padding mobile`);
+  assert.match(flat, /\.region-title\{[^}]*scroll-margin-block-start:var\(--tile-pad-block\)/, `${where} : ancre sous le header`);
+  assert.match(flat, /\.city-row\{[^}]*min-block-size:var\(--row-min-height\)/, `${where} : lignes ≥ 56px`);
 }
 
 /** Story 1.9 (FR39), stories 2.1, 3.1 à 3.4 : sitemap dans l'ordre du registre (ids triés : Caméras, Contact,
  * Entrepreneurs, accueil, Interphone, Réseaux, Maison connectée, Détecteurs ; 4 <url> chacun, 32 au total,
  * 5 xhtml:link chacun), robots.txt, icônes et manifeste. */
+// Story 4.4 : Zones, lue par le parseur YAML (titre fr entre guillemets doubles) ; <title> échappé, description en
+// attribut entre guillemets doubles (apostrophe non échappée).
+const AREAS_META = parse(readFileSync(join(ROOT, 'src/content/pages/areas.yaml'), 'utf8')).meta;
+META.areas = {
+  title: Object.fromEntries(LANGS.map((lang) => [lang, escaped(AREAS_META.title[lang])])),
+  description: Object.fromEntries(LANGS.map((lang) => [lang, AREAS_META.description[lang]])),
+};
 // Story 4.1 : titre (city.meta-title) et description (intro) des pages ville, comme ceux des pages fixes.
 for (const cid of CITY_IDS) {
   const { name, intro } = CITY_DATA[cid];
@@ -1536,14 +1656,15 @@ for (const cid of CITY_IDS) {
     description: Object.fromEntries(LANGS.map((lang) => [lang, intro[lang]])),
   };
 }
-// Story 4.1 : puis les pages ville, dans l'ordre région puis ville (registre : pages fixes, puis villes) ; Zones absente.
-const SITEMAP_IDS = ['cameras', 'contact', 'contractors', 'home', 'intercom', 'networks', 'smart-home', 'smoke-detectors', ...CITY_IDS.map((cid) => `city:${cid}`)];
+// Story 4.1 : puis les pages ville, dans l'ordre région puis ville (registre : pages fixes, puis villes). Story 4.4 :
+// Zones (`areas`, première des pages fixes triées par id).
+const SITEMAP_IDS = ['areas', 'cameras', 'contact', 'contractors', 'home', 'intercom', 'networks', 'smart-home', 'smoke-detectors', ...CITY_IDS.map((cid) => `city:${cid}`)];
 function assertSeoFiles(out, site, indexable) {
   const xml = readFileSync(join(out, 'sitemap.xml'), 'utf8');
   const blocks = [...xml.matchAll(/<url>([\s\S]*?)<\/url>/g)].map((m) => m[1]);
   assert.equal(blocks.length, SITEMAP_IDS.length * 4, 'sitemap : <url>');
-  assert.equal(blocks.length, 92, 'sitemap : <url> (8 pages fixes et 15 villes × 4 langues)');
-  assert.ok(!LANGS.some((l) => xml.includes(`/${encodeURIComponent(AREAS_SLUGS[l])}/<`)), 'sitemap : Zones');
+  assert.equal(blocks.length, 96, 'sitemap : <url> (9 pages fixes et 15 villes × 4 langues)');
+  assert.ok(LANGS.every((l) => xml.includes(`/${encodeURIComponent(AREAS_SLUGS[l])}/<`)), 'sitemap : Zones');
   blocks.forEach((block, i) => {
     const hrefs = PAGE_HREFS[SITEMAP_IDS[Math.floor(i / 4)]];
     const lang = LANGS[i % 4];
@@ -1561,9 +1682,9 @@ function assertSeoFiles(out, site, indexable) {
   assert.deepEqual(manifest.icons, [{ src: '/rs-icon-512.png', sizes: '512x512', type: 'image/png' }], 'manifeste : icône 512');
 }
 
-test('build de branche : 4 accueils complets (tuiles de services) + 4 Contact + 4 Caméras + 4 Détecteurs + 4 Maison connectée + 4 Réseaux + 4 Interphone + 4 Entrepreneurs + 60 pages ville + 4 path-probe, layout Base (lang/dir, #rs-data, évitement, repères, hreflang relatifs), _redirects', { timeout: 120_000 }, () => {
+test('build de branche : 4 accueils complets (tuiles de services) + 4 Contact + 4 Caméras + 4 Détecteurs + 4 Maison connectée + 4 Réseaux + 4 Interphone + 4 Entrepreneurs + 4 Zones + 60 pages ville + 4 path-probe, layout Base (lang/dir, #rs-data, évitement, repères, hreflang relatifs), _redirects', { timeout: 120_000 }, () => {
   const out = build({});
-  assert.deepEqual(indexFiles(out), [...HOMES, ...CONTACTS, ...CAMERAS, ...SMOKES, ...SMARTS, ...NETWORKS, ...INTERCOMS, ...CONTRACTORS, ...CITY_FILES, ...PROBES].sort());
+  assert.deepEqual(indexFiles(out), [...HOMES, ...CONTACTS, ...CAMERAS, ...SMOKES, ...SMARTS, ...NETWORKS, ...INTERCOMS, ...CONTRACTORS, ...AREAS_FILES, ...CITY_FILES, ...PROBES].sort());
   assert.ok(existsSync(join(out, '_redirects')), '_redirects absent');
   assert.ok(!existsSync(join(out, 'index.html')), 'index.html racine présent');
   assert.deepEqual(Object.keys(titles), LANGS);
@@ -1612,7 +1733,13 @@ test('build de branche : 4 accueils complets (tuiles de services) + 4 Contact + 
     assertLayout(html, 'contractors', LANGS[i], out);
     assertContractors(html, LANGS[i], out);
   }
-  // Story 4.1 : 2 villes × 4 langues sous le slug de `areas`, qui n'est pas générée.
+  // Story 4.4 : page Zones dans les 4 langues.
+  for (const [i, file] of AREAS_FILES.entries()) {
+    const html = readFileSync(join(out, file), 'utf8');
+    assertLayout(html, 'areas', LANGS[i], out);
+    assertAreas(html, LANGS[i], out);
+  }
+  // Stories 4.1, 4.2 : 15 villes × 4 langues sous le slug de `areas`.
   for (const cid of CITY_IDS) {
     for (const lang of LANGS) {
       const html = readFileSync(join(out, lang, AREAS_SLUGS[lang], CITY_DATA[cid].slugs[lang], 'index.html'), 'utf8');
@@ -1620,14 +1747,13 @@ test('build de branche : 4 accueils complets (tuiles de services) + 4 Contact + 
       assertCity(html, cid, lang);
     }
   }
-  assert.ok(!LANGS.some((lang) => existsSync(join(out, lang, AREAS_SLUGS[lang], 'index.html'))), 'page Zones générée');
   assertNotFoundPages(out);
   assertSeoFiles(out, '', false);
 });
 
-test('build de main indexable avec SITE_URL : 4 accueils complets (tuiles de services) + 4 Contact + 4 Caméras + 4 Détecteurs + 4 Maison connectée + 4 Réseaux + 4 Interphone + 4 Entrepreneurs + 60 pages ville, sans noindex, canonique et hreflang absolus', { timeout: 120_000 }, () => {
+test('build de main indexable avec SITE_URL : 4 accueils complets (tuiles de services) + 4 Contact + 4 Caméras + 4 Détecteurs + 4 Maison connectée + 4 Réseaux + 4 Interphone + 4 Entrepreneurs + 4 Zones + 60 pages ville, sans noindex, canonique et hreflang absolus', { timeout: 120_000 }, () => {
   const out = build({ WORKERS_CI_BRANCH: 'main', DOMAIN_LIVE: 'true', SITE_URL: 'https://rs.example' });
-  assert.deepEqual(indexFiles(out), [...HOMES, ...CONTACTS, ...CAMERAS, ...SMOKES, ...SMARTS, ...NETWORKS, ...INTERCOMS, ...CONTRACTORS, ...CITY_FILES].sort());
+  assert.deepEqual(indexFiles(out), [...HOMES, ...CONTACTS, ...CAMERAS, ...SMOKES, ...SMARTS, ...NETWORKS, ...INTERCOMS, ...CONTRACTORS, ...AREAS_FILES, ...CITY_FILES].sort());
   assert.ok(!existsSync(join(out, 'index.html')));
   for (const lang of LANGS) {
     const html = readFileSync(join(out, lang, 'index.html'), 'utf8');
@@ -1669,6 +1795,11 @@ test('build de main indexable avec SITE_URL : 4 accueils complets (tuiles de ser
     const html = readFileSync(join(out, file), 'utf8');
     assertLayout(html, 'contractors', LANGS[i], out, 'https://rs.example', true);
     assertContractors(html, LANGS[i], out);
+  }
+  for (const [i, file] of AREAS_FILES.entries()) {
+    const html = readFileSync(join(out, file), 'utf8');
+    assertLayout(html, 'areas', LANGS[i], out, 'https://rs.example', true);
+    assertAreas(html, LANGS[i], out);
   }
   for (const cid of CITY_IDS) {
     for (const lang of LANGS) {

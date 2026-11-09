@@ -100,5 +100,10 @@
   "city.neighbors.title": "גם ביישובים שמסביב",
   "city.reviews.label": "חוות דעת מ{city} והסביבה",
   "city.reviews.source": "מידרג",
-  "placeholder.neighbors": "יישובים בסביבה"
+  "placeholder.neighbors": "יישובים בסביבה",
+  "areas.title": "אזורי שירות",
+  "areas.subtitle": "מבאר שבע ועד ירושלים, כולל היישובים.",
+  "areas.tiles-label": "אזורים",
+  "areas.missing": "לא מצאתם את היישוב שלכם?",
+  "placeholder.other-settlements": "יישובים נוספים"
 }

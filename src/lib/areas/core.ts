@@ -11,6 +11,8 @@ export interface RegionData {
   /** Ancre de la région sur la page Zones (`#jerusalem-area`), identique dans les 4 langues. */
   anchor: string;
   order: number;
+  /** Story 4.4 (D2) : dernière ligne « autres yishouvim » en placeholder sur la tuile de la page Zones. */
+  others?: boolean;
 }
 
 export interface CityData {
@@ -29,6 +31,8 @@ export interface CityData {
 
 export interface Region extends RegionData {
   id: string;
+  /** Toujours posé : `false` si la source ne le donne pas (YAML brut au lint). */
+  others: boolean;
 }
 
 export interface City extends CityData {
@@ -67,7 +71,7 @@ export function buildAreas(
       errors.push(`src/content/regions/${id}.yaml : région « ${id} » déclarée deux fois`);
       continue;
     }
-    regionById.set(id, { id, ...data });
+    regionById.set(id, { id, ...data, others: data.others === true });
     const other = anchors.get(data.anchor);
     if (other !== undefined) errors.push(`src/content/regions/${id}.yaml : ancre « ${data.anchor} » déjà prise par « ${other} »`);
     else anchors.set(data.anchor, id);
@@ -100,6 +104,28 @@ export function buildAreas(
       return region ?? fail([`région inconnue « ${id} »`]);
     },
   };
+}
+
+// — Story 4.4 (FR8, UX-DR23, décision D6 de l'epic 4) : damier des tuiles de région de la page Zones —
+
+export type Tone = 'light' | 'dark';
+
+export interface RegionTone {
+  /** Ton sur la grille 2 colonnes (≥ 960px) : `(ligne + colonne) % 2`, la tuile 1 claire. */
+  wide: Tone;
+  /** Ton sur 1 colonne (< 960px) : alternance simple, la tuile 1 claire. */
+  narrow: Tone;
+  /** Dernière tuile d'un nombre impair : pleine largeur sur 2 colonnes. */
+  span: boolean;
+}
+
+/** Tons des `count` tuiles, dans l'ordre des régions (D6 : règle de la spine, pas le canvas Zones). */
+export function regionTones(count: number): RegionTone[] {
+  return Array.from({ length: Math.max(0, Math.trunc(count)) }, (_, i) => ({
+    wide: (Math.floor(i / 2) + (i % 2)) % 2 === 0 ? 'light' : 'dark',
+    narrow: i % 2 === 0 ? 'light' : 'dark',
+    span: count % 2 === 1 && i === count - 1,
+  }));
 }
 
 /** Sources du registre de routes (AD-2) : `city:{id}` sous `areas`, active même tant que `areas` est désactivée. */

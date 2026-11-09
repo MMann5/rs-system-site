@@ -7,3 +7,5 @@ name:
   fr: 'Judée-Samarie'
 anchor: 'judea-samaria'
 order: 4
+# Story 4.4 (D2) : dernière ligne de la tuile sur Zones = « autres yishouvim » en placeholder (liste à valider par Ran).
+others: true

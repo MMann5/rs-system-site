@@ -1,12 +1,12 @@
 // Story 4.1 (FR9, AD-2, AD-4) : régions et villes — cœur pur (validation, tri, sources du registre), schémas Zod
-// et contenus du dépôt (story 4.2 : les 15 villes et leurs 4 régions).
+// et contenus du dépôt (story 4.2 : les 15 villes et leurs 4 régions). Story 4.4 : damier `regionTones`, champ `others`.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
-import { buildAreas, buildReviews, citySources, CITY_ID_PREFIX, MAX_REVIEWS_PER_CITY } from '../src/lib/areas/core.ts';
+import { buildAreas, buildReviews, citySources, CITY_ID_PREFIX, MAX_REVIEWS_PER_CITY, regionTones } from '../src/lib/areas/core.ts';
 import { citySchema, regionSchema, reviewSchema } from '../src/lib/areas/schema.ts';
 import { buildRegistry } from '../src/lib/routes/core.ts';
 
@@ -149,9 +149,9 @@ test('intros (D1, NFR10) : phrase du canvas « התקנה ב{עיר} והסבי�
   }
 });
 
-test('areas.yaml : désactivée (story 4.4), slugs אזורים / areas / районы / zones', () => {
+test('areas.yaml : activée (story 4.4), slugs אזורים / areas / районы / zones', () => {
   const data = parse(readFileSync(join(CONTENT, 'pages/areas.yaml'), 'utf8'));
-  assert.equal(data.enabled, false);
+  assert.equal(data.enabled, true);
   assert.deepEqual(data.slugs, { he: 'אזורים', en: 'areas', ru: 'районы', fr: 'zones' });
 });
 
@@ -251,4 +251,40 @@ test('contenus (D3) : aucun avis publié, les 15 villes à reviews: []', () => {
   const files = readdirSync(join(CONTENT, 'reviews'));
   assert.deepEqual(files, ['README.md']);
   for (const { id, raw } of readDir('cities')) assert.deepEqual(raw.reviews, [], `${id} : reviews`);
+});
+
+// — Story 4.4 (FR8, UX-DR23, D2, D6) : damier des tuiles de la page Zones et ligne « autres yishouvim ». —
+
+const tones = (n) => regionTones(n).map((t) => [t.wide, t.narrow, t.span]);
+
+test('regionTones (D6) : 4 régions → 2 colonnes clair/sombre/sombre/clair, 1 colonne alternée, aucun span', () => {
+  assert.deepEqual(tones(4), [
+    ['light', 'light', false],
+    ['dark', 'dark', false],
+    ['dark', 'light', false],
+    ['light', 'dark', false],
+  ]);
+});
+
+test('regionTones (D6) : 5 régions → la 5e claire et pleine largeur ; 1 région → claire, span ; 0 → []', () => {
+  const five = regionTones(5);
+  assert.deepEqual(five.map((t) => t.wide), ['light', 'dark', 'dark', 'light', 'light']);
+  assert.deepEqual(five.map((t) => t.narrow), ['light', 'dark', 'light', 'dark', 'light']);
+  assert.deepEqual(five.map((t) => t.span), [false, false, false, false, true]);
+  assert.deepEqual(regionTones(1), [{ wide: 'light', narrow: 'light', span: true }]);
+  assert.deepEqual(regionTones(0), []);
+  // Règle de la spine : sur 2 colonnes, (ligne + colonne) % 2, hors tuile pleine largeur.
+  regionTones(8).forEach((t, i) => assert.equal(t.wide, (Math.floor(i / 2) + (i % 2)) % 2 === 0 ? 'light' : 'dark', `index ${i}`));
+});
+
+test('others (D2) : défaut false (schéma et YAML brut), true seulement pour judea-samaria dans le dépôt', () => {
+  assert.equal(regionSchema.parse({ name: four('r'), anchor: 'r', order: 1 }).others, false);
+  assert.equal(regionSchema.parse({ name: four('r'), anchor: 'r', order: 1, others: true }).others, true);
+  assert.ok(!regionSchema.safeParse({ name: four('r'), anchor: 'r', order: 1, others: 'oui' }).success, 'others non booléen');
+  // YAML brut (lint, completeness.mjs) : champ absent → false ; région sans ville → aucune ville.
+  const areas = buildAreas([region('north', 1), { id: 'west', data: { ...region('west', 2).data, others: true } }], []);
+  assert.deepEqual(areas.regions.map((r) => [r.id, r.others]), [['north', false], ['west', true]]);
+  assert.deepEqual(areas.cities.filter((c) => c.region === 'north'), []);
+  const repo = buildAreas(readDir('regions').map(({ id, raw }) => ({ id, data: regionSchema.parse(raw) })), []);
+  assert.deepEqual(repo.regions.filter((r) => r.others).map((r) => r.id), ['judea-samaria']);
 });

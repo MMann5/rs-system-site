@@ -100,5 +100,10 @@
   "city.neighbors.title": "Также в окрестных населённых пунктах",
   "city.reviews.label": "Отзывы: {city} и окрестности",
   "city.reviews.source": "Мидраг",
-  "placeholder.neighbors": "соседние населённые пункты"
+  "placeholder.neighbors": "соседние населённые пункты",
+  "areas.title": "Районы обслуживания",
+  "areas.subtitle": "От Беэр-Шевы до Иерусалима, включая поселения.",
+  "areas.tiles-label": "Районы",
+  "areas.missing": "Не нашли свой населённый пункт?",
+  "placeholder.other-settlements": "другие поселения"
 }

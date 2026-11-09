@@ -100,5 +100,10 @@
   "city.neighbors.title": "Aussi dans les localités alentour",
   "city.reviews.label": "Avis de clients à {city} et alentour",
   "city.reviews.source": "Midrag",
-  "placeholder.neighbors": "localités voisines"
+  "placeholder.neighbors": "localités voisines",
+  "areas.title": "Zones d'intervention",
+  "areas.subtitle": "De Beer-Sheva à Jérusalem, yishouvim compris.",
+  "areas.tiles-label": "Zones",
+  "areas.missing": "Votre localité n'y est pas ?",
+  "placeholder.other-settlements": "autres yishouvim"
 }

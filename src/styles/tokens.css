@@ -527,4 +527,23 @@
   --review-grid-gap: 56px;
   /* Canvas City.dc.html › figure : « gap: 16px » entre citation et légende */
   --review-gap: 16px;
+  /* — Story 4.4 : page Zones (canvas Zones.dc.html, DESIGN.md › Layout › Par point de rupture › Tuile de région) — */
+  /* Canvas Zones.dc.html › en-tête : « padding: 88px 22px 64px », « gap: 12px » entre titre et sous-titre */
+  --areas-head-pad-top: 88px;
+  --areas-head-pad-end: 64px;
+  --areas-head-gap: 12px;
+  /* DESIGN.md › Layout › Par point de rupture › Tuile de région : « padding 48px, min 360px » | « 40px » | « 32px 22px » */
+  --region-tile-pad: 48px;
+  --region-tile-pad-tablet: 40px;
+  --region-tile-pad-mobile-block: 32px;
+  --region-tile-pad-mobile-inline: 22px;
+  --region-tile-min: 360px;
+  /* Canvas Zones.dc.html › tuile : « gap: 20px » entre le titre et la liste de villes */
+  --region-tile-gap: 20px;
+  /* Canvas Zones.dc.html › ligne de ville : « padding: 14px 0 », « font-size: 20px » */
+  --city-row-pad-block: 14px;
+  --type-city-row-size: 20px;
+  /* Canvas Zones.dc.html › phrase « לא מצאתם… » : « max-width: 760px; margin: 40px auto 0 » */
+  --areas-missing-max: 760px;
+  --areas-missing-gap: 40px;
 }
