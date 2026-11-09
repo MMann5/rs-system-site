@@ -1,0 +1,75 @@
+# Maison connectée (story 3.3, FR4) : slugs des décisions de l'epic 3 ; titre « {Service} · RS SYSTEM »
+# (EXPERIENCE.md › Référencement) ; description = sous-titre + zone.
+# Textes hébreux : canvas Smart.dc.html, mot pour mot. Traductions en/ru/fr réécrites par l'agent
+# (pas mot à mot) : relecture humaine recommandée.
+slugs:
+  he: 'בית-חכם'
+  en: 'smart-home'
+  ru: 'умный-дом'
+  fr: 'maison-connectee'
+enabled: true
+meta:
+  title:
+    he: 'בית חכם · RS SYSTEM'
+    en: 'Smart home · RS SYSTEM'
+    ru: 'Умный дом · RS SYSTEM'
+    fr: 'Maison connectée · RS SYSTEM'
+  description:
+    he: 'אור, תריסים ומזגן. בלחיצה אחת, או לבד. מבאר שבע ועד ירושלים.'
+    en: 'Lights, shutters and air conditioning, with one tap or on their own. From Beer Sheva to Jerusalem.'
+    ru: 'Свет, жалюзи и кондиционер: одним нажатием или сами по себе. От Беэр-Шевы до Иерусалима.'
+    fr: 'Lumière, volets et climatisation, d’une seule touche ou tout seuls. De Beer-Sheva à Jérusalem.'
+service:
+  hero:
+    title:
+      he: 'בית חכם'
+      en: 'Smart home'
+      ru: 'Умный дом'
+      fr: 'Maison connectée'
+    subtitle:
+      he: 'אור, תריסים ומזגן. בלחיצה אחת, או לבד.'
+      en: 'Lights, shutters and air conditioning. With one tap, or on their own.'
+      ru: 'Свет, жалюзи и кондиционер. Одним нажатием или сами по себе.'
+      fr: 'Lumière, volets et climatisation. D’une seule touche, ou tout seuls.'
+    alt:
+      he: 'מתג חכם לבן על קיר בחדר שינה'
+      en: 'White smart switch on a bedroom wall'
+      ru: 'Белый умный выключатель на стене спальни'
+      fr: 'Interrupteur connecté blanc sur le mur d’une chambre'
+  trio:
+    title:
+      he: 'למי זה מתאים'
+      en: 'Who it is for'
+      ru: 'Для кого это'
+      fr: 'Pour qui'
+    items:
+      - title:
+          he: 'לבית'
+          en: 'For your home'
+          ru: 'Для дома'
+          fr: 'Pour la maison'
+        text:
+          he: 'תאורה, תריסים ומיזוג מהטלפון.'
+          en: 'Lighting, shutters and air conditioning from your phone.'
+          ru: 'Свет, жалюзи и кондиционер с телефона.'
+          fr: 'L’éclairage, les volets et la climatisation depuis le téléphone.'
+      - title:
+          he: 'לבית בבנייה'
+          en: 'For a home under construction'
+          ru: 'Для строящегося дома'
+          fr: 'Pour une maison en construction'
+        text:
+          he: 'תשתית מוכנה כבר בשלב הבנייה.'
+          en: 'The wiring is ready while the house is still being built.'
+          ru: 'Проводка готова уже на этапе строительства.'
+          fr: 'Le câblage est prêt dès le chantier.'
+      - title:
+          he: 'למשרד'
+          en: 'For the office'
+          ru: 'Для офиса'
+          fr: 'Pour le bureau'
+        text:
+          he: 'תאורה ומיזוג שנכבים לבד בסוף היום.'
+          en: 'Lights and air conditioning that switch off by themselves at the end of the day.'
+          ru: 'Свет и кондиционер сами выключаются в конце дня.'
+          fr: 'Lumière et climatisation qui s’éteignent seules en fin de journée.'

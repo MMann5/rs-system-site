@@ -1,0 +1,444 @@
+---
+// FR23, UX-DR17, UX-DR18, UX-DR37, AD-9 (story 3.1) : tuile (DESIGN.md › Components › Tuile claire / Tuile
+// sombre ; canvas Cameras.dc.html). Jamais cliquable en bloc : seuls ses liens « › » le sont (0 à 2), l'image
+// n'a pas de lien. Titre de niveau h2 ou h3, sur-titre facultatif, texte dans le flux (la tuile grandit avec
+// lui : min-block-size seulement, jamais de height) ; overflow: clip sur le cadre de la photo seulement.
+// - `dark` : fond tile-night ou navy-deep (lisible si la photo ne charge pas), photo plein cadre sous scrim,
+//   texte blanc en haut, calque de maintien derrière le bloc de texte (comme HeroPhoto), data-surface="photo".
+// - `light` : fond surface-alt, titre tile-title navy centré, liens clairs, photo sous le texte qui remplit le reste.
+// Ordre du DOM : texte puis photo (ordre de lecture), la photo de la tuile sombre passant dessous par z-index.
+// Mouvement (uniquement sous @supports (animation-timeline: view())) : bloc de texte révélé (.reveal) ;
+// photo dézoomée 1,14 → 1 par défaut, ou parallaxe (`motion="parallax"`, photo de la grue). Coupé par
+// prefers-reduced-motion (base.css).
+// Story 3.3 (UX-DR17, UX-DR18) : tuile immeuble pleine largeur (Interphone) : point focal `building`, taille
+// `building` (620px, 560px sous 960px, 520px sous 700px).
+// Story 3.5 (UX-DR4, UX-DR5, UX-DR17) : tuiles de l'accueil (canvas Main.dc.html), trois tailles de plus :
+// - `feature` (claire, caméras) : titre tile-title, texte subhead, photo encadrée de 1100px au plus × 520px,
+//   16:9 sous 960px, 4:5 sous 700px, à 36px sous les liens ;
+// - `crane-home` (sombre, grue) : titre tile-title, texte subhead, 720px (600px sous 960px), 12px au-dessus ;
+// - `grid` (claire ou sombre, dans la grille de Home.astro) : sans marge latérale, titre grid-tile-title, texte
+//   20px ; sombre 600 / 560 / 520px ; claire 600px au-dessus de 960px (photo qui remplit le reste), sinon photo
+//   16:9 puis 4:3 sous le texte, à 28px des liens.
+// Points focaux `intercom`, `switch`, `network` en plus ; `sizes` de la photo choisi par la taille.
+// Correctif 3.1 (D5, recette) : sous 700px, parallaxe plus douce (jetons --drift-*-mobile) pour la source
+// téléphone de la grue (crane-mast-portrait.jpg, centrée sur le mât et la cabine).
+import type { ImageMetadata } from 'astro';
+import { FEATURE_TILE_PHOTO_SIZES, GRID_TILE_PHOTO_SIZES, TILE_PHOTO_SIZES } from '../lib/photos';
+import ResponsivePhoto from './ResponsivePhoto.astro';
+import TextLink from './TextLink.astro';
+
+export interface TileLink {
+  href: string;
+  label: string;
+  track?: string;
+  placement?: string;
+}
+
+interface Props {
+  variant: 'light' | 'dark';
+  /** Id du titre (aria-labelledby de la tuile). */
+  id: string;
+  level: 'h2' | 'h3';
+  eyebrow?: string | undefined;
+  title: string;
+  text?: string | undefined;
+  links?: readonly TileLink[];
+  /** `focus` : point focal, jeton --photo-focus-{focus} de tokens.css. */
+  photo: {
+    src: ImageMetadata;
+    portrait?: ImageMetadata | undefined;
+    alt: string;
+    focus: 'dome' | 'crane' | 'building' | 'intercom' | 'switch' | 'network';
+  };
+  /** Tuile sombre : fond et scrim (jetons --color-{background}, --scrim-{scrim}). */
+  background?: 'tile-night' | 'navy-deep';
+  scrim?: 'crane' | 'tile' | 'network';
+  motion?: 'zoom' | 'parallax';
+  /**
+   * Hauteur minimale par point de rupture : `crane` = tuile grue de Caméras (640px, 600px sous 960px) ;
+   * `building` = tuile immeuble pleine largeur (620px, 560px sous 960px, 520px sous 700px) ;
+   * `feature` = tuile claire caméras de l'accueil ; `crane-home` = tuile grue de l'accueil (720px, 600px sous 960px) ;
+   * `grid` = tuile de la grille de l'accueil (voir l'en-tête).
+   */
+  size?: 'crane' | 'building' | 'feature' | 'crane-home' | 'grid';
+}
+
+const { variant, id, level, eyebrow, title, text, links = [], photo, background = 'tile-night', scrim = 'tile', motion = 'zoom', size } = Astro.props;
+if (links.length > 2) throw new Error(`Tile « ${id} » : ${links.length} liens (2 au plus)`);
+const Heading = level;
+const dark = variant === 'dark';
+const tone = dark ? 'photo' : 'light';
+const sizes = size === 'feature' ? FEATURE_TILE_PHOTO_SIZES : size === 'grid' ? GRID_TILE_PHOTO_SIZES : TILE_PHOTO_SIZES;
+const vars = [`--photo-position: var(--photo-focus-${photo.focus})`, dark ? `--tile-bg: var(--color-${background}); --tile-scrim: var(--scrim-${scrim})` : ''].filter(Boolean).join('; ');
+---
+<section class:list={['tile', variant, size]} aria-labelledby={id} data-surface={dark ? 'photo' : undefined} style={vars}>
+  <div class="content reveal">
+    {eyebrow && <p class="eyebrow">{eyebrow}</p>}
+    <Heading id={id} class="title">{title}</Heading>
+    {text && <p class="text">{text}</p>}
+    {links.length > 0 && (
+      <div class="links">
+        {links.map((link) => <TextLink href={link.href} label={link.label} tone={tone} track={link.track} placement={link.placement} />)}
+      </div>
+    )}
+  </div>
+  <div class="media">
+    <ResponsivePhoto src={photo.src} portrait={photo.portrait} alt={photo.alt} sizes={sizes} class={`photo ${motion}`} />
+  </div>
+  {dark && <div class="scrim"></div>}
+</section>
+
+<style>
+  /* Seuils (les @media ne lisent pas les tokens) : --bp-menu 960px, --bp-mobile-bar 700px. */
+  .tile {
+    position: relative;
+    isolation: isolate;
+    container-type: inline-size;
+    box-sizing: border-box;
+    margin-inline: var(--tile-gutter);
+  }
+
+  .crane {
+    min-block-size: var(--tile-crane-min);
+  }
+
+  @media (width < 960px) {
+    .crane {
+      min-block-size: var(--tile-crane-min-tablet);
+    }
+  }
+
+  .building {
+    min-block-size: var(--tile-building-min);
+  }
+
+  @media (width < 960px) {
+    .building {
+      min-block-size: var(--tile-building-min-tablet);
+    }
+  }
+
+  @media (width < 700px) {
+    .building {
+      min-block-size: var(--tile-building-min-mobile);
+    }
+  }
+
+  .crane-home {
+    min-block-size: var(--tile-crane-min-home);
+    margin-block-start: var(--tile-gutter);
+  }
+
+  @media (width < 960px) {
+    .crane-home {
+      min-block-size: var(--tile-crane-min-tablet);
+    }
+  }
+
+  .content {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--stack-gap);
+    max-inline-size: var(--container);
+    margin-inline: auto;
+    padding-block-start: var(--tile-pad-top);
+    padding-inline: var(--page-gutter);
+    text-align: center;
+  }
+
+  @media (width < 960px) {
+    .content {
+      padding-block-start: var(--hero-pad-top-tablet);
+    }
+  }
+
+  @media (width < 700px) {
+    .content {
+      padding-block-start: var(--hero-pad-top-mobile);
+    }
+  }
+
+  .eyebrow {
+    margin: 0;
+    font-size: var(--type-eyebrow-size);
+    font-weight: var(--type-eyebrow-weight);
+    line-height: var(--type-body-leading);
+  }
+
+  .title {
+    margin: 0;
+    font-size: var(--type-section-title-size);
+    font-weight: var(--type-section-title-weight);
+    line-height: var(--type-section-title-leading);
+  }
+
+  .text {
+    margin: 0;
+    font-size: var(--type-tile-text-size);
+    font-weight: var(--type-body-weight);
+    line-height: var(--type-subhead-leading);
+  }
+
+  .links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    column-gap: var(--link-gap);
+  }
+
+  /* Seul cadre qui rogne : celui de la photo, jamais le texte. `clip` et non `hidden` : un conteneur de défilement
+   * deviendrait la source de view() de la photo, et ce cadre ne défile jamais (parallaxe et dézoom figés). */
+  .media {
+    overflow: clip;
+  }
+
+  .media :global(picture) {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+  }
+
+  .media :global(.photo) {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+    object-position: var(--photo-position);
+  }
+
+  /* — Sombre : photo plein cadre sous scrim, texte en haut, blanc — */
+  .dark {
+    /* Contient le calque de maintien (--scrim-hold-extend sous le texte) : il ne déborde jamais sur le bloc suivant. */
+    padding-block-end: var(--scrim-hold-extend);
+    background-color: var(--tile-bg);
+    color: var(--color-white);
+  }
+
+  .dark .media {
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+  }
+
+  .scrim {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: var(--tile-scrim);
+  }
+
+  /* Calque de maintien (UX-DR5) : du haut du bloc jusqu'à son bas + --scrim-hold-extend, derrière le texte,
+   * sur toute la largeur de la tuile (le bloc est centré : 50 % du bloc − 50cqi rejoint les deux bords). */
+  .dark .content::before {
+    content: "";
+    position: absolute;
+    inset-block: 0 calc(-1 * var(--scrim-hold-extend));
+    inset-inline: calc(50% - 50cqi);
+    z-index: -1;
+    background: var(--scrim-hold);
+  }
+
+  .dark .eyebrow,
+  .dark .title {
+    color: var(--color-white);
+  }
+
+  .dark .text {
+    color: var(--color-subhead-on-photo);
+  }
+
+  /* — Claire : texte navy centré, photo sous le texte qui remplit le reste de la tuile — */
+  .light {
+    display: flex;
+    flex-direction: column;
+    background-color: var(--color-surface-alt);
+    color: var(--color-navy);
+  }
+
+  .light .content {
+    inline-size: 100%;
+    box-sizing: border-box;
+  }
+
+  .light .title {
+    font-size: var(--type-tile-title-size);
+    font-weight: var(--type-tile-title-weight);
+    line-height: var(--type-tile-title-leading);
+  }
+
+  .light .text {
+    color: var(--color-ink-muted);
+  }
+
+  .light .media {
+    inline-size: 100%;
+  }
+
+  /* — Tailles de l'accueil (story 3.5). Après les règles de variante : mêmes spécificités, elles l'emportent. — */
+  .crane-home .title,
+  .feature .title {
+    font-size: var(--type-tile-title-size);
+    font-weight: var(--type-tile-title-weight);
+    line-height: var(--type-tile-title-leading);
+  }
+
+  .crane-home .text,
+  .feature .text {
+    font-size: var(--type-subhead-size);
+    font-weight: var(--type-subhead-weight);
+    line-height: var(--type-subhead-leading);
+  }
+
+  /* Tuile claire caméras : cadre photo 1100 × 520 entre les marges de page, 16:9 puis 4:5 (seul `block-size` permis :
+   * celui du cadre de la photo, qui ne porte pas de texte). */
+  .feature .media {
+    inline-size: min(var(--tile-feature-photo-max), 100% - 2 * var(--page-gutter));
+    block-size: var(--tile-feature-photo-height);
+    margin-block-start: var(--tile-feature-photo-gap);
+    margin-inline: auto;
+  }
+
+  @media (width < 960px) {
+    .feature .media {
+      block-size: auto;
+      aspect-ratio: var(--photo-ratio-tablet);
+    }
+  }
+
+  @media (width < 700px) {
+    .feature .media {
+      aspect-ratio: var(--photo-ratio-portrait);
+    }
+  }
+
+  /* Tuile de grille : la grille de Home.astro pose le joint et le padding, la tuile n'a pas de marge. */
+  .tile.grid {
+    margin-inline: 0;
+  }
+
+  .grid .content {
+    padding-block-start: var(--tile-grid-pad-top);
+    padding-inline: var(--space-6);
+  }
+
+  @media (width < 700px) {
+    .grid .content {
+      padding-block-start: var(--hero-pad-top-mobile);
+    }
+  }
+
+  .grid .title {
+    font-size: var(--type-grid-tile-title-size);
+    font-weight: var(--type-grid-tile-title-weight);
+    line-height: var(--type-grid-tile-title-leading);
+  }
+
+  .grid .text {
+    font-size: var(--type-grid-tile-text-size);
+  }
+
+  .grid.dark {
+    min-block-size: var(--tile-grid-min);
+  }
+
+  @media (width < 960px) {
+    .grid.dark {
+      min-block-size: var(--tile-grid-min-tablet);
+    }
+  }
+
+  @media (width < 700px) {
+    .grid.dark {
+      min-block-size: var(--tile-grid-min-mobile);
+    }
+  }
+
+  /* Claire : 600px au-dessus de 960px, la photo remplit ce que le texte laisse (sa taille propre ne compte pas :
+   * elle est posée en absolu dans son cadre) ; dessous, photo 16:9 puis 4:3 sous le texte. */
+  .grid.light .content {
+    padding-block-end: var(--tile-grid-photo-gap);
+  }
+
+  .grid.light {
+    min-block-size: var(--tile-grid-min);
+  }
+
+  .grid.light .media {
+    position: relative;
+    flex: 1 1 0;
+  }
+
+  .grid.light .media :global(picture) {
+    position: absolute;
+    inset: 0;
+  }
+
+  @media (width < 960px) {
+    .grid.light {
+      min-block-size: auto;
+    }
+
+    .grid.light .media {
+      flex: none;
+      aspect-ratio: var(--photo-ratio-tablet);
+    }
+  }
+
+  @media (width < 700px) {
+    .grid.light .media {
+      aspect-ratio: var(--photo-ratio-mobile-landscape);
+    }
+  }
+
+  /* — Mouvement au défilement (EXPERIENCE.md › Mouvement) — */
+  @supports (animation-timeline: view()) {
+    .media :global(.zoom) {
+      animation: tile-zoom var(--ease) both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 55%;
+    }
+
+    .media :global(.parallax) {
+      animation: tile-drift linear both;
+      animation-range: cover 0% cover 100%;
+    }
+
+    /* Sous 700px : parallaxe plus douce pour toute photo en parallaxe (seule la grue l'est : D5, source téléphone
+     * crane-mast-portrait.jpg, mât et cabine sous le texte). */
+    @media (width < 700px) {
+      .media :global(.parallax) {
+        --drift-from: var(--drift-from-mobile);
+        --drift-to: var(--drift-to-mobile);
+        --drift-scale: var(--drift-scale-mobile);
+      }
+    }
+
+    /* Timeline dans une règle à part (plus spécifique, donc après le raccourci) : sans valeur var(), le minifieur
+     * CSS replierait `view()` dans le raccourci `animation`, que les navigateurs rejettent en entier. */
+    .media :global(img.parallax) {
+      animation-timeline: view();
+    }
+
+    @keyframes tile-zoom {
+      from {
+        transform: scale(var(--tile-zoom-from));
+      }
+
+      to {
+        transform: none;
+      }
+    }
+
+    @keyframes tile-drift {
+      from {
+        transform: translateY(var(--drift-from)) scale(var(--drift-scale));
+      }
+
+      to {
+        transform: translateY(var(--drift-to)) scale(var(--drift-scale));
+      }
+    }
+  }
+</style>

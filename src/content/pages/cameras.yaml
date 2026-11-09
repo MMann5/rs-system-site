@@ -1,0 +1,96 @@
+# Caméras (story 3.1, FR2) : slugs des décisions de l'epic 3 ; titre « {Service} · RS SYSTEM »
+# (EXPERIENCE.md › Référencement) ; description = sous-titre + zone.
+# Textes hébreux : canvas Cameras.dc.html, mot pour mot. Traductions en/ru/fr réécrites par l'agent
+# (pas mot à mot) : relecture humaine recommandée.
+slugs:
+  he: 'מצלמות'
+  en: 'cameras'
+  ru: 'камеры'
+  fr: 'cameras'
+enabled: true
+meta:
+  title:
+    he: 'מצלמות אבטחה · RS SYSTEM'
+    en: 'Security cameras · RS SYSTEM'
+    ru: 'Камеры видеонаблюдения · RS SYSTEM'
+    fr: 'Caméras de surveillance · RS SYSTEM'
+  description:
+    he: 'רואים מה קורה בבית ובעסק. מהטלפון, מכל מקום. מבאר שבע ועד ירושלים.'
+    en: 'See what is happening at home or at work, from your phone, wherever you are. From Beer Sheva to Jerusalem.'
+    ru: 'Видно, что происходит дома и на работе, с телефона, где бы вы ни были. От Беэр-Шевы до Иерусалима.'
+    fr: 'Voyez ce qui se passe chez vous et au travail, depuis votre téléphone, où que vous soyez. De Beer-Sheva à Jérusalem.'
+service:
+  hero:
+    title:
+      he: 'מצלמות אבטחה'
+      en: 'Security cameras'
+      ru: 'Камеры видеонаблюдения'
+      fr: 'Caméras de surveillance'
+    subtitle:
+      he: 'רואים מה קורה בבית ובעסק. מהטלפון, מכל מקום.'
+      en: 'See what is happening at home or at work. From your phone, wherever you are.'
+      ru: 'Видно, что происходит дома и на работе. С телефона, где бы вы ни были.'
+      fr: 'Voyez ce qui se passe chez vous et au travail. Depuis votre téléphone, où que vous soyez.'
+    alt:
+      he: 'מצלמת כיפה מותקנת על קיר אבן'
+      en: 'Dome camera mounted on a stone wall'
+      ru: 'Купольная камера на каменной стене'
+      fr: 'Caméra dôme fixée sur un mur en pierre'
+  trio:
+    title:
+      he: 'למי זה מתאים'
+      en: 'Who it is for'
+      ru: 'Для кого это'
+      fr: 'Pour qui'
+    items:
+      - title:
+          he: 'לבית'
+          en: 'For your home'
+          ru: 'Для частного дома'
+          fr: 'Pour la maison'
+        text:
+          he: 'מצלמות בכניסה, בחצר ובחניה. צפייה מהטלפון.'
+          en: 'Cameras at the entrance, in the yard and over the parking spot. Watch from your phone.'
+          ru: 'Камеры у входа, во дворе и на парковке. Просмотр с телефона.'
+          fr: 'Des caméras à l’entrée, dans la cour et sur la place de parking. À regarder depuis le téléphone.'
+      - title:
+          he: 'לבניין'
+          en: 'For your building'
+          ru: 'Для многоквартирного дома'
+          fr: 'Pour l’immeuble'
+        text:
+          he: 'לובי, חניון וכניסות. הקלטה מסודרת לוועד הבית.'
+          en: 'Lobby, car park and entrances. Organised recordings for the residents’ committee.'
+          ru: 'Вестибюль, парковка и входы. Аккуратная запись для домового комитета.'
+          fr: 'Hall, parking et entrées. Des enregistrements bien tenus pour le comité d’immeuble.'
+      - title:
+          he: 'לעסק'
+          en: 'For your business'
+          ru: 'Для бизнеса'
+          fr: 'Pour le commerce'
+        text:
+          he: 'חנות, משרד או מחסן. רואים מה קורה גם כשסגור.'
+          en: 'Shop, office or warehouse. See what is going on even after closing.'
+          ru: 'Магазин, офис или склад. Видно, что происходит, даже когда закрыто.'
+          fr: 'Boutique, bureau ou entrepôt. Vous voyez ce qui se passe, même après la fermeture.'
+  tile:
+    eyebrow:
+      he: 'לקבלנים'
+      en: 'For contractors'
+      ru: 'Подрядчикам'
+      fr: 'Entrepreneurs'
+    title:
+      he: 'גם על העגורן.'
+      en: 'On the crane, too.'
+      ru: 'И на кране тоже.'
+      fr: 'Jusque sur la grue.'
+    text:
+      he: 'מצלמות לאתרי בנייה, כדי לראות את ההתקדמות מרחוק.'
+      en: 'Cameras for building sites, to follow progress from a distance.'
+      ru: 'Камеры для стройплощадок, чтобы следить за ходом работ издалека.'
+      fr: 'Des caméras de chantier, pour suivre l’avancement à distance.'
+    alt:
+      he: 'עגורן צריח באתר בנייה בשעת ערב'
+      en: 'Tower crane on a building site at dusk'
+      ru: 'Башенный кран на стройплощадке в сумерках'
+      fr: 'Grue à tour sur un chantier au crépuscule'

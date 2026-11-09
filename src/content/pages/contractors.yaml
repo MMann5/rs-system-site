@@ -1,0 +1,97 @@
+# Pour les entrepreneurs (story 3.4, FR7) : slugs des décisions de l'epic 3 ; titre d'EXPERIENCE.md › Référencement
+# (« Caméras de chantier sur grue · RS SYSTEM ») ; description = sous-titre + zone.
+# Textes hébreux : canvas Builders.dc.html, mot pour mot (sur-titre, héros, trio « מה מקבלים », tuile immeuble).
+# Photos réutilisées : grue (story 3.1) et immeuble de nuit (story 3.3), jamais retéléchargées (décision D1).
+# Traductions en/ru/fr réécrites par l'agent (pas mot à mot) : relecture humaine recommandée.
+slugs:
+  he: 'לקבלנים'
+  en: 'contractors'
+  ru: 'подрядчикам'
+  fr: 'entrepreneurs'
+enabled: true
+meta:
+  title:
+    he: 'מצלמות לעגורנים · RS SYSTEM'
+    en: 'Crane cameras for building sites · RS SYSTEM'
+    ru: 'Камеры на кран для стройплощадок · RS SYSTEM'
+    fr: 'Caméras de chantier sur grue · RS SYSTEM'
+  description:
+    he: 'רואים את האתר מתקדם. בלי לנסוע. מבאר שבע ועד ירושלים.'
+    en: 'Watch your site progress without driving out to it. From Beer Sheva to Jerusalem.'
+    ru: 'Видно, как продвигается стройка, без поездок на объект. От Беэр-Шевы до Иерусалима.'
+    fr: 'Vous suivez l’avancement du chantier sans vous déplacer. De Beer-Sheva à Jérusalem.'
+service:
+  hero:
+    eyebrow:
+      he: 'לקבלנים'
+      en: 'For contractors'
+      ru: 'Подрядчикам'
+      fr: 'Entrepreneurs'
+    title:
+      he: 'מצלמה על העגורן.'
+      en: 'A camera on the crane.'
+      ru: 'Камера на кране.'
+      fr: 'Une caméra sur la grue.'
+    subtitle:
+      he: 'רואים את האתר מתקדם. בלי לנסוע.'
+      en: 'Watch your site progress. Without driving out to it.'
+      ru: 'Видно, как продвигается стройка. Без поездок на объект.'
+      fr: 'Vous suivez l’avancement du chantier. Sans vous déplacer.'
+    alt:
+      he: 'עגורן צריח באתר בנייה בשעת ערב'
+      en: 'Tower crane on a building site at dusk'
+      ru: 'Башенный кран на стройплощадке в сумерках'
+      fr: 'Grue à tour sur un chantier au crépuscule'
+  trio:
+    title:
+      he: 'מה מקבלים'
+      en: 'What you get'
+      ru: 'Что вы получаете'
+      fr: 'Ce que vous obtenez'
+    items:
+      - title:
+          he: 'מבט מלמעלה'
+          en: 'A view from above'
+          ru: 'Вид сверху'
+          fr: 'Une vue d’en haut'
+        text:
+          he: 'מצלמה בראש העגורן שרואה את כל האתר.'
+          en: 'A camera at the top of the crane that sees the whole site.'
+          ru: 'Камера на вершине крана, которой видна вся площадка.'
+          fr: 'Une caméra en haut de la grue, qui voit tout le chantier.'
+      - title:
+          he: 'כמה אתרים'
+          en: 'Several sites'
+          ru: 'Несколько объектов'
+          fr: 'Plusieurs chantiers'
+        text:
+          he: 'מתקינים בכל האתרים שלכם, באותה צורה.'
+          en: 'We install on all your sites, the same way each time.'
+          ru: 'Ставим на всех ваших объектах, одинаково.'
+          fr: 'Nous installons sur tous vos chantiers, de la même façon.'
+      - title:
+          he: 'עד המסירה'
+          en: 'Up to handover'
+          ru: 'До сдачи объекта'
+          fr: 'Jusqu’à la livraison'
+        text:
+          he: 'רשת, אינטרקום ומצלמות גם לבניין עצמו.'
+          en: 'Network, intercom and cameras for the building itself, too.'
+          ru: 'А также сеть, домофон и камеры для самого здания.'
+          fr: 'Réseau, interphone et caméras pour l’immeuble lui-même.'
+  tile:
+    title:
+      he: 'מהיסודות ועד הדיירים.'
+      en: 'From the foundations to the residents.'
+      ru: 'От фундамента до новосёлов.'
+      fr: 'Des fondations jusqu’aux résidents.'
+    text:
+      he: 'תשתית תקשורת, אינטרקום ומצלמות לבניין החדש.'
+      en: 'Network infrastructure, intercom and cameras for the new building.'
+      ru: 'Сетевая инфраструктура, домофон и камеры для нового дома.'
+      fr: 'Infrastructure réseau, interphone et caméras pour l’immeuble neuf.'
+    alt:
+      he: 'בניין מגורים מודרני מואר בלילה'
+      en: 'Modern residential building lit up at night'
+      ru: 'Современный жилой дом с подсветкой ночью'
+      fr: 'Immeuble d’habitation moderne éclairé la nuit'

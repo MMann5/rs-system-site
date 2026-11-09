@@ -75,5 +75,18 @@
   "contact.info.email": "Эл. почта",
   "contact.info.zone": "Зона обслуживания",
   "contact.info.hours": "Часы работы",
-  "placeholder.hours": "часы работы"
+  "placeholder.hours": "часы работы",
+  "action.quote": "Узнать цену",
+  "action.quote-site": "Узнать цену для объекта",
+  "action.details": "Подробнее",
+  "action.site-visit": "Заказать выезд техника",
+  "steps.title": "Как это проходит",
+  "steps.call.title": "Звонок",
+  "steps.call.text": "Позвоните или напишите в WhatsApp и расскажите, что нужно.",
+  "steps.visit.title": "Выезд техника",
+  "steps.visit.text": "Техник приезжает, осматривает объект и называет цену.",
+  "steps.install.title": "Установка",
+  "steps.install.text": "Устанавливаем, подключаем и проверяем, что всё работает.",
+  "steps.service.title": "Обучение и обслуживание",
+  "steps.service.text": "Объясняем, как пользоваться, и остаёмся на связи после установки."
 }

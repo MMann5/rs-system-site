@@ -1,0 +1,71 @@
+# Détecteurs de fumée (story 3.2, FR3) : slugs des décisions de l'epic 3 ; titre « {Service} · RS SYSTEM »
+# (EXPERIENCE.md › Référencement) ; description = sous-titre + zone.
+# Héros illustré (détecteur en CSS, aria-hidden) : pas de photo, donc pas de `alt`.
+# Textes hébreux : canvas Smoke.dc.html, mot pour mot. Traductions en/ru/fr réécrites par l'agent
+# (pas mot à mot) : relecture humaine recommandée.
+slugs:
+  he: 'גלאי-עשן'
+  en: 'smoke-detectors'
+  ru: 'датчики-дыма'
+  fr: 'detecteurs-de-fumee'
+enabled: true
+meta:
+  title:
+    he: 'גלאי עשן · RS SYSTEM'
+    en: 'Smoke detectors · RS SYSTEM'
+    ru: 'Датчики дыма · RS SYSTEM'
+    fr: 'Détecteurs de fumée · RS SYSTEM'
+  description:
+    he: 'מזהים עשן מוקדם, בכל חדר. מבאר שבע ועד ירושלים.'
+    en: 'Smoke detected early, in every room. From Beer Sheva to Jerusalem.'
+    ru: 'Раннее обнаружение дыма, в каждой комнате. От Беэр-Шевы до Иерусалима.'
+    fr: 'La fumée repérée tôt, dans chaque pièce. De Beer-Sheva à Jérusalem.'
+service:
+  hero:
+    title:
+      he: 'גלאי עשן'
+      en: 'Smoke detectors'
+      ru: 'Датчики дыма'
+      fr: 'Détecteurs de fumée'
+    subtitle:
+      he: 'מזהים עשן מוקדם, בכל חדר.'
+      en: 'Smoke detected early, in every room.'
+      ru: 'Раннее обнаружение дыма, в каждой комнате.'
+      fr: 'La fumée repérée tôt, dans chaque pièce.'
+  trio:
+    title:
+      he: 'למי זה מתאים'
+      en: 'Who it is for'
+      ru: 'Для кого это'
+      fr: 'Pour qui'
+    items:
+      - title:
+          he: 'לבית'
+          en: 'For your home'
+          ru: 'Для квартиры и дома'
+          fr: 'Pour la maison'
+        text:
+          he: 'גלאי בכל חדר שינה, בסלון ובמטבח.'
+          en: 'A detector in every bedroom, the living room and the kitchen.'
+          ru: 'Датчик в каждой спальне, в гостиной и на кухне.'
+          fr: 'Un détecteur dans chaque chambre, au salon et dans la cuisine.'
+      - title:
+          he: 'לבניין'
+          en: 'For your building'
+          ru: 'Для многоквартирного дома'
+          fr: 'Pour l’immeuble'
+        text:
+          he: 'חדרי מדרגות, חניון ומחסנים.'
+          en: 'Stairwells, car park and storage rooms.'
+          ru: 'Лестничные клетки, парковка и кладовые.'
+          fr: 'Cages d’escalier, parking et caves.'
+      - title:
+          he: 'לעסק'
+          en: 'For your business'
+          ru: 'Для бизнеса'
+          fr: 'Pour le commerce'
+        text:
+          he: 'משרד, חנות או מחסן.'
+          en: 'Office, shop or warehouse.'
+          ru: 'Офис, магазин или склад.'
+          fr: 'Bureau, boutique ou entrepôt.'

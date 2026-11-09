@@ -1,0 +1,110 @@
+---
+// FR3, UX-DR34, UX-DR38, NFR7, AD-8 (story 3.2) : détecteur de fumée illustré, en CSS seul, décoratif
+// (aria-hidden). DESIGN.md › Components › Détecteur illustré ; canvas Smoke.dc.html (lg), Main.dc.html (md),
+// Blog.dc.html (sm). Disque detector-shell, grille radiale (≈ 58 % du disque, rebord detector-rim), LED led-ok.
+// Seule ombre du site : un jeton --shadow-detector-* par taille.
+// Mouvement au chargement : `rise` = montée unique (1,4 s après 0,5 s) ; la LED pulse 2 fois (2,4 s) puis
+// reste allumée, après la montée si `rise`, sinon dès l'apparition. La règle prefers-reduced-motion de
+// base.css coupe tout : détecteur en place, LED allumée fixe.
+interface Props {
+  /** `lg` 380px (max 80vw, page Détecteurs), `md` 260px (accueil), `sm` 150px (carte de blog). */
+  size: 'lg' | 'md' | 'sm';
+  /** Montée unique à l'apparition. */
+  rise?: boolean;
+}
+
+const { size, rise = false } = Astro.props;
+---
+<div class:list={['detector', size, { rise }]} aria-hidden="true">
+  <div class="grille">
+    <div class="led"></div>
+  </div>
+</div>
+
+<style>
+  .detector {
+    box-sizing: border-box;
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--detector-size);
+    aspect-ratio: 1;
+    border-radius: var(--radius-full);
+    background-color: var(--color-detector-shell);
+  }
+
+  .lg {
+    --detector-size: var(--detector-size-lg);
+    --grille-step: var(--detector-grille-step-lg);
+    --grille-pitch: var(--detector-grille-pitch-lg);
+    --led-size: var(--detector-led-lg);
+    max-inline-size: var(--detector-max-lg);
+    box-shadow: var(--shadow-detector-lg);
+  }
+
+  .md {
+    --detector-size: var(--detector-size-md);
+    --grille-step: var(--detector-grille-step-md);
+    --grille-pitch: var(--detector-grille-pitch-md);
+    --led-size: var(--detector-led);
+    box-shadow: var(--shadow-detector-md);
+  }
+
+  .sm {
+    --detector-size: var(--detector-size-sm);
+    --grille-step: var(--detector-grille-step-sm);
+    --grille-pitch: var(--detector-grille-pitch-sm);
+    --led-size: var(--detector-led);
+    box-shadow: var(--shadow-detector-sm);
+  }
+
+  .grille {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--detector-grille-ratio);
+    aspect-ratio: 1;
+    border: var(--detector-rim-width) solid var(--color-detector-rim);
+    border-radius: var(--radius-full);
+    background: repeating-radial-gradient(
+      circle,
+      var(--color-detector-grille-light) 0 var(--grille-step),
+      var(--color-detector-grille) var(--grille-step) var(--grille-pitch)
+    );
+  }
+
+  /* Opacité 1 au repos : sans fill-mode, la LED reste allumée après ses 2 pulsations (jamais en boucle). */
+  .led {
+    inline-size: var(--led-size);
+    aspect-ratio: 1;
+    border-radius: var(--radius-full);
+    background-color: var(--color-led-ok);
+    animation: led-pulse var(--led-pulse-duration) ease-in-out var(--led-delay, 0s) var(--led-pulse-count);
+  }
+
+  /* Montée unique ; la LED attend sa fin (délai + durée) pour pulser. */
+  .rise {
+    --led-delay: calc(var(--detector-rise-delay) + var(--detector-rise-duration));
+    animation: detector-rise var(--detector-rise-duration) var(--ease) var(--detector-rise-delay) both;
+  }
+
+  @keyframes detector-rise {
+    from {
+      opacity: 0;
+      transform: translateY(var(--detector-rise-distance)) scale(var(--detector-rise-scale));
+    }
+
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes led-pulse {
+    50% {
+      opacity: var(--led-pulse-min);
+    }
+  }
+</style>

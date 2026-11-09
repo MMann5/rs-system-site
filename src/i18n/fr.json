@@ -75,5 +75,18 @@
   "contact.info.email": "E-mail",
   "contact.info.zone": "Zone d'intervention",
   "contact.info.hours": "Horaires",
-  "placeholder.hours": "horaires"
+  "placeholder.hours": "horaires",
+  "action.quote": "Demander un devis",
+  "action.quote-site": "Devis pour le chantier",
+  "action.details": "En savoir plus",
+  "action.site-visit": "Organiser une visite technique",
+  "steps.title": "Comment ça se passe",
+  "steps.call.title": "Un appel",
+  "steps.call.text": "Appelez ou écrivez sur WhatsApp, et dites-nous ce qu’il vous faut.",
+  "steps.visit.title": "Visite technique",
+  "steps.visit.text": "Un technicien vient voir les lieux et vous remet un devis.",
+  "steps.install.title": "Installation",
+  "steps.install.text": "Nous installons, raccordons et vérifions que tout fonctionne.",
+  "steps.service.title": "Prise en main et suivi",
+  "steps.service.text": "Nous vous montrons comment vous en servir, et restons joignables après la pose."
 }

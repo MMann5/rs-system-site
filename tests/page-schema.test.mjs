@@ -1,0 +1,171 @@
+// Story 3.1 (AD-4, FR2) : schéma des pages fixes. Une page service incomplète (une langue, un public du trio)
+// ou porteuse d'un champ inconnu est refusée : le build échoue au chargement des contenus.
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { parse } from 'yaml';
+import { pageSchema, requireHome } from '../src/lib/page-schema.ts';
+
+const PAGES = fileURLToPath(new URL('../src/content/pages/', import.meta.url));
+const cameras = () => parse(readFileSync(join(PAGES, 'cameras.yaml'), 'utf8'));
+const refused = (data) => !pageSchema.safeParse(data).success;
+
+test('pages fixes : chaque src/content/pages/*.yaml passe le schéma', () => {
+  for (const name of readdirSync(PAGES).filter((n) => n.endsWith('.yaml'))) {
+    const result = pageSchema.safeParse(parse(readFileSync(join(PAGES, name), 'utf8')));
+    assert.ok(result.success, `${name} : ${result.error?.message}`);
+  }
+});
+
+test('cameras.yaml : bloc service complet (héros, trio de 3, tuile)', () => {
+  const { service } = pageSchema.parse(cameras());
+  assert.equal(service.trio.items.length, 3);
+  assert.equal(service.hero.title.he, 'מצלמות אבטחה');
+  assert.equal(service.tile.eyebrow.he, 'לקבלנים');
+});
+
+test('page service : une langue manquante est refusée (héros, trio, tuile)', () => {
+  for (const drop of [
+    (d) => delete d.service.hero.title.ru,
+    (d) => delete d.service.hero.alt.fr,
+    (d) => delete d.service.trio.items[1].text.en,
+    (d) => delete d.service.tile.alt.he,
+    (d) => delete d.service.tile.eyebrow.ru,
+  ]) {
+    const data = cameras();
+    drop(data);
+    assert.ok(refused(data), String(drop));
+  }
+});
+
+test('page service : texte vide, trio de 2 ou de 4, champ inconnu ou langue en trop refusés', () => {
+  const empty = cameras();
+  empty.service.hero.subtitle.he = '   ';
+  const two = cameras();
+  two.service.trio.items.pop();
+  const four = cameras();
+  four.service.trio.items.push(four.service.trio.items[0]);
+  const unknown = cameras();
+  unknown.service.hero.cta = 'x';
+  const extraLang = cameras();
+  extraLang.service.tile.title.de = 'Auch auf dem Kran.';
+  for (const data of [empty, two, four, unknown, extraLang]) assert.ok(refused(data));
+});
+
+test('page service : la tuile et son sur-titre sont facultatifs', () => {
+  const noTile = cameras();
+  delete noTile.service.tile;
+  assert.ok(!refused(noTile));
+  const noEyebrow = cameras();
+  delete noEyebrow.service.tile.eyebrow;
+  assert.ok(!refused(noEyebrow));
+});
+
+// Story 3.2 (AD-4) : héros illustré sans photo, donc sans `alt` ; Service.astro l'exige pour un héros à photo.
+test('page service : hero.alt facultatif (héros illustré), mais complet s’il est présent', () => {
+  const noAlt = cameras();
+  delete noAlt.service.hero.alt;
+  assert.ok(!refused(noAlt));
+  const partial = cameras();
+  delete partial.service.hero.alt.ru;
+  assert.ok(refused(partial));
+});
+
+test('smoke-detectors.yaml : héros sans alt, trio de 3 du canvas, sans tuile', () => {
+  const { service, slugs, enabled } = pageSchema.parse(parse(readFileSync(join(PAGES, 'smoke-detectors.yaml'), 'utf8')));
+  assert.equal(enabled, true);
+  assert.deepEqual(slugs, { he: 'גלאי-עשן', en: 'smoke-detectors', ru: 'датчики-дыма', fr: 'detecteurs-de-fumee' });
+  assert.equal(service.hero.title.he, 'גלאי עשן');
+  assert.equal(service.hero.subtitle.he, 'מזהים עשן מוקדם, בכל חדר.');
+  assert.equal(service.hero.alt, undefined);
+  assert.equal(service.tile, undefined);
+  assert.deepEqual(
+    service.trio.items.map((item) => [item.title.he, item.text.he]),
+    [
+      ['לבית', 'גלאי בכל חדר שינה, בסלון ובמטבח.'],
+      ['לבניין', 'חדרי מדרגות, חניון ומחסנים.'],
+      ['לעסק', 'משרד, חנות או מחסן.'],
+    ],
+  );
+});
+
+// Story 3.4 (AD-4) : sur-titre du héros sombre (Entrepreneurs), facultatif mais complet s'il est présent.
+test('page service : hero.eyebrow facultatif, mais complet s’il est présent', () => {
+  const withEyebrow = cameras();
+  withEyebrow.service.hero.eyebrow = { he: 'לקבלנים', en: 'For contractors', ru: 'Подрядчикам', fr: 'Entrepreneurs' };
+  assert.equal(pageSchema.parse(withEyebrow).service.hero.eyebrow.he, 'לקבלנים');
+  assert.equal(pageSchema.parse(cameras()).service.hero.eyebrow, undefined);
+  const partial = cameras();
+  partial.service.hero.eyebrow = { he: 'לקבלנים', en: 'For contractors', ru: 'Подрядчикам' };
+  assert.ok(refused(partial));
+  const empty = cameras();
+  empty.service.hero.eyebrow = { he: ' ', en: 'For contractors', ru: 'Подрядчикам', fr: 'Entrepreneurs' };
+  assert.ok(refused(empty));
+});
+
+test('networks.yaml et contractors.yaml : slugs, héros du canvas, Entrepreneurs avec sur-titre et tuile sans sur-titre', () => {
+  const networks = pageSchema.parse(parse(readFileSync(join(PAGES, 'networks.yaml'), 'utf8')));
+  assert.equal(networks.enabled, true);
+  assert.deepEqual(networks.slugs, { he: 'רשתות', en: 'networks', ru: 'сети', fr: 'reseaux' });
+  assert.equal(networks.service.hero.title.he, 'תקשורת ורשתות');
+  assert.equal(networks.service.hero.eyebrow, undefined);
+  assert.equal(networks.service.tile, undefined);
+  const contractors = pageSchema.parse(parse(readFileSync(join(PAGES, 'contractors.yaml'), 'utf8')));
+  assert.equal(contractors.enabled, true);
+  assert.deepEqual(contractors.slugs, { he: 'לקבלנים', en: 'contractors', ru: 'подрядчикам', fr: 'entrepreneurs' });
+  assert.equal(contractors.service.hero.eyebrow.he, 'לקבלנים');
+  assert.equal(contractors.service.hero.title.he, 'מצלמה על העגורן.');
+  assert.equal(contractors.service.tile.eyebrow, undefined);
+  assert.equal(contractors.service.tile.title.he, 'מהיסודות ועד הדיירים.');
+});
+
+// Story 3.5 (AD-4) : bloc `home` des tuiles de l'accueil, facultatif au schéma (Home.astro l'exige), complet s'il est présent.
+const home = () => parse(readFileSync(join(PAGES, 'home.yaml'), 'utf8'));
+
+test('home.yaml : bloc home complet, hébreu du canvas Main.dc.html', () => {
+  const { home: tiles } = pageSchema.parse(home());
+  assert.equal(tiles.cameras.title.he, 'מצלמות אבטחה');
+  assert.equal(tiles.crane.eyebrow.he, 'לקבלנים');
+  assert.equal(tiles.crane.title.he, 'מצלמה על העגורן.');
+  assert.equal(tiles.services.title.he, 'שירותים נוספים');
+  assert.deepEqual(
+    ['management', 'intercom', 'smart-home', 'networks'].map((key) => tiles.services[key].title.he),
+    ['לחברות ניהול ולוועדי בית', 'אינטרקום', 'בית חכם', 'תקשורת ורשתות'],
+  );
+  assert.equal(tiles.smoke.text.he, 'מזהים מוקדם. בכל חדר.');
+});
+
+test('home : une langue manquante, un texte vide ou une clé inconnue sont refusés', () => {
+  for (const change of [
+    (d) => delete d.home.cameras.alt.ru,
+    (d) => delete d.home.crane.eyebrow.fr,
+    (d) => delete d.home.services.title.en,
+    (d) => delete d.home.services['smart-home'].text.he,
+    (d) => delete d.home.smoke.title.ru,
+    (d) => delete d.home.services.networks,
+    (d) => (d.home.smoke.alt = d.home.cameras.alt),
+    (d) => (d.home.services.extra = d.home.services.intercom),
+    (d) => (d.home.cameras.link = 'x'),
+    (d) => (d.home.services.intercom.text.de = 'Wer klingelt?'),
+    (d) => (d.home.cameras.text.he = '  '),
+  ]) {
+    const data = home();
+    change(data);
+    assert.ok(refused(data), String(change));
+  }
+});
+
+test('home : bloc absent accepté (pages autres que l’accueil)', () => {
+  const data = home();
+  delete data.home;
+  assert.ok(!refused(data));
+  assert.equal(pageSchema.parse(cameras()).home, undefined);
+});
+
+test('requireHome : bloc absent → erreur nommant le fichier ; présent → rendu tel quel', () => {
+  assert.throws(() => requireHome('home', undefined), /bloc « home » absent de src\/content\/pages\/home\.yaml/);
+  const { home: tiles } = pageSchema.parse(home());
+  assert.equal(requireHome('home', tiles), tiles);
+});

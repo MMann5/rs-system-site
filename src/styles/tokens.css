@@ -368,4 +368,129 @@
   --icon-size-status: 24px;
   /* DESIGN.md › Components › Messages du formulaire : « filet 4px à l'extrémité de début » */
   --form-status-rule: 4px;
+  /* — Story 3.1 : page Caméras et composants des pages services (canvas Cameras.dc.html, Steps.dc.html) — */
+  /* DESIGN.md › Layout › Par point de rupture : « Héros clair + photo encadrée (services) : photo 1180 × 600 » (largeur : --container) */
+  --hero-light-photo-height: 600px;
+  /* DESIGN.md › Layout › Par point de rupture : photo encadrée « 16:9 » (700–960px) et « 4:5 » (< 700px) */
+  --photo-ratio-tablet: 16 / 9;
+  --photo-ratio-portrait: 4 / 5;
+  /* Canvas Cameras.dc.html › héros : photo « margin-top: 44px » sous les liens */
+  --hero-light-photo-gap: 44px;
+  /* Canvas Cameras.dc.html › héros : sous-titre « max-width: 760px » */
+  --hero-light-subtitle-max: 760px;
+  /* DESIGN.md › Photographie : points focaux « dôme center 32% », « grue center 40% » */
+  --photo-focus-dome: center 32%;
+  --photo-focus-crane: center 40%;
+  /* Canvas Cameras.dc.html / Steps.dc.html : « gap: 56px » entre le titre de section et sa grille */
+  --section-head-gap: 56px;
+  /* Canvas Cameras.dc.html / Steps.dc.html : « gap: 10px » entre les lignes d'un élément (trio, étape, tuile) */
+  --stack-gap: 10px;
+  /* DESIGN.md › Components › Trio : « minmax(min(100%, 260px), 1fr) » ; canvas : « gap: 48px » */
+  --trio-col-min: 260px;
+  --trio-gap: 48px;
+  /* DESIGN.md › Components › Trio : texte « {typography.body} 17px » */
+  --type-trio-text-size: 17px;
+  /* DESIGN.md › Components › Étapes : « minmax(min(100%, 220px), 1fr) » ; canvas Steps.dc.html : « gap: 40px » */
+  --steps-col-min: 220px;
+  --steps-gap: 40px;
+  /* DESIGN.md › Components › Étapes : titre « {typography.h3} 700 » */
+  --type-step-title-weight: 700;
+  /* DESIGN.md › Layout › Par point de rupture › Tuile grue : « 640px (Caméras) », « 600px » en tablette et mobile */
+  --tile-crane-min: 640px;
+  --tile-crane-min-tablet: 600px;
+  /* DESIGN.md › Layout › Par point de rupture : padding haut des tuiles à texte « 52–64px » (canvas : 64px) */
+  --tile-pad-top: 64px;
+  /* DESIGN.md › Components › Tuile sombre : sur-titre « 17px/600 » ; canvas Cameras.dc.html : texte « 22px » */
+  --type-eyebrow-size: 17px;
+  --type-eyebrow-weight: 600;
+  --type-tile-text-size: 22px;
+  /* EXPERIENCE.md › Mouvement › Révélation au défilement : « opacité 0,4 → 1 + translateY(56px) → 0 » */
+  --reveal-opacity-from: 0.4;
+  --reveal-distance: 56px;
+  /* EXPERIENCE.md › Mouvement › Dézoom au défilement : « scale(1.14) → 1 » */
+  --tile-zoom-from: 1.14;
+  /* EXPERIENCE.md › Mouvement › Parallaxe : « translateY(-7%) → 7% à scale(1.16) » */
+  --drift-from: -7%;
+  --drift-to: 7%;
+  --drift-scale: 1.16;
+  /* — Story 3.2 : détecteur de fumée illustré et page Détecteurs (canvas Smoke.dc.html, Main.dc.html, Blog.dc.html) — */
+  /* DESIGN.md › Components › Détecteur illustré : « 260px (accueil) / 380px max 80vw (page détecteurs) / 150px (carte blog) » */
+  --detector-size-lg: 380px;
+  --detector-size-md: 260px;
+  --detector-size-sm: 150px;
+  --detector-max-lg: 80vw;
+  /* Canvas Smoke.dc.html : grille « width: 58% » du disque (Main 150/260, Blog 86/150) ; rebord « border: 1px » */
+  --detector-grille-ratio: 58%;
+  --detector-rim-width: 1px;
+  /* DESIGN.md › Components › Détecteur illustré : « LED 10–12px » (canvas Smoke 12px, Main 10px) */
+  --detector-led-lg: 12px;
+  --detector-led: 10px;
+  /* Canvas : repeating-radial-gradient « 0 7px, 7px 8px » (Smoke), « 0 6px, 6px 7px » (Main), « 0 5px, 5px 6px » (Blog) */
+  --detector-grille-step-lg: 7px;
+  --detector-grille-pitch-lg: 8px;
+  --detector-grille-step-md: 6px;
+  --detector-grille-pitch-md: 7px;
+  --detector-grille-step-sm: 5px;
+  --detector-grille-pitch-sm: 6px;
+  /* DESIGN.md › Élévation : seule ombre du site ; canvas Smoke (380px), Main (260px), Blog (150px), navy 9,39,71 */
+  --shadow-detector-lg: 0 40px 80px rgba(9,39,71,.16), inset 0 -8px 18px rgba(9,39,71,.06);
+  --shadow-detector-md: 0 30px 60px rgba(9,39,71,.14), inset 0 -6px 14px rgba(9,39,71,.06);
+  --shadow-detector-sm: 0 20px 40px rgba(9,39,71,.14);
+  /* UX-DR38 : montée du détecteur « 1,4 s, délai 0,5 s » ; canvas Smoke.dc.html @keyframes up : translateY(60px) scale(.94) */
+  --detector-rise-distance: 60px;
+  --detector-rise-scale: 0.94;
+  --detector-rise-duration: 1.4s;
+  --detector-rise-delay: 0.5s;
+  /* UX-DR38 : LED « 2 pulsations de 2,4 s puis allumée fixe » ; canvas @keyframes pl : opacité 0,3 à mi-course */
+  --led-pulse-duration: 2.4s;
+  --led-pulse-min: 0.3;
+  --led-pulse-count: 2;
+  /* Canvas Smoke.dc.html › héros : détecteur « margin-top: 72px », section « padding: 72px 22px 112px » */
+  --hero-light-illustration-gap: 72px;
+  --hero-light-illustration-pad-end: 112px;
+  /* — Story 3.3 : pages Maison connectée et Interphone (canvas Smart.dc.html, Intercom.dc.html) — */
+  /* DESIGN.md › Photographie : Interphone et Maison connectée « 4:3 » sous 700px (cadre du héros clair) */
+  --photo-ratio-mobile-landscape: 4 / 3;
+  /* DESIGN.md › Photographie : points focaux « interrupteur center 50% », « interphone center 55% », « immeuble center 70% » */
+  --photo-focus-switch: center 50%;
+  --photo-focus-intercom: center 55%;
+  --photo-focus-building: center 70%;
+  /* DESIGN.md › Layout › Par point de rupture › Tuile pleine largeur immeuble : « 620px », « 560px », « 520px » */
+  --tile-building-min: 620px;
+  --tile-building-min-tablet: 560px;
+  --tile-building-min-mobile: 520px;
+  /* — Story 3.4 : pages Réseaux et Pour les entrepreneurs (canvas Network.dc.html, Builders.dc.html) — */
+  /* DESIGN.md › Layout › Par point de rupture › Héros photo (accueil, Réseaux, Entrepreneurs) : « 780 / 760 / 820px » */
+  --hero-photo-min-networks: 760px;
+  --hero-photo-min-contractors: 820px;
+  /* DESIGN.md › Photographie : Réseaux (baie, câbles) « center 60% » */
+  --photo-focus-network: center 60%;
+  /* — Story 3.5 : accueil complet avec les tuiles de services (canvas Main.dc.html, DESIGN.md › Layout) — */
+  /* DESIGN.md › Layout › Par point de rupture › Tuile grue : « min-block-size 720px (accueil) » */
+  --tile-crane-min-home: 720px;
+  /* DESIGN.md › Layout › Tuile claire accueil (caméras) : « photo 1100 × 520 » ; canvas Main.dc.html : « margin-top: 36px » */
+  --tile-feature-photo-max: 1100px;
+  --tile-feature-photo-height: 520px;
+  --tile-feature-photo-gap: 36px;
+  /* DESIGN.md › Layout & Spacing : grille « repeat(auto-fit, minmax(min(100%, 520px), 1fr)) » */
+  --tile-grid-col-min: 520px;
+  /* DESIGN.md › Layout › Par point de rupture › Tuile de grille : « 600px », « 560px », « 520px » */
+  --tile-grid-min: 600px;
+  --tile-grid-min-tablet: 560px;
+  --tile-grid-min-mobile: 520px;
+  /* Canvas Main.dc.html › grille : « padding: 52px 24px 28px » (haut, puis photo à 28px des liens), texte « font-size: 20px » */
+  --tile-grid-pad-top: 52px;
+  --tile-grid-photo-gap: 28px;
+  --type-grid-tile-text-size: 20px;
+  /* Canvas Main.dc.html › tuile détecteur : « padding: 72px 22px 88px » */
+  --tile-smoke-pad-top: 72px;
+  --tile-smoke-pad-end: 88px;
+  /* — Correctif 3.1 (D5 de l'epic 3, recette) : parallaxe de la grue plus douce sous 700px. Avec le recadrage
+   * téléphone crane-mast-portrait.jpg, mât et cabine restent dans la tuile (600px) et sous le bloc de texte à 320 et
+   * 390px, du début à la fin de la parallaxe. L'échelle dépasse la translation d'une marge, comme au-dessus de
+   * 700px (débord (1,05 − 1) / 2 = 2,5 % > 2 % de course) : pas de bord vide, même arrondi au sous-pixel.
+   * EXPERIENCE.md › Mouvement (±7 %, 1,16) reste la valeur au-dessus de 700px. — */
+  --drift-from-mobile: -2%;
+  --drift-to-mobile: 2%;
+  --drift-scale-mobile: 1.05;
 }

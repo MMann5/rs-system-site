@@ -1,0 +1,96 @@
+# Interphone (story 3.3, FR6) : slugs des décisions de l'epic 3 ; titre « {Service} · RS SYSTEM »
+# (EXPERIENCE.md › Référencement) ; description = sous-titre + zone.
+# Textes hébreux : canvas Intercom.dc.html, mot pour mot (héros, trio, tuile immeuble). Traductions en/ru/fr
+# réécrites par l'agent (pas mot à mot) : relecture humaine recommandée.
+slugs:
+  he: 'אינטרקום'
+  en: 'intercom'
+  ru: 'домофон'
+  fr: 'interphone'
+enabled: true
+meta:
+  title:
+    he: 'אינטרקום · RS SYSTEM'
+    en: 'Intercom · RS SYSTEM'
+    ru: 'Домофон · RS SYSTEM'
+    fr: 'Interphone · RS SYSTEM'
+  description:
+    he: 'יודעים מי בדלת. לפני שפותחים. מבאר שבע ועד ירושלים.'
+    en: 'Know who is at the door before you open it. From Beer Sheva to Jerusalem.'
+    ru: 'Видно, кто у двери, ещё до того, как открыть. От Беэр-Шевы до Иерусалима.'
+    fr: 'Vous savez qui est à la porte avant d’ouvrir. De Beer-Sheva à Jérusalem.'
+service:
+  hero:
+    title:
+      he: 'אינטרקום'
+      en: 'Intercom'
+      ru: 'Домофон'
+      fr: 'Interphone'
+    subtitle:
+      he: 'יודעים מי בדלת. לפני שפותחים.'
+      en: 'Know who is at the door. Before you open it.'
+      ru: 'Видно, кто у двери. Ещё до того, как открыть.'
+      fr: 'Vous savez qui est à la porte. Avant d’ouvrir.'
+    alt:
+      he: 'יד לוחצת על לוח אינטרקום בכניסה לבניין'
+      en: 'A hand pressing an intercom panel at a building entrance'
+      ru: 'Рука нажимает кнопку домофона у входа в дом'
+      fr: 'Une main appuie sur la platine d’interphone à l’entrée d’un immeuble'
+  trio:
+    title:
+      he: 'למי זה מתאים'
+      en: 'Who it is for'
+      ru: 'Для кого это'
+      fr: 'Pour qui'
+    items:
+      - title:
+          he: 'לבית פרטי'
+          en: 'For a private house'
+          ru: 'Для частного дома'
+          fr: 'Pour une maison'
+        text:
+          he: 'אינטרקום עם מסך, ופתיחת השער מהטלפון.'
+          en: 'An intercom with a screen, and the gate opens from your phone.'
+          ru: 'Домофон с экраном и открытие ворот с телефона.'
+          fr: 'Un interphone avec écran, et le portail qui s’ouvre depuis le téléphone.'
+      - title:
+          he: 'לבניין'
+          en: 'For your building'
+          ru: 'Для многоквартирного дома'
+          fr: 'Pour l’immeuble'
+        text:
+          he: 'פנל כניסה לכל הדיירים, והחלפה של מערכת ישנה.'
+          en: 'An entrance panel for every resident, and replacement of an old system.'
+          ru: 'Панель у входа для всех жильцов и замена старой системы.'
+          fr: 'Une platine d’entrée pour tous les résidents, et le remplacement d’un ancien système.'
+      - title:
+          he: 'לחברות ניהול'
+          en: 'For management companies'
+          ru: 'Для управляющих компаний'
+          fr: 'Pour les sociétés de gestion'
+        text:
+          he: 'סיור טכני בבניין והצעה מסודרת לוועד.'
+          en: 'A technical visit of the building and a clear quote for the committee.'
+          ru: 'Технический осмотр здания и понятное предложение для домового комитета.'
+          fr: 'Une visite technique de l’immeuble et un devis clair pour le comité.'
+  tile:
+    eyebrow:
+      he: 'לחברות ניהול ולוועדי בית'
+      en: 'For management companies and building committees'
+      ru: 'Управляющим компаниям и домовым комитетам'
+      fr: 'Sociétés de gestion et comités d’immeuble'
+    title:
+      he: 'בניין שלם. ספק אחד.'
+      en: 'A whole building. One supplier.'
+      ru: 'Весь дом. Один подрядчик.'
+      fr: 'Tout l’immeuble. Un seul prestataire.'
+    text:
+      he: 'אינטרקום, מצלמות לחניון וללובי, ורשת לכל המערכות.'
+      en: 'Intercom, cameras for the car park and lobby, and one network for every system.'
+      ru: 'Домофон, камеры для парковки и вестибюля и сеть для всех систем.'
+      fr: 'Interphone, caméras pour le parking et le hall, et un réseau pour tous les systèmes.'
+    alt:
+      he: 'בניין מגורים מודרני מואר בלילה'
+      en: 'Modern residential building lit up at night'
+      ru: 'Современный жилой дом с подсветкой ночью'
+      fr: 'Immeuble d’habitation moderne éclairé la nuit'
