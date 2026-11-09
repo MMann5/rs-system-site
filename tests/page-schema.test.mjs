@@ -90,3 +90,33 @@ test('smoke-detectors.yaml : héros sans alt, trio de 3 du canvas, sans tuile', 
     ],
   );
 });
+
+// Story 3.4 (AD-4) : sur-titre du héros sombre (Entrepreneurs), facultatif mais complet s'il est présent.
+test('page service : hero.eyebrow facultatif, mais complet s’il est présent', () => {
+  const withEyebrow = cameras();
+  withEyebrow.service.hero.eyebrow = { he: 'לקבלנים', en: 'For contractors', ru: 'Подрядчикам', fr: 'Entrepreneurs' };
+  assert.equal(pageSchema.parse(withEyebrow).service.hero.eyebrow.he, 'לקבלנים');
+  assert.equal(pageSchema.parse(cameras()).service.hero.eyebrow, undefined);
+  const partial = cameras();
+  partial.service.hero.eyebrow = { he: 'לקבלנים', en: 'For contractors', ru: 'Подрядчикам' };
+  assert.ok(refused(partial));
+  const empty = cameras();
+  empty.service.hero.eyebrow = { he: ' ', en: 'For contractors', ru: 'Подрядчикам', fr: 'Entrepreneurs' };
+  assert.ok(refused(empty));
+});
+
+test('networks.yaml et contractors.yaml : slugs, héros du canvas, Entrepreneurs avec sur-titre et tuile sans sur-titre', () => {
+  const networks = pageSchema.parse(parse(readFileSync(join(PAGES, 'networks.yaml'), 'utf8')));
+  assert.equal(networks.enabled, true);
+  assert.deepEqual(networks.slugs, { he: 'רשתות', en: 'networks', ru: 'сети', fr: 'reseaux' });
+  assert.equal(networks.service.hero.title.he, 'תקשורת ורשתות');
+  assert.equal(networks.service.hero.eyebrow, undefined);
+  assert.equal(networks.service.tile, undefined);
+  const contractors = pageSchema.parse(parse(readFileSync(join(PAGES, 'contractors.yaml'), 'utf8')));
+  assert.equal(contractors.enabled, true);
+  assert.deepEqual(contractors.slugs, { he: 'לקבלנים', en: 'contractors', ru: 'подрядчикам', fr: 'entrepreneurs' });
+  assert.equal(contractors.service.hero.eyebrow.he, 'לקבלנים');
+  assert.equal(contractors.service.hero.title.he, 'מצלמה על העגורן.');
+  assert.equal(contractors.service.tile.eyebrow, undefined);
+  assert.equal(contractors.service.tile.title.he, 'מהיסודות ועד הדיירים.');
+});

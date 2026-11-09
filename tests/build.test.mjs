@@ -1,4 +1,4 @@
-// Stories 1.3 à 1.9, 2.1 à 2.4, 3.1 à 3.3 : sortie réelle du build, sur une branche puis sur main (registre, layout Base.astro).
+// Stories 1.3 à 1.9, 2.1 à 2.4, 3.1 à 3.4 : sortie réelle du build, sur une branche puis sur main (registre, layout Base.astro).
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
@@ -28,8 +28,15 @@ const SMART_SLUGS = { he: 'בית-חכם', en: 'smart-home', ru: 'умный-д�
 const SMARTS = LANGS.map((lang) => `${lang}/${SMART_SLUGS[lang]}/index.html`);
 const INTERCOM_SLUGS = { he: 'אינטרקום', en: 'intercom', ru: 'домофон', fr: 'interphone' };
 const INTERCOMS = LANGS.map((lang) => `${lang}/${INTERCOM_SLUGS[lang]}/index.html`);
-/** Stories 3.2 et 3.3 : ids des pages services actives (modèle Service), dans l'ordre de la colonne Services. */
-const SERVICE_IDS = ['cameras', 'smoke-detectors', 'smart-home', 'intercom'];
+// Story 3.4 : pages Réseaux et Pour les entrepreneurs, slugs des décisions de l'epic 3.
+const NETWORK_SLUGS = { he: 'רשתות', en: 'networks', ru: 'сети', fr: 'reseaux' };
+const NETWORKS = LANGS.map((lang) => `${lang}/${NETWORK_SLUGS[lang]}/index.html`);
+const CONTRACTOR_SLUGS = { he: 'לקבלנים', en: 'contractors', ru: 'подрядчикам', fr: 'entrepreneurs' };
+const CONTRACTORS = LANGS.map((lang) => `${lang}/${CONTRACTOR_SLUGS[lang]}/index.html`);
+/** Stories 3.2 à 3.4 : ids des pages services actives (modèle Service), dans l'ordre de la colonne Services. */
+const SERVICE_IDS = ['cameras', 'smoke-detectors', 'smart-home', 'networks', 'intercom'];
+/** Story 3.4 : service du contexte de chaque page du modèle Service (= id, sauf Entrepreneurs → `crane-cameras`). */
+const PAGE_SERVICE = { ...Object.fromEntries(SERVICE_IDS.map((sid) => [sid, sid])), contractors: 'crane-cameras' };
 const dirs = [];
 
 // Étapes du script `build` de package.json : `astro build`, puis chaque `node <script>` lancé sur le dossier
@@ -84,7 +91,7 @@ function metaField(id, field) {
 }
 
 const META = Object.fromEntries(
-  ['home', 'path-probe', 'contact', 'cameras', 'smoke-detectors', 'smart-home', 'intercom'].map((id) => [id, { title: metaField(id, 'title'), description: metaField(id, 'description') }]),
+  ['home', 'path-probe', 'contact', 'cameras', 'smoke-detectors', 'smart-home', 'networks', 'intercom', 'contractors'].map((id) => [id, { title: metaField(id, 'title'), description: metaField(id, 'description') }]),
 );
 const titles = META.home.title;
 
@@ -101,9 +108,11 @@ const PAGE_HREFS = {
   'smoke-detectors': Object.fromEntries(LANGS.map((lang) => [lang, `/${lang}/${encodeURIComponent(SMOKE_SLUGS[lang])}/`])),
   'smart-home': Object.fromEntries(LANGS.map((lang) => [lang, `/${lang}/${encodeURIComponent(SMART_SLUGS[lang])}/`])),
   intercom: Object.fromEntries(LANGS.map((lang) => [lang, `/${lang}/${encodeURIComponent(INTERCOM_SLUGS[lang])}/`])),
+  networks: Object.fromEntries(LANGS.map((lang) => [lang, `/${lang}/${encodeURIComponent(NETWORK_SLUGS[lang])}/`])),
+  contractors: Object.fromEntries(LANGS.map((lang) => [lang, `/${lang}/${encodeURIComponent(CONTRACTOR_SLUGS[lang])}/`])),
 };
-/** Stories 3.1 à 3.3 : ids actifs du header, dans l'ordre de nav.ts (HEADER_NAV_IDS). */
-const HEADER_IDS = ['cameras', 'smoke-detectors', 'smart-home', 'intercom', 'contact'];
+/** Stories 3.1 à 3.4 : ids actifs du header, dans l'ordre de nav.ts (HEADER_NAV_IDS). */
+const HEADER_IDS = ['cameras', 'smoke-detectors', 'smart-home', 'networks', 'intercom', 'contractors', 'contact'];
 // Story 1.6 : chaînes i18n du menu, du sélecteur et de la barre mobile.
 const MENU_LABEL = { he: 'תפריט', en: 'Menu', ru: 'Меню', fr: 'Menu' };
 const SWITCHER_LABEL = { he: 'שפה', en: 'Language', ru: 'Язык', fr: 'Langue' };
@@ -120,17 +129,17 @@ const BASELINE_BDI = /<bdi lang="he" dir="rtl"[^>]*>/g;
 const RATING_BDI = /<bdi dir="ltr"[^>]*>[\d.,]+<\/bdi>/g;
 const FOCUSABLE = /<(?:a\b[^>]*\shref=|button\b|input\b|select\b|textarea\b|[a-z][\w-]*\b[^>]*\stabindex=)[^>]*>/i;
 
-/** Story 1.7 (FR19, UX-DR33, D1), stories 2.1, 3.1 à 3.3 : footer avec `cameras`, `smoke-detectors`,
- * `smart-home`, `intercom` et `contact` seuls actifs (colonne Services = les 4 services dans l'ordre, colonne
- * Pour les entreprises = Interphone seul, sous « sociétés de gestion », colonne RS SYSTEM = Contact). */
+/** Story 1.7 (FR19, UX-DR33, D1), stories 2.1, 3.1 à 3.4 : footer avec les 5 services, `contractors` et
+ * `contact` seuls actifs (colonne Services = les 5 services dans l'ordre, colonne Pour les entreprises =
+ * « Caméras de grue » → Entrepreneurs puis « sociétés de gestion » → Interphone, colonne RS SYSTEM = Contact). */
 function assertFooter(footer, lang, where) {
   const dict = I18N[lang];
   const contact = dict['footer.col.contact'];
   const company = dict['footer.col.company'];
   const services = dict['footer.col.services'];
   const business = dict['footer.col.business'];
-  // Cinq <nav> : Services, Pour les entreprises (seul lien : Interphone), RS SYSTEM (seul lien : Contact), la colonne
-  // Contact, puis le sélecteur ; ni Zones (page inactive), ni lien Caméras de grue (contractors inactif), aucun <nav> légal.
+  // Cinq <nav> : Services, Pour les entreprises (Entrepreneurs puis Interphone), RS SYSTEM (seul lien : Contact), la
+  // colonne Contact, puis le sélecteur ; ni Zones (page inactive), aucun <nav> légal.
   const navs = footer.match(/<nav\b[^>]*>/g) ?? [];
   assert.equal(navs.length, 5, `${where} : <nav> du footer ${navs}`);
   assert.match(navs[0], new RegExp(`^<nav aria-label="${services}"[\\s>]`), `${where} : <nav> Services`);
@@ -145,7 +154,11 @@ function assertFooter(footer, lang, where) {
   assert.deepEqual(linksOf(servicesCol), SERVICE_IDS.map((sid) => [PAGE_HREFS[sid][lang], dict[`nav.${sid}`]]), `${where} : liens Services`);
   const businessCol = column(navs[1]);
   assert.equal(businessCol.match(/<h2\b[^>]*>([^<]*)<\/h2>/)?.[1], escaped(business), `${where} : <h2> Pour les entreprises`);
-  assert.deepEqual(linksOf(businessCol), [[PAGE_HREFS.intercom[lang], escaped(dict['nav.footer.management'])]], `${where} : liens Pour les entreprises`);
+  assert.deepEqual(
+    linksOf(businessCol),
+    [[PAGE_HREFS.contractors[lang], escaped(dict['nav.footer.crane-cameras'])], [PAGE_HREFS.intercom[lang], escaped(dict['nav.footer.management'])]],
+    `${where} : liens Pour les entreprises`,
+  );
   const companyCol = column(navs[2]);
   assert.equal(companyCol.match(/<h2\b[^>]*>([^<]*)<\/h2>/)?.[1], company, `${where} : <h2> RS SYSTEM`);
   assert.deepEqual(linksOf(companyCol), [[PAGE_HREFS.contact[lang], dict['nav.contact']]], `${where} : liens RS SYSTEM`);
@@ -204,9 +217,10 @@ function assertLayout(html, id, lang, out, site = '', indexable = false) {
       assert.deepEqual(data.services[code], { label: serviceLabel(code, lang), he: serviceLabel(code, 'he') }, `${where} : service ${code}`);
     }
     assert.deepEqual(data.cities, {}, `${where} : cities`);
-  } else if (SERVICE_IDS.includes(id)) {
-    // Stories 3.1 à 3.3 (AD-13) : le modèle Service fixe le service et la section de navigation (= id de la page).
-    assert.deepEqual(JSON.parse(json), { context: { id, lang, service: id, navSection: id, indexable } }, where);
+  } else if (Object.hasOwn(PAGE_SERVICE, id)) {
+    // Stories 3.1 à 3.4 (AD-13) : le modèle Service fixe le service (Entrepreneurs : crane-cameras) et la section de
+    // navigation (= id de la page).
+    assert.deepEqual(JSON.parse(json), { context: { id, lang, service: PAGE_SERVICE[id], navSection: id, indexable } }, where);
   } else {
     assert.deepEqual(JSON.parse(json), { context: { id, lang, indexable } }, where);
   }
@@ -240,7 +254,7 @@ function assertLayout(html, id, lang, out, site = '', indexable = false) {
     assert.ok(buttons[0].includes(` ${attr}`), `${where} : ${attr} absent de ${buttons[0]}`);
   }
   assert.ok(header.indexOf('<button') > header.indexOf('href="tel:'), `${where} : bouton pas après le numéro`);
-  // Panneau #mobile-menu après la barre. Stories 2.1, 3.1 à 3.3 : ids de nav actifs = HEADER_IDS ;
+  // Panneau #mobile-menu après la barre. Stories 2.1, 3.1 à 3.4 : ids de nav actifs = HEADER_IDS ;
   // trois <nav> dans le header : liens de la barre (avant le panneau), puis dans le panneau les mêmes liens et le sélecteur.
   assert.equal(header.match(/\sid="mobile-menu"/g)?.length, 1, `${where} : #mobile-menu`);
   const menu = header.slice(header.indexOf(' id="mobile-menu"'));
@@ -295,7 +309,7 @@ function assertLayout(html, id, lang, out, site = '', indexable = false) {
   assert.equal(actions[0]?.[1], 'tel:+972509565669', `${where} : lien Appeler`);
   const barWa = waHref(pageWaInput(context, HE_SERVICES));
   assert.equal(actions[1]?.[1], barWa.replaceAll('&', '&amp;'), `${where} : lien WhatsApp`);
-  if (SERVICE_IDS.includes(id)) assert.ok(decodeURIComponent(barWa).includes(serviceLabel(id, 'he')), `${where} : service dans le message de la barre`);
+  if (Object.hasOwn(PAGE_SERVICE, id)) assert.ok(decodeURIComponent(barWa).includes(serviceLabel(PAGE_SERVICE[id], 'he')), `${where} : service dans le message de la barre`);
   for (const [[, , attrs, inner], event, label] of [[actions[0], 'call_click', CALL_LABEL[lang]], [actions[1], 'whatsapp_click', WA_LABEL[lang]]]) {
     assert.match(attrs, new RegExp(`\\sdata-track="${event}"`), `${where} : data-track ${event}`);
     assert.match(attrs, /\sdata-placement="mobile_bar"/, `${where} : data-placement ${event}`);
@@ -358,6 +372,10 @@ function assertHome(html, lang, out) {
   // Un seul h1, celui du héros ; sous-titre.
   assert.equal(html.match(/<h1[\s>]/g)?.length, 1, `${where} : <h1>`);
   assert.equal(hero.match(/<h1 id="hero-title"[^>]*>([^<]*)<\/h1>/)?.[1], dict['home.hero.title'], `${where} : h1`);
+  // Story 3.4 : HeroPhoto sans variante, rendu de l'accueil inchangé (pas de style, h1 hero-title, pas de sur-titre).
+  assert.equal(attr(hero.match(/^<section\b[^>]*>/)?.[0] ?? '', 'style'), undefined, `${where} : style du héros`);
+  assert.equal(attr(hero.match(/<h1 id="hero-title"[^>]*>/)?.[0] ?? '', 'class'), 'title', `${where} : classe du h1`);
+  assert.ok(!hero.includes('class="eyebrow"'), `${where} : sur-titre dans le héros`);
   assert.equal(hero.match(/<p class="subtitle"[^>]*>([^<]*)<\/p>/)?.[1], dict['home.hero.subtitle'], `${where} : sous-titre`);
   // Liens du héros : Appeler puis WhatsApp, ton photo.
   const heroLinks = [...hero.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)];
@@ -841,7 +859,7 @@ function assertCameras(html, lang, out) {
   assert.deepEqual(trioItems, CAMERAS_PAGE.trio.items.map((item) => [escaped(item.title[lang]), escaped(item.text[lang])]), `${where} : 3 h3 du trio`);
   assert.equal(trio.match(/<h3[\s>]/g)?.length, 3, `${where} : h3 du trio`);
   assert.ok(!/<a\b|<svg\b|<img\b/.test(trio), `${where} : lien, picto ou image dans le trio`);
-  // Tuile grue : sombre sur photo, sur-titre, h2, texte ; aucun lien (contractors inactif), bloc non cliquable.
+  // Tuile grue : sombre sur photo, sur-titre, h2, texte ; bloc non cliquable, un seul lien (story 3.4).
   const tileTag = tile.match(/^<section\b[^>]*>/)[0];
   assert.equal(attr(tileTag, 'data-surface'), 'photo', `${where} : data-surface de la tuile`);
   assert.equal(attr(tileTag, 'aria-labelledby'), 'tile-title', `${where} : aria-labelledby de la tuile`);
@@ -851,11 +869,12 @@ function assertCameras(html, lang, out) {
   assert.equal(content.match(/^<p class="eyebrow"[^>]*>([^<]*)<\/p>/)?.[1], escaped(CAMERAS_PAGE.tile.eyebrow[lang]), `${where} : sur-titre`);
   assert.equal(content.match(/<h2 id="tile-title"[^>]*>([^<]*)<\/h2>/)?.[1], escaped(CAMERAS_PAGE.tile.title[lang]), `${where} : h2 de la tuile`);
   assert.equal(content.match(/<p class="text"[^>]*>([^<]*)<\/p>/)?.[1], escaped(CAMERAS_PAGE.tile.text[lang]), `${where} : texte de la tuile`);
-  assert.ok(!/<a\b/.test(tile), `${where} : lien dans la tuile`);
-  // Slugs proposés pour Entrepreneurs (décisions de l'epic 3) : aucun lien vers la page, inactive.
-  for (const slug of ['לקבלנים', 'contractors', 'подрядчикам', 'entrepreneurs']) {
-    assert.ok(!html.includes(`href="/${lang}/${encodeURIComponent(slug)}/`), `${where} : lien vers Entrepreneurs (${slug})`);
-  }
+  // Story 3.4 (FR23) : `contractors` actif, donc un lien « לפרטים › » (ton photo) vers Entrepreneurs, avant la photo.
+  const tileLinks = [...tile.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)];
+  assert.equal(tileLinks.length, 1, `${where} : liens de la tuile`);
+  assertTextLink(tileLinks[0], PAGE_HREFS.contractors[lang], escaped(dict['action.details']), undefined, undefined, `${where} : tuile vers Entrepreneurs`);
+  assert.match(tileLinks[0][1], /\sclass="text-link photo"/, `${where} : ton photo du lien de tuile`);
+  assert.ok(tile.indexOf(tileLinks[0][0]) < tile.indexOf('<picture'), `${where} : lien hors de l'image`);
   assert.match(tile, /<img\b[^>]*\sclass="photo parallax"/, `${where} : photo de la grue en parallaxe`);
   // Étapes : h2, puis <ol role="list"> de 4 <li> : numéro aria-hidden, h3 et texte lus dans i18n.
   assert.match(steps, /^<section class="steps reveal" aria-labelledby="steps-title"[\s>]/, `${where} : étapes`);
@@ -1117,13 +1136,142 @@ function assertIntercom(html, lang, out) {
   assertPhotoService(html, lang, out, { id: 'intercom', content: INTERCOM_PAGE, focus: 'intercom', tile: true });
 }
 
-/** Story 1.9 (FR39), stories 2.1, 3.1 à 3.3 : sitemap dans l'ordre du registre (ids triés : Caméras, Contact,
- * accueil, Interphone, Maison connectée, Détecteurs ; 4 <url> chacun, 24 au total, 5 xhtml:link chacun), robots.txt, icônes et manifeste. */
-const SITEMAP_IDS = ['cameras', 'contact', 'home', 'intercom', 'smart-home', 'smoke-detectors'];
+/** Story 3.4 : contenu de src/content/pages/{networks,contractors}.yaml (bloc `service`). */
+const NETWORKS_PAGE = parse(readFileSync(join(ROOT, 'src/content/pages/networks.yaml'), 'utf8')).service;
+const CONTRACTORS_PAGE = parse(readFileSync(join(ROOT, 'src/content/pages/contractors.yaml'), 'utf8')).service;
+
+/**
+ * Story 3.4 (FR5, FR7, FR21, FR22, FR23, FR31, NFR4, UX-DR5, UX-DR13, UX-DR17, UX-DR18, UX-DR20, UX-DR21, UX-DR36) :
+ * page service à héros photo sombre plein cadre (HeroPhoto.astro en variante) : Réseaux, Entrepreneurs (`tile`).
+ */
+function assertCoverService(html, lang, out, { id, service, content, focus, scrim, size, quoteKey, eyebrow, land, tile: withTile }) {
+  const where = `${id} (${lang})`;
+  const dict = I18N[lang];
+  const tel = 'tel:+972509565669';
+  const wa = waHref({ serviceHe: serviceLabel(service, 'he') });
+  const quote = `${PAGE_HREFS.contact[lang]}?service=${service}`;
+  const main = html.match(/<main id="content"[^>]*>([\s\S]*?)<\/main>/)?.[1] ?? '';
+  // Ordre de <main> : héros sombre, trio, (tuile immeuble), étapes, bloc contact ; rien d'autre.
+  const sections = [...main.matchAll(/<section class="([^"]*)"/g)].map((m) => m[1]);
+  const expected = withTile ? ['hero', 'trio reveal', 'tile dark building', 'steps reveal', 'band'] : ['hero', 'trio reveal', 'steps reveal', 'band'];
+  assert.deepEqual(sections, expected, `${where} : sections de <main>`);
+  const sectionAt = (cls) => main.match(new RegExp(`<section class="${cls}"[\\s\\S]*?</section>`))?.[0] ?? '';
+  const [hero, trio, steps, band] = [sectionAt('hero'), sectionAt('trio reveal'), sectionAt('steps reveal'), sectionAt('band')];
+  const tile = withTile ? sectionAt('tile dark building') : '';
+  assert.ok(main.startsWith(hero), `${where} : héros en tête`);
+  // Titres : un seul h1, aucun saut de niveau (footer compris).
+  assert.equal(html.match(/<h1[\s>]/g)?.length, 1, `${where} : <h1>`);
+  const levels = [...html.matchAll(/<h([1-6])[\s>]/g)].map((m) => Number(m[1]));
+  assert.equal(levels[0], 1, `${where} : premier titre ${levels}`);
+  levels.forEach((level, i) => assert.ok(i === 0 || level <= levels[i - 1] + 1, `${where} : saut de titre ${levels}`));
+  // Héros sombre : surface photo, variante en style inline (point focal, scrim, hauteur).
+  const heroTag = hero.match(/^<section\b[^>]*>/)?.[0] ?? '';
+  assert.match(heroTag, /^<section class="hero" aria-labelledby="hero-title" data-surface="photo"[\s>]/, `${where} : héros sombre`);
+  assert.equal(attr(heroTag, 'style'), `--photo-position: var(--photo-focus-${focus}); --hero-scrim: var(--scrim-${scrim}); --hero-min: var(--hero-photo-min-${size})`, `${where} : variante du héros`);
+  const heroContent = hero.match(/<div class="content"[^>]*>([\s\S]*)<\/div><\/section>$/)?.[1] ?? '';
+  if (eyebrow) {
+    // Sur-titre avant le h1, premier élément du bloc de texte.
+    assert.equal(heroContent.match(/^<p class="eyebrow"[^>]*>([^<]*)<\/p><h1\b/)?.[1], escaped(content.hero.eyebrow[lang]), `${where} : sur-titre avant le h1`);
+  } else {
+    assert.ok(!hero.includes('class="eyebrow"'), `${where} : sur-titre`);
+    assert.match(heroContent, /^<h1\b/, `${where} : h1 en tête du bloc`);
+  }
+  const h1 = hero.match(/<h1 id="hero-title"([^>]*)>([^<]*)<\/h1>/);
+  assert.equal(h1?.[2], escaped(content.hero.title[lang]), `${where} : h1`);
+  assert.equal(attr(`<h1${h1?.[1]}>`, 'class'), 'title page', `${where} : h1 en page-title`);
+  assert.equal(hero.match(/<p class="subtitle"[^>]*>([^<]*)<\/p>/)?.[1], escaped(content.hero.subtitle[lang]), `${where} : sous-titre`);
+  const heroLinks = [...hero.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)];
+  assert.equal(heroLinks.length, 3, `${where} : liens du héros`);
+  assertTextLink(heroLinks[0], tel, dict['action.call'], 'call_click', 'hero', `${where} : héros Appeler`);
+  assertTextLink(heroLinks[1], wa, dict['action.whatsapp'], 'whatsapp_click', 'hero', `${where} : héros WhatsApp`);
+  assertTextLink(heroLinks[2], quote, escaped(dict[quoteKey]), undefined, undefined, `${where} : héros Devis`);
+  for (const [, attrs] of heroLinks) assert.match(attrs, /\sclass="text-link photo"/, `${where} : ton photo`);
+  assert.ok(decodeURIComponent(wa).includes(serviceLabel(service, 'he')), `${where} : service dans le message`);
+  // Photos : héros plein cadre (seule eager/high) et, sur Entrepreneurs, l'immeuble de la tuile (lazy).
+  const pictures = html.match(/<picture>[\s\S]*?<\/picture>/g) ?? [];
+  assert.equal(pictures.length, withTile ? 2 : 1, `${where} : <picture>`);
+  assert.ok(hero.includes(pictures[0]), `${where} : <picture> hors du héros`);
+  assert.equal(html.match(/<img\b/g)?.length, withTile ? 3 : 2, `${where} : <img> (logo + photos)`);
+  assert.equal(html.match(/\sfetchpriority="high"/g)?.length, 1, `${where} : une seule image prioritaire`);
+  assertServicePicture(pictures[0], { alt: content.hero.alt[lang], sizes: '100vw', land, portrait: ['1440', '1800'], priority: true, budgets: { land: 250_000, portrait: 120_000 } }, out, `${where} : héros`);
+  // CSS servie : la variante est lue avec les valeurs de l'accueil en repli ; jetons de la story 3.4.
+  const all = servedCss(html, out);
+  const heroCid = heroTag.match(/\s(data-astro-cid-[\w-]+)/)?.[1];
+  assert.ok(heroCid, `${where} : scope CSS du héros`);
+  const rule = (sel) => [...all.matchAll(new RegExp(`(?:^|[}\\s,])\\${sel}\\[${heroCid}\\]\\s*\\{([^}]*)\\}`, 'g'))].map((m) => m[1]).join('\n');
+  assert.match(rule('.hero'), /min-block-size: ?var\(--hero-min, ?var\(--hero-photo-min\)\)/, `${where} : .hero lit --hero-min`);
+  // Photo non chargée : le fond navy-deep du héros reste sous le texte blanc.
+  assert.match(rule('.hero'), /background-color: ?var\(--color-navy-deep\)/, `${where} : fond navy-deep du héros`);
+  assert.match(rule('.scrim'), /background: ?var\(--hero-scrim, ?var\(--scrim-hero\)\)/, `${where} : .scrim lit --hero-scrim`);
+  assert.match(all, /object-position: ?var\(--photo-position, ?center 60%\)/, `${where} : .photo lit --photo-position`);
+  // Astro scope le sélecteur composé en `.title[cid].page` (ou `.title.page[cid]` selon la version).
+  const titlePage = [...all.matchAll(new RegExp(`\\.title(?:\\[${heroCid}\\])?\\.page(?:\\[${heroCid}\\])?\\s*\\{([^}]*)\\}`, 'g'))].map((m) => m[1]).join('\n');
+  assert.match(titlePage, /font-size: ?var\(--type-page-title-size\)/, `${where} : .title.page en page-title`);
+  assert.match(rule('.eyebrow'), /color: ?var\(--color-white\)/, `${where} : .eyebrow blanc`);
+  const token = (name) => all.match(new RegExp(`${name}:\\s*([^;}]+)`))?.[1]?.trim();
+  assert.deepEqual(['--hero-photo-min-networks', '--hero-photo-min-contractors', '--photo-focus-network'].map(token), ['760px', '820px', 'center 60%'], `${where} : jetons de la story 3.4`);
+  assert.equal(token('--photo-focus-crane'), 'center 40%', `${where} : jeton focus grue`);
+  // Trio : h2 puis 3 h3 (YAML), aucun lien.
+  assert.match(trio, /^<section class="trio reveal" aria-labelledby="trio-title"[\s>]/, `${where} : trio`);
+  assert.equal(trio.match(/<h2 id="trio-title"[^>]*>([^<]*)<\/h2>/)?.[1], escaped(content.trio.title[lang]), `${where} : h2 du trio`);
+  const trioItems = [...trio.matchAll(/<h3\b[^>]*>([^<]*)<\/h3><p\b[^>]*>([^<]*)<\/p>/g)].map((m) => [m[1], m[2]]);
+  assert.deepEqual(trioItems, content.trio.items.map((item) => [escaped(item.title[lang]), escaped(item.text[lang])]), `${where} : 3 h3 du trio`);
+  assert.ok(!/<a\b|<svg\b|<img\b/.test(trio), `${where} : lien, picto ou image dans le trio`);
+  if (withTile) {
+    // Tuile immeuble : navy-deep, scrim-tile, focus immeuble ; sans sur-titre ; h2, texte ; un seul lien vers Réseaux.
+    assert.ok(main.indexOf(trio) < main.indexOf(tile) && main.indexOf(tile) < main.indexOf(steps), `${where} : tuile entre trio et étapes`);
+    const tileTag = tile.match(/^<section\b[^>]*>/)[0];
+    assert.equal(attr(tileTag, 'data-surface'), 'photo', `${where} : data-surface de la tuile`);
+    assert.equal(attr(tileTag, 'aria-labelledby'), 'tile-title', `${where} : aria-labelledby de la tuile`);
+    assert.equal(attr(tileTag, 'style'), '--photo-position: var(--photo-focus-building); --tile-bg: var(--color-navy-deep); --tile-scrim: var(--scrim-tile)', `${where} : style de la tuile`);
+    const tileContent = tile.match(/<div class="content reveal"[^>]*>([\s\S]*?)<\/div>/)?.[1] ?? '';
+    assert.ok(!tile.includes('class="eyebrow"'), `${where} : sur-titre de la tuile`);
+    assert.equal(tileContent.match(/^<h2 id="tile-title"[^>]*>([^<]*)<\/h2>/)?.[1], escaped(content.tile.title[lang]), `${where} : h2 de la tuile`);
+    assert.equal(tileContent.match(/<p class="text"[^>]*>([^<]*)<\/p>/)?.[1], escaped(content.tile.text[lang]), `${where} : texte de la tuile`);
+    const tileLinks = [...tile.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)];
+    assert.equal(tileLinks.length, 1, `${where} : liens de la tuile`);
+    assertTextLink(tileLinks[0], PAGE_HREFS.networks[lang], escaped(dict['action.details']), undefined, undefined, `${where} : tuile vers Réseaux`);
+    assert.match(tileLinks[0][1], /\sclass="text-link photo"/, `${where} : ton photo du lien de tuile`);
+    assert.ok(tile.indexOf(tileLinks[0][0]) < tile.indexOf('<picture'), `${where} : lien hors de l'image`);
+    assert.ok(tile.includes(pictures[1]), `${where} : <picture> hors de la tuile`);
+    assert.match(tile, /<img\b[^>]*\sclass="photo zoom"/, `${where} : photo de l'immeuble en dézoom`);
+    assertServicePicture(pictures[1], { alt: content.tile.alt[lang], sizes: 'calc(100vw - 24px)', land: ['2560', '1280'], portrait: ['1440', '1800'], priority: false, budgets: { land: 180_000, portrait: 180_000 } }, out, `${where} : immeuble`);
+  } else {
+    assert.ok(!/<section class="tile\b/.test(main), `${where} : tuile`);
+  }
+  // Étapes : h2, puis <ol role="list"> de 4 <li> lus dans i18n.
+  assert.match(steps, /^<section class="steps reveal" aria-labelledby="steps-title"[\s>]/, `${where} : étapes`);
+  assert.equal(steps.match(/<h2 id="steps-title"[^>]*>([^<]*)<\/h2>/)?.[1], escaped(dict['steps.title']), `${where} : h2 des étapes`);
+  const ol = steps.match(/<ol\b([^>]*)>([\s\S]*?)<\/ol>/);
+  assert.equal(attr(`<ol${ol?.[1]}>`, 'role'), 'list', `${where} : ol role=list`);
+  const items = [...(ol?.[2] ?? '').matchAll(/<li\b[^>]*><span class="number" aria-hidden="true"[^>]*>(\d)<\/span><h3\b[^>]*>([^<]*)<\/h3><p\b[^>]*>([^<]*)<\/p><\/li>/g)].map((m) => m.slice(1));
+  assert.deepEqual(items, STEP_KEYS.map((key, i) => [String(i + 1), escaped(dict[`steps.${key}.title`]), escaped(dict[`steps.${key}.text`])]), `${where} : 4 étapes`);
+  // Bloc contact : WhatsApp avec le libellé hébreu du service, « Laisser ses coordonnées » vers Contact ?service=.
+  const bandLinks = [...band.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)];
+  assert.equal(bandLinks.length, 4, `${where} : liens du bloc`);
+  assertTextLink(bandLinks[2], wa, dict['action.whatsapp'], 'whatsapp_click', 'contact_band', `${where} : bloc WhatsApp`);
+  assertTextLink(bandLinks[3], quote, escaped(dict['contact-band.leave-details']), undefined, undefined, `${where} : bloc leave-details`);
+  assert.ok(!html.includes('data-umami'), `${where} : data-umami-*`);
+}
+
+/** Story 3.4 (FR5) : page Réseaux en `lang`. */
+function assertNetworks(html, lang, out) {
+  assertCoverService(html, lang, out, { id: 'networks', service: 'networks', content: NETWORKS_PAGE, focus: 'network', scrim: 'network', size: 'networks', quoteKey: 'action.quote', eyebrow: false, land: ['2560', '1344'], tile: false });
+}
+
+/** Story 3.4 (FR7) : page Pour les entrepreneurs en `lang`, avec la tuile immeuble vers Réseaux. */
+function assertContractors(html, lang, out) {
+  assertCoverService(html, lang, out, { id: 'contractors', service: 'crane-cameras', content: CONTRACTORS_PAGE, focus: 'crane', scrim: 'crane', size: 'contractors', quoteKey: 'action.quote-site', eyebrow: true, land: ['2560', '1164'], tile: true });
+}
+
+/** Story 1.9 (FR39), stories 2.1, 3.1 à 3.4 : sitemap dans l'ordre du registre (ids triés : Caméras, Contact,
+ * Entrepreneurs, accueil, Interphone, Réseaux, Maison connectée, Détecteurs ; 4 <url> chacun, 32 au total,
+ * 5 xhtml:link chacun), robots.txt, icônes et manifeste. */
+const SITEMAP_IDS = ['cameras', 'contact', 'contractors', 'home', 'intercom', 'networks', 'smart-home', 'smoke-detectors'];
 function assertSeoFiles(out, site, indexable) {
   const xml = readFileSync(join(out, 'sitemap.xml'), 'utf8');
   const blocks = [...xml.matchAll(/<url>([\s\S]*?)<\/url>/g)].map((m) => m[1]);
-  assert.equal(blocks.length, 24, 'sitemap : <url>');
+  assert.equal(blocks.length, 32, 'sitemap : <url>');
   blocks.forEach((block, i) => {
     const hrefs = PAGE_HREFS[SITEMAP_IDS[Math.floor(i / 4)]];
     const lang = LANGS[i % 4];
@@ -1141,9 +1289,9 @@ function assertSeoFiles(out, site, indexable) {
   assert.deepEqual(manifest.icons, [{ src: '/rs-icon-512.png', sizes: '512x512', type: 'image/png' }], 'manifeste : icône 512');
 }
 
-test('build de branche : 4 accueils + 4 Contact + 4 Caméras + 4 Détecteurs + 4 Maison connectée + 4 Interphone + 4 path-probe, layout Base (lang/dir, #rs-data, évitement, repères, hreflang relatifs), _redirects', { timeout: 120_000 }, () => {
+test('build de branche : 4 accueils + 4 Contact + 4 Caméras + 4 Détecteurs + 4 Maison connectée + 4 Réseaux + 4 Interphone + 4 Entrepreneurs + 4 path-probe, layout Base (lang/dir, #rs-data, évitement, repères, hreflang relatifs), _redirects', { timeout: 120_000 }, () => {
   const out = build({});
-  assert.deepEqual(indexFiles(out), [...HOMES, ...CONTACTS, ...CAMERAS, ...SMOKES, ...SMARTS, ...INTERCOMS, ...PROBES].sort());
+  assert.deepEqual(indexFiles(out), [...HOMES, ...CONTACTS, ...CAMERAS, ...SMOKES, ...SMARTS, ...NETWORKS, ...INTERCOMS, ...CONTRACTORS, ...PROBES].sort());
   assert.ok(existsSync(join(out, '_redirects')), '_redirects absent');
   assert.ok(!existsSync(join(out, 'index.html')), 'index.html racine présent');
   assert.deepEqual(Object.keys(titles), LANGS);
@@ -1182,13 +1330,23 @@ test('build de branche : 4 accueils + 4 Contact + 4 Caméras + 4 Détecteurs + 4
     assertLayout(html, 'intercom', LANGS[i], out);
     assertIntercom(html, LANGS[i], out);
   }
+  for (const [i, file] of NETWORKS.entries()) {
+    const html = readFileSync(join(out, file), 'utf8');
+    assertLayout(html, 'networks', LANGS[i], out);
+    assertNetworks(html, LANGS[i], out);
+  }
+  for (const [i, file] of CONTRACTORS.entries()) {
+    const html = readFileSync(join(out, file), 'utf8');
+    assertLayout(html, 'contractors', LANGS[i], out);
+    assertContractors(html, LANGS[i], out);
+  }
   assertNotFoundPages(out);
   assertSeoFiles(out, '', false);
 });
 
-test('build de main indexable avec SITE_URL : 4 accueils + 4 Contact + 4 Caméras + 4 Détecteurs + 4 Maison connectée + 4 Interphone, sans noindex, canonique et hreflang absolus', { timeout: 120_000 }, () => {
+test('build de main indexable avec SITE_URL : 4 accueils + 4 Contact + 4 Caméras + 4 Détecteurs + 4 Maison connectée + 4 Réseaux + 4 Interphone + 4 Entrepreneurs, sans noindex, canonique et hreflang absolus', { timeout: 120_000 }, () => {
   const out = build({ WORKERS_CI_BRANCH: 'main', DOMAIN_LIVE: 'true', SITE_URL: 'https://rs.example' });
-  assert.deepEqual(indexFiles(out), [...HOMES, ...CONTACTS, ...CAMERAS, ...SMOKES, ...SMARTS, ...INTERCOMS].sort());
+  assert.deepEqual(indexFiles(out), [...HOMES, ...CONTACTS, ...CAMERAS, ...SMOKES, ...SMARTS, ...NETWORKS, ...INTERCOMS, ...CONTRACTORS].sort());
   assert.ok(!existsSync(join(out, 'index.html')));
   for (const lang of LANGS) {
     assertLayout(readFileSync(join(out, lang, 'index.html'), 'utf8'), 'home', lang, out, 'https://rs.example', true);
@@ -1218,6 +1376,16 @@ test('build de main indexable avec SITE_URL : 4 accueils + 4 Contact + 4 Caméra
     const html = readFileSync(join(out, file), 'utf8');
     assertLayout(html, 'intercom', LANGS[i], out, 'https://rs.example', true);
     assertIntercom(html, LANGS[i], out);
+  }
+  for (const [i, file] of NETWORKS.entries()) {
+    const html = readFileSync(join(out, file), 'utf8');
+    assertLayout(html, 'networks', LANGS[i], out, 'https://rs.example', true);
+    assertNetworks(html, LANGS[i], out);
+  }
+  for (const [i, file] of CONTRACTORS.entries()) {
+    const html = readFileSync(join(out, file), 'utf8');
+    assertLayout(html, 'contractors', LANGS[i], out, 'https://rs.example', true);
+    assertContractors(html, LANGS[i], out);
   }
   // Story 1.9 : les 5 404 restent en noindex sur un build indexable ; sitemap et robots absolus.
   assertNotFoundPages(out);

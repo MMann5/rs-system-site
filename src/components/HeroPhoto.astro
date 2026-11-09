@@ -6,6 +6,11 @@
 // Calque de maintien derrière le bloc de texte : opacité ≥ 0,62 sous tout le texte (mobile, russe, zoom).
 // Entrée : dézoom de la photo, montée décalée du texte (le h1 sans opacité) ; coupées par
 // prefers-reduced-motion (base.css). Hauteur minimale par largeur, jamais de `height`.
+// Story 3.4 (FR5, FR7, UX-DR13, UX-DR36) : même héros pour Réseaux et Entrepreneurs (DESIGN.md › Héros photo),
+// par props facultatives : `variant` (point focal, scrim et hauteur au-dessus de 960px, posés en style inline
+// --photo-position / --hero-scrim / --hero-min et lus avec la valeur de l'accueil en repli), `titleSize="page"`
+// (h1 en page-title), `eyebrow` (sur-titre blanc avant le h1, monté avec lui sans opacité) et `quote`
+// (3e lien Devis ›, ton photo). Sans elles, le HTML de l'accueil est inchangé.
 import type { ImageMetadata } from 'astro';
 import { telHref, waHref } from '../lib/contact/core';
 import { serviceLabels } from '../lib/contact/labels';
@@ -20,22 +25,35 @@ interface Props {
   photo: { src: ImageMetadata; portrait: ImageMetadata; alt: string };
   title: string;
   subtitle: string;
+  /** Sur-titre avant le h1 (Entrepreneurs). */
+  eyebrow?: string | undefined;
+  /** 3e lien « Devis › » (pages services), déjà résolu ; absent si `contact` est inactif. */
+  quote?: { href: string; label: string } | undefined;
+  /** Jetons --photo-focus-{focus}, --scrim-{scrim}, --hero-photo-min-{size} ; absent : valeurs de l'accueil. */
+  variant?: { focus: 'network' | 'crane'; scrim: 'network' | 'crane'; size: 'networks' | 'contractors' } | undefined;
+  /** Taille du h1 : `hero` (accueil, hero-title) ou `page` (pages services et Entrepreneurs, page-title). */
+  titleSize?: 'hero' | 'page';
 }
 
-const { ctx, photo, title, subtitle } = Astro.props;
+const { ctx, photo, title, subtitle, eyebrow, quote, variant, titleSize = 'hero' } = Astro.props;
 const wa = waHref(pageWaInput(ctx, serviceLabels('he')));
+const style = variant
+  ? `--photo-position: var(--photo-focus-${variant.focus}); --hero-scrim: var(--scrim-${variant.scrim}); --hero-min: var(--hero-photo-min-${variant.size})`
+  : undefined;
 ---
-<section class="hero" aria-labelledby="hero-title" data-surface="photo">
+<section class="hero" aria-labelledby="hero-title" data-surface="photo" style={style}>
   <div class="media">
     <ResponsivePhoto src={photo.src} portrait={photo.portrait} alt={photo.alt} sizes="100vw" priority class="photo" />
   </div>
   <div class="scrim"></div>
   <div class="content">
-    <h1 id="hero-title" class="title">{title}</h1>
+    {eyebrow && <p class="eyebrow">{eyebrow}</p>}
+    <h1 id="hero-title" class={titleSize === 'page' ? 'title page' : 'title'}>{title}</h1>
     <p class="subtitle">{subtitle}</p>
     <div class="links">
       <TextLink href={telHref()} label={t(ctx.lang, 'action.call')} tone="photo" track="call_click" placement="hero" />
       <TextLink href={wa} label={t(ctx.lang, 'action.whatsapp')} tone="photo" track="whatsapp_click" placement="hero" />
+      {quote && <TextLink href={quote.href} label={quote.label} tone="photo" />}
     </div>
   </div>
 </section>
@@ -47,7 +65,8 @@ const wa = waHref(pageWaInput(ctx, serviceLabels('he')));
     isolation: isolate;
     container-type: inline-size;
     box-sizing: border-box;
-    min-block-size: var(--hero-photo-min);
+    /* Story 3.4 : --hero-min posé par la variante (Réseaux 760px, Entrepreneurs 820px). */
+    min-block-size: var(--hero-min, var(--hero-photo-min));
     /* Contient le calque de maintien (--scrim-hold-extend sous le texte) : il ne déborde jamais sur le bloc suivant. */
     padding-block-end: var(--scrim-hold-extend);
     background-color: var(--color-navy-deep);
@@ -87,7 +106,7 @@ const wa = waHref(pageWaInput(ctx, serviceLabels('he')));
     inline-size: 100%;
     block-size: 100%;
     object-fit: cover;
-    object-position: center 60%;
+    object-position: var(--photo-position, center 60%);
     animation: hero-zoom var(--hero-zoom-duration) var(--ease) both;
   }
 
@@ -95,7 +114,7 @@ const wa = waHref(pageWaInput(ctx, serviceLabels('he')));
     position: absolute;
     inset: 0;
     z-index: -1;
-    background: var(--scrim-hero);
+    background: var(--hero-scrim, var(--scrim-hero));
   }
 
   /* Dans le flux : la section grandit avec le texte (russe, zoom). */
@@ -140,6 +159,23 @@ const wa = waHref(pageWaInput(ctx, serviceLabels('he')));
     font-size: var(--type-hero-title-size);
     font-weight: var(--type-hero-title-weight);
     line-height: var(--type-hero-title-leading);
+    color: var(--color-white);
+    animation: hero-rise-title var(--rise-duration) var(--ease) var(--rise-delay-1) both;
+  }
+
+  /* h1 des pages services et Entrepreneurs (DESIGN.md › Typo). */
+  .title.page {
+    font-size: var(--type-page-title-size);
+    font-weight: var(--type-page-title-weight);
+    line-height: var(--type-page-title-leading);
+  }
+
+  /* Sur-titre blanc sur photo (jamais link-on-night), monté avec le h1, sans opacité. */
+  .eyebrow {
+    margin: 0;
+    font-size: var(--type-eyebrow-size);
+    font-weight: var(--type-eyebrow-weight);
+    line-height: var(--type-body-leading);
     color: var(--color-white);
     animation: hero-rise-title var(--rise-duration) var(--ease) var(--rise-delay-1) both;
   }

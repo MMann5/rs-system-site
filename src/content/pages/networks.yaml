@@ -1,0 +1,75 @@
+# Réseaux (story 3.4, FR5) : slugs des décisions de l'epic 3 ; titre « {Service} · RS SYSTEM »
+# (EXPERIENCE.md › Référencement) ; description = sous-titre + zone.
+# Textes hébreux : canvas Network.dc.html, mot pour mot (héros, trio). Héros photo sombre (baie réseau,
+# Pexels 6466143, décision D1). Traductions en/ru/fr réécrites par l'agent (pas mot à mot) : relecture humaine recommandée.
+slugs:
+  he: 'רשתות'
+  en: 'networks'
+  ru: 'сети'
+  fr: 'reseaux'
+enabled: true
+meta:
+  title:
+    he: 'תקשורת ורשתות · RS SYSTEM'
+    en: 'Networks and communications · RS SYSTEM'
+    ru: 'Сети и связь · RS SYSTEM'
+    fr: 'Réseaux et communication · RS SYSTEM'
+  description:
+    he: 'רשת אחת יציבה לבית, למשרד ולמערכות האבטחה. מבאר שבע ועד ירושלים.'
+    en: 'One stable network for your home, your office and your security systems. From Beer Sheva to Jerusalem.'
+    ru: 'Одна надёжная сеть для дома, офиса и систем безопасности. От Беэр-Шевы до Иерусалима.'
+    fr: 'Un seul réseau stable pour la maison, le bureau et les systèmes de sécurité. De Beer-Sheva à Jérusalem.'
+service:
+  hero:
+    title:
+      he: 'תקשורת ורשתות'
+      en: 'Networks and communications'
+      ru: 'Сети и связь'
+      fr: 'Réseaux et communication'
+    subtitle:
+      he: 'רשת אחת יציבה לבית, למשרד ולמערכות האבטחה.'
+      en: 'One stable network for your home, your office and your security systems.'
+      ru: 'Одна надёжная сеть для дома, офиса и систем безопасности.'
+      fr: 'Un seul réseau stable pour la maison, le bureau et les systèmes de sécurité.'
+    alt:
+      he: 'כבלי רשת מחוברים למתג תקשורת'
+      en: 'Network cables plugged into a switch'
+      ru: 'Сетевые кабели, подключённые к коммутатору'
+      fr: 'Câbles réseau branchés sur un commutateur'
+  trio:
+    title:
+      he: 'למי זה מתאים'
+      en: 'Who it is for'
+      ru: 'Для кого это'
+      fr: 'Pour qui'
+    items:
+      - title:
+          he: 'לבית'
+          en: 'For your home'
+          ru: 'Для дома'
+          fr: 'Pour la maison'
+        text:
+          he: 'Wi-Fi שמגיע לכל חדר.'
+          en: 'Wi-Fi that reaches every room.'
+          ru: 'Wi-Fi, который ловит в каждой комнате.'
+          fr: 'Un Wi-Fi qui arrive dans chaque pièce.'
+      - title:
+          he: 'לעסק'
+          en: 'For your business'
+          ru: 'Для бизнеса'
+          fr: 'Pour l’entreprise'
+        text:
+          he: 'ארון תקשורת מסודר, כבילה ונקודות רשת.'
+          en: 'A tidy network cabinet, cabling and network points.'
+          ru: 'Аккуратный телекоммуникационный шкаф, кабельная разводка и сетевые розетки.'
+          fr: 'Une baie réseau bien rangée, le câblage et les prises réseau.'
+      - title:
+          he: 'לבניין חדש'
+          en: 'For a new building'
+          ru: 'Для нового дома'
+          fr: 'Pour un immeuble neuf'
+        text:
+          he: 'תשתית תקשורת לכל הדירות, עד המסירה.'
+          en: 'Network infrastructure for every flat, up to handover.'
+          ru: 'Сетевая инфраструктура для всех квартир, до сдачи дома.'
+          fr: 'L’infrastructure réseau de tous les appartements, jusqu’à la livraison.'

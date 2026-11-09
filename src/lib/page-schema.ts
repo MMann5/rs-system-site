@@ -14,7 +14,13 @@ export const perLang = <T extends z.ZodType>(value: T) => z.strictObject({ he: v
 const trioItem = z.strictObject({ title: perLang(text), text: perLang(text) });
 export const servicePageSchema = z.strictObject({
   // Story 3.2 : `alt` facultatif (héros illustré, sans photo) ; Service.astro l'exige pour un héros à photo.
-  hero: z.strictObject({ title: perLang(text), subtitle: perLang(text), alt: perLang(text).optional() }),
+  // Story 3.4 : `eyebrow` facultatif, sur-titre du héros sombre (« לקבלנים » d'Entrepreneurs), complet s'il est présent.
+  hero: z.strictObject({
+    eyebrow: perLang(text).optional(),
+    title: perLang(text),
+    subtitle: perLang(text),
+    alt: perLang(text).optional(),
+  }),
   trio: z.strictObject({ title: perLang(text), items: z.array(trioItem).length(3) }),
   tile: z
     .strictObject({ eyebrow: perLang(text).optional(), title: perLang(text), text: perLang(text), alt: perLang(text) })
