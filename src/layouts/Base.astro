@@ -1,0 +1,78 @@
+---
+// AD-7, AD-13, FR24, FR39, UX-DR9 : layout unique de toutes les pages.
+// Seul fichier de src/ qui pose lang/dir HTML (sur <html>, depuis le contexte de page).
+import '../styles/base.css';
+import FontPreload from '../components/FontPreload.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import MobileBar from '../components/MobileBar.astro';
+import { SITE_URL } from '../lib/env';
+import { t } from '../lib/i18n';
+import { DIR } from '../lib/langs';
+import { serializeRsData, type PageContext } from '../lib/page-context';
+import { alternates, NOT_FOUND_ID, url } from '../lib/routes';
+import { absoluteUrl, hreflangLinks, ICON_LINKS } from '../lib/seo';
+
+interface Props {
+  ctx: PageContext;
+  title: string;
+  /** Absente (404) : pas de meta description. */
+  description?: string;
+  /** Tables de données de la page (AD-5), fusionnées à côté de `context` dans #rs-data. */
+  tables?: Record<string, unknown>;
+}
+
+const { ctx, title, description, tables } = Astro.props;
+// La 404 n'a pas d'URL propre : ni canonique ni hreflang.
+const isNotFound = ctx.id === NOT_FOUND_ID;
+const canonical = isNotFound ? undefined : absoluteUrl(url(ctx.id, ctx.lang), SITE_URL);
+const hreflangs = isNotFound ? [] : hreflangLinks(alternates(ctx.id), SITE_URL);
+const rsData = serializeRsData(ctx, tables);
+---
+<!doctype html>
+<html lang={ctx.lang} dir={DIR[ctx.lang]} data-page-id={ctx.id}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    {!ctx.indexable && <meta name="robots" content="noindex" />}
+    <FontPreload lang={ctx.lang} />
+    <title>{title}</title>
+    {description !== undefined && <meta name="description" content={description} />}
+    {canonical !== undefined && <link rel="canonical" href={canonical} />}
+    {hreflangs.map(({ hreflang, href }) => <link rel="alternate" hreflang={hreflang} href={href} />)}
+    {ICON_LINKS.map((icon) => <link {...icon} />)}
+  </head>
+  <body>
+    <a class="skip-link" href="#content">{t(ctx.lang, 'layout.skip-link')}</a>
+    <Header ctx={ctx} />
+    <main id="content">
+      <slot />
+    </main>
+    <Footer ctx={ctx} />
+    <MobileBar ctx={ctx} />
+    <script type="application/json" id="rs-data" is:inline set:html={rsData} />
+  </body>
+</html>
+
+<style>
+  /* DESIGN.md › Components › Lien d'évitement : hors écran au repos ; au focus, en haut à
+   * l'extrémité de début, au-dessus de tout. Décalé de l'anneau pour que celui-ci reste visible. */
+  .skip-link {
+    position: absolute;
+    inset-inline-start: calc(var(--focus-ring-width) + var(--focus-offset));
+    inset-block-end: 100%;
+    z-index: var(--z-skip-link);
+    padding-block: var(--skip-link-pad-block);
+    padding-inline: var(--space-4);
+    background-color: var(--color-white);
+    color: var(--color-navy);
+    font-size: var(--type-body-size);
+    font-weight: var(--type-label-weight);
+    line-height: var(--type-body-leading);
+  }
+
+  .skip-link:focus {
+    inset-block-start: calc(var(--focus-ring-width) + var(--focus-offset));
+    inset-block-end: auto;
+  }
+</style>

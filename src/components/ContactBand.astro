@@ -1,0 +1,127 @@
+---
+// FR21, FR41, UX-DR19, AD-2, AD-4, AD-5, AD-6, décisions D2 et D3 : bloc contact (DESIGN.md › Components ›
+// Bloc contact). Fond navy-deep, centré. Ordre fixe, chaque élément absent étant omis : h2 (masqué
+// visuellement), preuve (note Midrag de src/content/proof.yaml ; aucune rangée de logos, aucun fourni),
+// zone (lien vers Zones si `areas` est actif, sinon texte simple), numéro géant en lien d'appel mesuré,
+// actions Appeler › WhatsApp › puis Laisser ses coordonnées › (seulement si `contact` est actif).
+import { telHref, waHref } from '../lib/contact/core';
+import { bandLinks, formatRating, ratingLine } from '../lib/contact/band';
+import { serviceLabels } from '../lib/contact/labels';
+import { midragProof } from '../lib/contact/proof';
+import { pageWaInput } from '../lib/contact/table';
+import { t } from '../lib/i18n';
+import type { PageContext } from '../lib/page-context';
+import { isEnabled, url } from '../lib/routes';
+import PhoneNumber from './PhoneNumber.astro';
+import TextLink from './TextLink.astro';
+
+interface Props {
+  ctx: PageContext;
+}
+
+const { ctx } = Astro.props;
+const { lang } = ctx;
+const proof = midragProof();
+const line = ratingLine(proof, lang, (key) => t(lang, key));
+const { zoneHref, detailsHref } = bandLinks({ lang, service: ctx.service }, { isEnabled, url });
+const wa = waHref(pageWaInput(ctx, serviceLabels('he')));
+const zone = t(lang, 'contact.zone');
+---
+<section class="band" aria-labelledby="contact-band-title" data-surface="navy">
+  <h2 id="contact-band-title" class="visually-hidden">{t(lang, 'contact-band.title')}</h2>
+  {proof.rating !== undefined && line !== undefined && (
+    <div class="proof">
+      <p class="score"><bdi dir="ltr">{formatRating(proof.rating, lang)}</bdi></p>
+      <p class="rating-line">{line}</p>
+    </div>
+  )}
+  {zoneHref ? <TextLink href={zoneHref} label={zone} tone="night" /> : <p class="zone">{zone}</p>}
+  <a href={telHref()} class="phone" data-track="call_click" data-placement="contact_band"><PhoneNumber /></a>
+  <div class="actions">
+    <TextLink href={telHref()} label={t(lang, 'action.call')} tone="night" track="call_click" placement="contact_band" />
+    <TextLink href={wa} label={t(lang, 'action.whatsapp')} tone="night" track="whatsapp_click" placement="contact_band" />
+    {detailsHref && <TextLink href={detailsHref} label={t(lang, 'contact-band.leave-details')} tone="night" />}
+  </div>
+</section>
+
+<style>
+  /* Seuils (les @media ne lisent pas les tokens) : --bp-menu 960px, --bp-mobile-bar 700px. */
+  .band {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-4);
+    padding-block: var(--section-y);
+    padding-inline: var(--page-gutter);
+    background-color: var(--color-navy-deep);
+    color: var(--color-white);
+    text-align: center;
+  }
+
+  @media (width < 960px) {
+    .band {
+      padding-block: var(--section-y-tablet);
+    }
+  }
+
+  @media (width < 700px) {
+    .band {
+      padding-block: var(--section-y-mobile);
+    }
+  }
+
+  .proof {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-4);
+    margin-block-end: var(--space-6);
+  }
+
+  .score {
+    margin: 0;
+    font-family: var(--type-score-giant-family);
+    font-size: var(--type-score-giant-size);
+    font-weight: var(--type-score-giant-weight);
+    line-height: var(--type-score-giant-leading);
+  }
+
+  .rating-line {
+    margin: 0;
+    font-size: var(--type-body-lg-size);
+    font-weight: var(--type-body-lg-weight);
+    line-height: var(--type-body-lg-leading);
+    color: var(--color-nav-idle);
+  }
+
+  /* Zone en texte simple (D3) : 20px nav-idle, sans chevron. */
+  .zone {
+    margin: 0;
+    font-size: var(--type-text-link-size);
+    line-height: var(--type-text-link-leading);
+    color: var(--color-nav-idle);
+  }
+
+  /* Numéro géant : chiffres en family-sans, blanc ; une seule ligne (le token se réduit à 320px). */
+  .phone {
+    font-family: var(--type-phone-band-family);
+    font-size: var(--type-phone-band-size);
+    font-weight: var(--type-phone-band-weight);
+    letter-spacing: var(--type-phone-band-tracking);
+    color: var(--color-white);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .phone:hover,
+  .phone:focus-visible {
+    text-decoration: underline;
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    column-gap: var(--link-gap);
+  }
+</style>

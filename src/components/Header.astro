@@ -1,0 +1,311 @@
+---
+// FR16, FR17, FR32, NFR9, UX-DR7, UX-DR10, UX-DR11, AD-5, AD-14 : header collant et menu mobile
+// (DESIGN.md › Components › Header, Menu mobile). Logo vers l'accueil de la langue, liens de
+// src/lib/nav (omis tant qu'aucune page n'est active), numéro en lien d'appel généré par
+// src/lib/contact/core.ts. Sous le seuil du menu (960px en hébreu, 1200px sinon) : liens inline
+// masqués, bouton menu après le numéro, panneau #mobile-menu (mêmes liens + sélecteur de langues).
+// Le bouton existe même sans lien actif (décision D4) : le panneau contient alors le seul sélecteur.
+// Sans JS (`scripting` absent ou non reconnu) : bouton masqué, panneau déplié dans le flux.
+import { Image } from 'astro:assets';
+// Pas de « @ » dans un nom d'asset : Cloudflare/wrangler répondent à /_astro/…@2x… par une 307 vers %40 (porte links).
+import logo from '../assets/brand/rs-logo-compact-white-header-2x.png';
+import { telHref } from '../lib/contact/core';
+import { t } from '../lib/i18n';
+import { headerNav } from '../lib/nav';
+import type { PageContext } from '../lib/page-context';
+import { url } from '../lib/routes';
+import LanguageSwitcher from './LanguageSwitcher.astro';
+import PhoneNumber from './PhoneNumber.astro';
+
+interface Props {
+  ctx: PageContext;
+}
+
+const { ctx } = Astro.props;
+const items = headerNav(ctx);
+---
+<header data-surface="navy" class="header">
+  <div class="bar">
+    <a href={url('home', ctx.lang)} class="home">
+      <Image src={logo} height={50} densities={[1, 2]} format="png" alt={t(ctx.lang, 'header.home-label')} class="logo" />
+    </a>
+    {items.length > 0 && (
+      <nav aria-label={t(ctx.lang, 'nav.main-label')} class="nav">
+        <ul class="nav-list">
+          {items.map(({ href, label, current }) => (
+            <li><a href={href} class="nav-link" aria-current={current ? 'page' : undefined}>{label}</a></li>
+          ))}
+        </ul>
+      </nav>
+    )}
+    <div class="actions">
+      <a href={telHref()} class="phone" data-track="call_click" data-placement="header"><PhoneNumber /></a>
+      <button type="button" class="menu-button" aria-expanded="false" aria-controls="mobile-menu" aria-label={t(ctx.lang, 'menu.label')}>
+        <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+          <path class="menu-icon-bars" d="M4 8h16M4 16h16" />
+          <path class="menu-icon-cross" d="M6 6l12 12M18 6L6 18" />
+        </svg>
+      </button>
+    </div>
+  </div>
+  <div id="mobile-menu" class="menu" data-surface="navy">
+    <div class="menu-inner">
+      {items.length > 0 && (
+        <nav aria-label={t(ctx.lang, 'nav.main-label')}>
+          <ul class="menu-list">
+            {items.map(({ href, label, current }) => (
+              <li><a href={href} class="menu-link" aria-current={current ? 'page' : undefined}>{label}</a></li>
+            ))}
+          </ul>
+        </nav>
+      )}
+      <LanguageSwitcher ctx={ctx} />
+    </div>
+  </div>
+</header>
+
+<script>
+  import '../scripts/nav.ts';
+</script>
+
+<style>
+  /* Collant ; sous le seuil du menu, collant seulement avec JS (--header-position-menu, posé plus bas) :
+   * sans JS, le panneau déplié dans le flux ne doit pas rester collé en haut de l'écran. */
+  .header {
+    --header-position: sticky;
+    --header-position-menu: relative;
+    position: var(--header-position);
+    inset-block-start: 0;
+    z-index: var(--z-header);
+    background-color: var(--color-header-glass);
+  }
+
+  /* Contenu dans la colonne --container, gouttière --page-gutter. Cibles ≥ 44px : logo 50px,
+   * liens texte 24px + 2 × 16px ; centrées, l'anneau de focus (offset 3px) reste dans la barre. */
+  .bar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-6);
+    min-block-size: var(--header-height);
+    max-inline-size: var(--container);
+    margin-inline: auto;
+    padding-inline: var(--page-gutter);
+  }
+
+  .home {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  /* Logo jamais retourné ni recoloré : aucune transformation, aucun filtre. Taille = attributs
+   * width/height de <Image> (50px de haut, components.header.logoHeight). */
+  .logo {
+    display: block;
+  }
+
+  .nav {
+    display: flex;
+  }
+
+  .nav-list {
+    display: flex;
+    align-items: center;
+    gap: var(--space-6);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .nav-link {
+    display: block;
+    padding-block: var(--space-4);
+    font-size: var(--type-nav-size);
+    font-weight: var(--type-nav-weight);
+    color: var(--color-nav-idle);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  /* Actif : blanc 700 (graisse du numéro du header, même token). */
+  .nav-link[aria-current="page"] {
+    color: var(--color-white);
+    font-weight: var(--type-phone-inline-weight);
+  }
+
+  /* Numéro puis bouton menu, à l'extrémité de fin (écart serré : tient à 320px avec le logo). */
+  .actions {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    gap: var(--space-2);
+    margin-inline-start: auto;
+  }
+
+  /* Chiffres en family-sans même en hébreu. */
+  .phone {
+    display: block;
+    flex-shrink: 0;
+    padding-block: var(--space-4);
+    font-family: var(--type-phone-inline-family);
+    font-size: var(--type-phone-inline-size);
+    font-weight: var(--type-phone-inline-weight);
+    color: var(--color-white);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  /* — Bouton menu : 44 × 44 (= 2 × icône de 22px), blanc, sans fond ni bordure. Affiché sous le seuil,
+   * avec JS seulement (--menu-button-display, posé plus bas). — */
+  .menu-button {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    inline-size: calc(var(--icon-size-menu) * 2);
+    block-size: calc(var(--icon-size-menu) * 2);
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-none);
+    background: transparent;
+    color: var(--color-white);
+    cursor: pointer;
+  }
+
+  .menu-icon {
+    display: block;
+    inline-size: var(--icon-size-menu);
+    block-size: var(--icon-size-menu);
+    stroke-width: var(--icon-stroke-width);
+    stroke-linecap: round;
+  }
+
+  /* Deux traits fermé, croix ouvert. */
+  .menu-icon-cross,
+  .menu-button[aria-expanded="true"] .menu-icon-bars {
+    display: none;
+  }
+
+  .menu-button[aria-expanded="true"] .menu-icon-cross {
+    display: inline;
+  }
+
+  /* — Panneau (UX-DR11) : navy-deep, liste 22px/600, filets line-dark, sélecteur en bas.
+   * Rendu à toutes les largeurs, masqué au-dessus du seuil. — */
+  .menu {
+    display: none;
+    background-color: var(--color-navy-deep);
+  }
+
+  .menu-inner {
+    max-inline-size: var(--container);
+    margin-inline: auto;
+    padding-inline: var(--page-gutter);
+    padding-block-end: var(--space-6);
+  }
+
+  .menu-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .menu-link {
+    display: block;
+    padding-block: var(--space-4);
+    /* Filet fin (mot-clé thin, 1px) : aucune largeur littérale hors tokens.css. */
+    border-block-end: thin solid var(--color-line-dark);
+    font-size: var(--type-h3-size);
+    font-weight: var(--type-h3-weight);
+    line-height: var(--type-h3-leading);
+    color: var(--color-white);
+    text-decoration: none;
+  }
+
+  .menu-link[aria-current="page"] {
+    font-weight: var(--type-phone-inline-weight);
+  }
+
+  /* — Seuils du menu (les @media ne lisent pas les tokens) : --bp-menu 960px en hébreu,
+   * --bp-menu-ltr 1200px en EN/RU/FR. — */
+  .header {
+    --menu-button-display: none;
+  }
+
+  @media (width < 960px) {
+    .header:lang(he) {
+      --header-position: var(--header-position-menu);
+    }
+
+    .header:lang(he) .nav {
+      display: none;
+    }
+
+    .header:lang(he) .menu-button {
+      display: var(--menu-button-display);
+    }
+
+    .header:lang(he) .menu {
+      display: block;
+    }
+  }
+
+  @media (width < 1200px) {
+    .header:not(:lang(he)) {
+      --header-position: var(--header-position-menu);
+    }
+
+    .header:not(:lang(he)) .nav {
+      display: none;
+    }
+
+    .header:not(:lang(he)) .menu-button {
+      display: var(--menu-button-display);
+    }
+
+    .header:not(:lang(he)) .menu {
+      display: block;
+    }
+  }
+
+  /* — Avec JS : bouton visible sous le seuil ; panneau masqué tant que le header n'a pas
+   * data-menu-open (posé par src/scripts/nav.ts), sinon superposé sous la barre, défilement interne.
+   * Placé après les seuils : à spécificité égale, cette règle l'emporte. — */
+  @media (scripting: enabled) {
+    .header {
+      --menu-button-display: flex;
+      --header-position-menu: sticky;
+    }
+
+    .header:not([data-menu-open]) .menu {
+      display: none;
+    }
+
+    .menu {
+      position: absolute;
+      inset-block-start: 100%;
+      inset-inline: 0;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      max-block-size: calc(100dvh - var(--header-height) - env(safe-area-inset-bottom));
+    }
+  }
+
+  /* Sous --bp-mobile-bar (700px), la barre mobile fixe occupe aussi le bas de l'écran (pas sous 500px
+   * de hauteur : elle y est en fin de page). */
+  @media (scripting: enabled) and (width < 700px) and (height > 500px) {
+    .menu {
+      max-block-size: calc(100dvh - var(--header-height) - var(--mobile-bar-height) - env(safe-area-inset-bottom));
+    }
+  }
+
+  /* EXPERIENCE.md › Header : plus collant sous 500px de hauteur (les @media ne lisent pas les tokens).
+   * Reste positionné pour que le panneau ouvert se place sous la barre. Écrit `position` (et non
+   * --header-position) : l'emporte dans tous les modes, seuils compris. */
+  @media (max-height: 500px) {
+    .header {
+      position: relative;
+    }
+  }
+</style>

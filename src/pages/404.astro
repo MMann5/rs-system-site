@@ -1,0 +1,6 @@
+---
+// AD-3, FR15 : 404 racine en hébreu (dist/404.html), servie pour tout préfixe autre que /{lang}/.
+import NotFound from '../templates/NotFound.astro';
+import { NOT_FOUND_ID } from '../lib/routes';
+---
+<NotFound id={NOT_FOUND_ID} lang="he" />

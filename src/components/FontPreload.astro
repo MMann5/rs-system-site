@@ -1,0 +1,11 @@
+---
+// Précharge la seule 700 de la langue de la page (NFR5). Chemins : src/lib/fonts.ts.
+import { FONT_PRELOAD, type FontLang } from '../lib/fonts';
+
+interface Props {
+  lang: FontLang;
+}
+
+const { lang } = Astro.props;
+---
+<link rel="preload" href={FONT_PRELOAD[lang]} as="font" type="font/woff2" crossorigin />

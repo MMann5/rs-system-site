@@ -1,0 +1,65 @@
+---
+// FR15, UX-DR15, AD-2, AD-3, AD-5, AD-6, AD-10, AD-13 : page introuvable. Héros typographique navy :
+// h1, numéro géant, Appeler › WhatsApp ›, puis Accueil › (Zones › et Contact › s'ils sont actifs).
+// Toujours noindex, sans description, canonique ni hreflang (Base.astro), sans bloc contact ni redirection.
+// Rendue en hébreu par src/pages/404.astro et dans chaque langue par la route attrape-tout (/{lang}/404/).
+import HeroTypographic from '../components/HeroTypographic.astro';
+import PhoneNumber from '../components/PhoneNumber.astro';
+import TextLink from '../components/TextLink.astro';
+import Base from '../layouts/Base.astro';
+import { telHref, waHref } from '../lib/contact/core';
+import { serviceLabels } from '../lib/contact/labels';
+import { pageWaInput } from '../lib/contact/table';
+import { t } from '../lib/i18n';
+import type { Lang } from '../lib/langs';
+import { notFoundNav } from '../lib/nav';
+import { createPageContext } from '../lib/page-context';
+
+interface Props {
+  id: string;
+  lang: Lang;
+}
+
+const { id, lang } = Astro.props;
+const ctx = createPageContext({ id, lang }, { indexable: false });
+const wa = waHref(pageWaInput(ctx, serviceLabels('he')));
+const links = notFoundNav(lang);
+---
+<Base ctx={ctx} title={t(lang, 'not-found.meta-title')}>
+  <HeroTypographic title={t(lang, 'not-found.title')}>
+    <a href={telHref()} class="phone" data-track="call_click" data-placement="404"><PhoneNumber /></a>
+    <div class="row">
+      <TextLink href={telHref()} label={t(lang, 'action.call')} tone="night" track="call_click" placement="404" />
+      <TextLink href={wa} label={t(lang, 'action.whatsapp')} tone="night" track="whatsapp_click" placement="404" />
+    </div>
+    {links.length > 0 && (
+      <div class="row">
+        {links.map(({ href, label }) => <TextLink href={href} label={label} tone="night" />)}
+      </div>
+    )}
+  </HeroTypographic>
+</Base>
+
+<style>
+  /* Numéro géant (comme le bloc contact) : chiffres en family-sans, blanc, une seule ligne. */
+  .phone {
+    font-family: var(--type-phone-band-family);
+    font-size: var(--type-phone-band-size);
+    font-weight: var(--type-phone-band-weight);
+    letter-spacing: var(--type-phone-band-tracking);
+    color: var(--color-white);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .phone:hover,
+  .phone:focus-visible {
+    text-decoration: underline;
+  }
+
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: var(--link-gap);
+  }
+</style>

@@ -1,0 +1,122 @@
+---
+// UX-DR15, UX-DR38 : héros typographique (DESIGN.md › Components › Héros typographique), repris par la 404
+// et plus tard par Ville et À propos. Fond navy-deep, h1 page-title aligné au début, puis le slot.
+// Arcs de signal au coin de fin (canvas About.dc.html), non retournés en RTL, tracés une fois ;
+// prefers-reduced-motion coupe l'animation (base.css) et laisse les arcs dessinés (repos dashoffset 0).
+interface Props {
+  title: string;
+}
+
+const { title } = Astro.props;
+---
+<section class="hero-typo" aria-labelledby="page-title" data-surface="navy">
+  <div class="arcs">
+    <svg aria-hidden="true" focusable="false" viewBox="0 0 480 480">
+      <path class="arc arc-1" pathLength="1" d="M120 360 A128 128 0 0 1 248 232" />
+      <path class="arc arc-2" pathLength="1" d="M120 360 A228 228 0 0 1 348 132" />
+      <path class="arc arc-3" pathLength="1" d="M120 360 A328 328 0 0 1 448 32" />
+    </svg>
+  </div>
+  <div class="content">
+    <h1 id="page-title" class="title">{title}</h1>
+    <slot />
+  </div>
+</section>
+
+<style>
+  /* Seuils (les @media ne lisent pas les tokens) : --bp-menu 960px, --bp-mobile-bar 700px. */
+  .hero-typo {
+    position: relative;
+    isolation: isolate;
+    padding-block: var(--section-y);
+    padding-inline: var(--page-gutter);
+    background-color: var(--color-navy-deep);
+    color: var(--color-white);
+  }
+
+  @media (width < 960px) {
+    .hero-typo {
+      padding-block: var(--section-y-tablet);
+    }
+  }
+
+  /* Sous 700px, le texte occupe toute la largeur : on réserve sous lui la hauteur visible des arcs
+     (taille réduite moins le débord bas), pour qu'aucun arc ne passe derrière le titre, le numéro ou les liens. */
+  @media (width < 700px) {
+    .hero-typo {
+      padding-block: var(--section-y-mobile)
+        calc(var(--section-y-mobile) + (var(--arcs-size) + var(--arcs-offset-block)) * var(--arcs-scale-mobile));
+    }
+  }
+
+  /* Seul porteur d'overflow: hidden : le cadre des arcs, jamais le texte. */
+  .arcs {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .arcs svg {
+    position: absolute;
+    inset-inline-end: var(--arcs-offset-inline);
+    inset-block-end: var(--arcs-offset-block);
+    inline-size: var(--arcs-size);
+    block-size: var(--arcs-size);
+  }
+
+  @media (width < 700px) {
+    .arcs svg {
+      inset-inline-end: calc(var(--arcs-offset-inline) * var(--arcs-scale-mobile));
+      inset-block-end: calc(var(--arcs-offset-block) * var(--arcs-scale-mobile));
+      inline-size: calc(var(--arcs-size) * var(--arcs-scale-mobile));
+      block-size: calc(var(--arcs-size) * var(--arcs-scale-mobile));
+    }
+  }
+
+  .arc {
+    fill: none;
+    stroke: var(--color-signal-arc);
+    stroke-width: var(--arc-stroke-width);
+    stroke-linecap: round;
+    stroke-dasharray: 1;
+    stroke-dashoffset: 0;
+    animation: arc-draw var(--arc-duration) var(--ease) var(--arc-delay-1) both;
+  }
+
+  .arc-2 {
+    opacity: var(--arc-opacity-2);
+    animation-delay: var(--arc-delay-2);
+  }
+
+  .arc-3 {
+    opacity: var(--arc-opacity-3);
+    animation-delay: var(--arc-delay-3);
+  }
+
+  /* Dans le flux, au-dessus des arcs : la section grandit avec le texte (russe, zoom). */
+  .content {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-4);
+    max-inline-size: var(--container);
+    margin-inline: auto;
+  }
+
+  .title {
+    margin: 0;
+    font-size: var(--type-page-title-size);
+    font-weight: var(--type-page-title-weight);
+    line-height: var(--type-page-title-leading);
+    color: var(--color-white);
+  }
+
+  @keyframes arc-draw {
+    from {
+      stroke-dashoffset: 1;
+    }
+  }
+</style>

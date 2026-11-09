@@ -1,0 +1,91 @@
+---
+// FR18, FR31, UX-DR12, AD-5, AD-6, AD-13 : barre mobile Appeler / WhatsApp (DESIGN.md › Components ›
+// Barre mobile). Sous 700px (--bp-mobile-bar), fixée en bas, deux moitiés égales de 64px ; au-dessus,
+// absente ; sous 500px de hauteur, en fin de page (non fixe). Liens générés par src/lib/contact/core.ts,
+// message WhatsApp selon le service et la ville du contexte de page (pageWaInput).
+// Rendue par Base.astro après le <footer> : ordre de lecture = ordre visuel. Icônes du canvas Header.dc.html.
+import { telHref, waHref } from '../lib/contact/core';
+import { serviceLabels } from '../lib/contact/labels';
+import { pageWaInput } from '../lib/contact/table';
+import { t } from '../lib/i18n';
+import type { PageContext } from '../lib/page-context';
+
+interface Props {
+  ctx: PageContext;
+}
+
+const { ctx } = Astro.props;
+const wa = waHref(pageWaInput(ctx, serviceLabels('he')));
+---
+<div class="mobile-bar">
+  <a href={telHref()} class="action call" data-surface="navy" data-track="call_click" data-placement="mobile_bar">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path d="M5 3h4l2 5-2.5 1.5a11 11 0 0 0 6 6L16 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 5a2 2 0 0 1 2-2z" /></svg>
+    <span>{t(ctx.lang, 'mobile-bar.call')}</span>
+  </a>
+  <a href={wa} class="action whatsapp" data-surface="accent" data-track="whatsapp_click" data-placement="mobile_bar">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path d="M4 20l1.3-3.9A8 8 0 1 1 8 19z" /></svg>
+    <span>{t(ctx.lang, 'mobile-bar.whatsapp')}</span>
+  </a>
+</div>
+
+<style>
+  .mobile-bar {
+    display: none;
+  }
+
+  /* --bp-mobile-bar : les @media ne lisent pas les tokens. La zone de sécurité (indicateur d'accueil)
+   * prolonge le fond navy-deep sous les deux moitiés. */
+  @media (width < 700px) {
+    .mobile-bar {
+      display: flex;
+      position: fixed;
+      inset-inline: 0;
+      inset-block-end: 0;
+      z-index: var(--z-mobile-bar);
+      padding-block-end: env(safe-area-inset-bottom);
+      background-color: var(--color-navy-deep);
+    }
+  }
+
+  /* Plus fixe sous 500px de hauteur (EXPERIENCE.md › Barre mobile) : en fin de page. */
+  @media (width < 700px) and (max-height: 500px) {
+    .mobile-bar {
+      position: static;
+    }
+  }
+
+  /* Deux moitiés égales, angles droits, 18px/700, icône trait 20px + libellé sur une ligne. */
+  .action {
+    display: flex;
+    flex: 1 1 50%;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    min-inline-size: 0;
+    min-block-size: var(--mobile-bar-height);
+    border-radius: var(--radius-none);
+    font-size: var(--type-mobile-bar-size);
+    font-weight: var(--type-mobile-bar-weight);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .call {
+    background-color: var(--color-navy-deep);
+    color: var(--color-white);
+  }
+
+  .whatsapp {
+    background-color: var(--color-signal-blue);
+    color: var(--color-on-accent);
+  }
+
+  .icon {
+    flex-shrink: 0;
+    inline-size: var(--icon-size);
+    block-size: var(--icon-size);
+    stroke-width: var(--icon-stroke-width);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+</style>

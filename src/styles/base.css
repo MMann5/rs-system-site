@@ -1,0 +1,116 @@
+/*
+ * Styles de base (AD-7, AD-8, UX-DR2, UX-DR6, NFR7) : polices par langue, corps, focus,
+ * mouvement réduit, défilement, titres. Valeurs lues dans tokens.css uniquement ; propriétés logiques.
+ */
+@import './tokens.css';
+@import './fonts.css';
+
+/* — Police par langue, spécificité nulle : une classe de composant l'emporte.
+ * Posée sur les seuls éléments porteurs de `lang` (html, passage étranger), puis héritée :
+ * un composant qui fixe sa police la transmet à ses enfants. — */
+:where([lang]:lang(he)) {
+  font-family: var(--family-he);
+}
+
+:where([lang]:not(:lang(he))) {
+  font-family: var(--family-sans);
+}
+
+/* — Défilement : la cible d'ancre ou de focus n'est jamais sous le header collant ni la barre mobile — */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  scroll-padding-block: var(--scroll-padding-start) calc(var(--scroll-padding-start) + env(safe-area-inset-bottom));
+}
+
+body {
+  margin: 0;
+  font-size: var(--type-body-size);
+  font-weight: var(--type-body-weight);
+  line-height: var(--type-body-leading);
+  color: var(--color-ink);
+  background-color: var(--color-surface);
+}
+
+/* — Barre mobile (FR18) : sous --bp-mobile-bar (700px), le bas de page n'est jamais caché sous la
+ * barre fixe ; sous 500px de hauteur, la barre est en fin de page et ce dégagement disparaît.
+ * Les @media ne lisent pas les tokens. — */
+@media (width < 700px) {
+  body {
+    padding-block-end: calc(var(--mobile-bar-height) + env(safe-area-inset-bottom));
+  }
+}
+
+@media (width < 700px) and (max-height: 500px) {
+  body {
+    padding-block-end: 0;
+  }
+}
+
+/* — Contrôles de formulaire : police du site, pas la police système — */
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+/* — Titres : retour à la ligne équilibré, jamais de débordement (russe, mots longs) — */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+
+/* — Focus (UX-DR6) : anneau selon le fond, porté par `data-surface` sur l'élément ou un ancêtre.
+ * Clair par défaut ; navy = aplat navy, photo = photo sous scrim, accent = fond signal-blue. — */
+:root {
+  --focus-ring: var(--color-focus-ring);
+  --focus-ring-offset: var(--focus-offset);
+}
+
+[data-surface="navy"] {
+  --focus-ring: var(--color-focus-ring-dark);
+  --focus-ring-offset: var(--focus-offset);
+}
+
+[data-surface="photo"] {
+  --focus-ring: var(--color-focus-ring-on-photo);
+  --focus-ring-offset: var(--focus-offset);
+}
+
+[data-surface="accent"] {
+  --focus-ring: var(--color-focus-ring-on-accent);
+  --focus-ring-offset: var(--focus-offset-accent);
+}
+
+:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+
+/* — Mouvement réduit (NFR7) : aucune animation ni transition — */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* — Masqué visuellement, lu par les lecteurs d'écran (h2 du bloc contact) — */
+.visually-hidden {
+  position: absolute;
+  inline-size: var(--visually-hidden-size);
+  block-size: var(--visually-hidden-size);
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  margin: 0;
+}

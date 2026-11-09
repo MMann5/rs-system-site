@@ -1,0 +1,21 @@
+# D6 : page de test des chemins hébreux et cyrilliques sur Cloudflare.
+# Générée seulement sur les builds de branche (jamais quand WORKERS_CI_BRANCH === 'main'),
+# absente du sitemap, du menu, du footer et de tout lien ; noindex comme le reste du site.
+slugs:
+  he: 'בדיקת-נתיב'
+  en: 'path-probe'
+  ru: 'проверка-пути'
+  fr: 'test-de-chemin'
+enabled: true
+previewOnly: true
+meta:
+  title:
+    he: 'בדיקת נתיב · RS SYSTEM'
+    en: 'Path check · RS SYSTEM'
+    ru: 'Проверка пути · RS SYSTEM'
+    fr: 'Test de chemin · RS SYSTEM'
+  description:
+    he: 'דף בדיקה פנימי לנתיבים בעברית ובקירילית.'
+    en: 'Internal test page for Hebrew and Cyrillic paths.'
+    ru: 'Внутренняя тестовая страница для путей на иврите и кириллице.'
+    fr: 'Page de test interne pour les chemins en hébreu et en cyrillique.'

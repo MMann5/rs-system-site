@@ -1,0 +1,4 @@
+# FR41, AD-4, décision D2 : preuves du bloc contact. Chaque champ est optionnel : absent = masqué.
+# Nombre d'avis Midrag inconnu : ne pas l'inventer. L'ajouter ici (`reviews: N`) quand il est connu.
+- id: midrag
+  rating: 9.94

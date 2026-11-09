@@ -1,0 +1,6 @@
+---
+// AD-5, FR32 : numéro affiché, isolé en LTR dans les 4 langues. Sans <style> : Astro n'ajoute aucun
+// attribut data-astro-cid au <bdi>, et la ligne unique évite tout espace ajouté par compressHTML.
+import { PHONE_DISPLAY } from '../lib/contact/core';
+---
+<bdi dir="ltr">{PHONE_DISPLAY}</bdi>

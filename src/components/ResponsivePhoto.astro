@@ -1,0 +1,51 @@
+---
+// AD-9, NFR4 : seul passage des photos (contrôlé par scripts/checks/photos.mjs). Construit sur getImage() :
+// <picture> avec, si `portrait` est fourni, une source 4:5 dédiée sous 700px (MOBILE_PHOTO_MEDIA) en
+// AVIF, WebP puis JPEG ; puis AVIF et WebP de `src` ; enfin <img> JPEG avec dimensions déclarées.
+// Largeurs : PHOTO_WIDTHS ≤ largeur de la source (src/lib/photos.ts). Par défaut lazy + async ; `priority`
+// (héros seul) : eager + fetchpriority="high". Sans <style> : le parent stylise <img> via :global.
+import type { ImageMetadata } from 'astro';
+import { getImage } from 'astro:assets';
+import { MOBILE_PHOTO_MEDIA, photoWidths } from '../lib/photos';
+
+interface Props {
+  src: ImageMetadata;
+  portrait?: ImageMetadata;
+  alt: string;
+  sizes: string;
+  portraitSizes?: string;
+  priority?: boolean;
+  class?: string;
+}
+
+const { src, portrait, alt, sizes, portraitSizes = sizes, priority = false, class: className } = Astro.props;
+
+const FORMATS = ['avif', 'webp', 'jpeg'] as const;
+type Format = (typeof FORMATS)[number];
+// NFR4 (poids) : WebP à 75 (défaut sharp : 80, qui dépasse 120 Ko pour le 4:5 du héros à 1080w) ;
+// AVIF et JPEG gardent les défauts du service sharp d'Astro.
+const QUALITY: Partial<Record<Format, number>> = { webp: 75 };
+
+/** Une variante par format, aux largeurs de la source ; `width` = la plus grande (pas d'image en plus). */
+async function variants(image: ImageMetadata) {
+  const widths = photoWidths(image.width);
+  const width = widths[widths.length - 1] as number;
+  const entries = await Promise.all(
+    FORMATS.map(async (format) => [format, await getImage({ src: image, widths, width, format, quality: QUALITY[format] })] as const),
+  );
+  return Object.fromEntries(entries) as Record<Format, Awaited<ReturnType<typeof getImage>>>;
+}
+
+const main = await variants(src);
+const mobile = portrait ? await variants(portrait) : undefined;
+const loading = priority ? ({ loading: 'eager', fetchpriority: 'high' } as const) : ({ loading: 'lazy', decoding: 'async' } as const);
+---
+<picture>
+  {mobile && portrait && FORMATS.map((format) => (
+    <source media={MOBILE_PHOTO_MEDIA} type={`image/${format}`} srcset={mobile[format].srcSet.attribute} sizes={portraitSizes} width={portrait.width} height={portrait.height} />
+  ))}
+  {(['avif', 'webp'] as const).map((format) => (
+    <source type={`image/${format}`} srcset={main[format].srcSet.attribute} sizes={sizes} width={src.width} height={src.height} />
+  ))}
+  <img src={main.jpeg.src} srcset={main.jpeg.srcSet.attribute} sizes={sizes} width={src.width} height={src.height} alt={alt} class={className} {...loading} />
+</picture>

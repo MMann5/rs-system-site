@@ -1,0 +1,11 @@
+---
+// UX-DR35, FR40, décision D1 : seul passage d'un contenu manquant. Affiche `[text]` (texte traduit,
+// sans crochets dans les JSON i18n), marqué `data-placeholder`. L'avertissement sur un build non
+// indexable (contrôle de dist/) arrive en story 1.10 ; le blocage en production, en epic 7.
+interface Props {
+  text: string;
+}
+
+const { text } = Astro.props;
+---
+<span data-placeholder>[{text}]</span>
