@@ -42,6 +42,12 @@ const services = serviceLabels(lang);
 const optional = t(lang, 'form.optional');
 const nameError = t(lang, 'form.name.error');
 const phoneError = t(lang, 'form.phone.error');
+// Recette epic 2 (D6) : le numéro d'exemple du message téléphone est isolé en LTR et insécable (règle des
+// numéros), sous le champ comme dans le résumé ; le texte autour reste celui du dictionnaire.
+const phoneExample = phoneError.match(/\+?\d[\d .()-]*\d/);
+const phoneErrorParts = phoneExample
+  ? { before: phoneError.slice(0, phoneExample.index), number: phoneExample[0], after: phoneError.slice((phoneExample.index ?? 0) + phoneExample[0].length) }
+  : { before: phoneError, number: '', after: '' };
 ---
 <Base ctx={ctx} title={meta.title[lang]} description={meta.description[lang]} tables={{ services, cities: cityLabels(lang) }}>
   <section class="hero" aria-labelledby="contact-title">
@@ -74,7 +80,7 @@ const phoneError = t(lang, 'form.phone.error');
               <h3 class="status-title">{t(lang, 'form.errors.title')}</h3>
               <ul class="status-list">
                 <li data-field="name"><a href="#contact-name" class="status-link">{nameError}</a></li>
-                <li data-field="phone"><a href="#contact-phone" class="status-link">{phoneError}</a></li>
+                <li data-field="phone"><a href="#contact-phone" class="status-link">{phoneErrorParts.before}{phoneErrorParts.number && <bdi dir="ltr">{phoneErrorParts.number}</bdi>}{phoneErrorParts.after}</a></li>
               </ul>
             </div>
           </div>
@@ -88,7 +94,7 @@ const phoneError = t(lang, 'form.phone.error');
           <div class="field-group">
             <label for="contact-phone" class="label">{t(lang, 'form.phone.label')}</label>
             <input id="contact-phone" class="field" type="tel" dir="ltr" autocomplete="tel" required aria-required="true" />
-            <p id="contact-phone-error" class="error" hidden><svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7.5v5.5M12 16.5v.01" /></svg><span>{phoneError}</span></p>
+            <p id="contact-phone-error" class="error" hidden><svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7.5v5.5M12 16.5v.01" /></svg><span>{phoneErrorParts.before}{phoneErrorParts.number && <bdi dir="ltr">{phoneErrorParts.number}</bdi>}{phoneErrorParts.after}</span></p>
           </div>
           <div class="field-group">
             <label for="contact-city" class="label">{t(lang, 'form.city.label')} <span class="optional">{optional}</span></label>
@@ -409,7 +415,9 @@ const phoneError = t(lang, 'form.phone.error');
     color: var(--color-link);
   }
 
-  .status-action :global(bdi) {
+  .status-action :global(bdi),
+  .error bdi,
+  .status-link bdi {
     white-space: nowrap;
   }
 
@@ -438,10 +446,12 @@ const phoneError = t(lang, 'form.phone.error');
     list-style: none;
   }
 
+  /* inline-block (pas flex) : le numéro d'exemple isolé reste dans la phrase au lieu de devenir une colonne. */
   .status-link {
-    display: inline-flex;
-    align-items: center;
+    display: inline-block;
+    box-sizing: border-box;
     min-block-size: var(--space-12);
+    padding-block: calc((var(--space-12) - var(--type-body-size) * var(--type-body-leading)) / 2);
     font-size: var(--type-body-size);
     line-height: var(--type-body-leading);
     color: var(--color-link);

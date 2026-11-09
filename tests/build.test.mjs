@@ -150,7 +150,10 @@ function assertLayout(html, id, lang, out, site = '', indexable = false) {
   assert.equal(html.match(BASELINE_BDI)?.length ?? 0, lang === 'he' ? 0 : 1, `${where} : bdi de la baseline`);
   assert.equal(html.replace(SWITCHER_LINK, '').replace(BASELINE_BDI, '').match(/\slang=/g)?.length, 1, `${where} : lang= en double`);
   // Story 2.1 : seul autre dir= de la page Contact, dir="ltr" sur le champ téléphone.
-  const withoutIsolates = html.replaceAll(PHONE_BDI, '').replace(BASELINE_BDI, '').replace(RATING_BDI, '');
+  // Recette epic 2 (D6) : numéro d'exemple du message téléphone, isolé sous le champ et dans le résumé.
+  const exampleBdi = id === 'contact' ? /<bdi dir="ltr"(?: data-astro-cid-[\w-]+)?>050-123-4567<\/bdi>/g : /$^/;
+  if (id === 'contact') assert.equal(html.match(exampleBdi)?.length, 2, `${where} : numéro d'exemple isolé 2 fois (résumé et champ)`);
+  const withoutIsolates = html.replaceAll(PHONE_BDI, '').replace(BASELINE_BDI, '').replace(RATING_BDI, '').replace(exampleBdi, '');
   const phoneField = id === 'contact' ? /<input id="contact-phone"[^>]*>/ : /$^/;
   assert.equal(withoutIsolates.replace(phoneField, '').match(/\sdir=/g)?.length, 1, `${where} : dir= en double`);
   assert.match(html, new RegExp(`<html lang="${lang}" dir="${lang === 'he' ? 'rtl' : 'ltr'}" data-page-id="${id}"[\\s>]`), where);
@@ -559,7 +562,13 @@ function assertContactErrors(html, block, form, dict, out, where) {
   const status = template.replace(/^<div class="form-status"[^>]*>/, '');
   assert.match(status, ALERT_ICON, `${where} : icône 24px du résumé`);
   assert.equal(status.match(/<h3 class="status-title"[^>]*>([^<]*)<\/h3>/)?.[1], escaped(dict['form.errors.title']), `${where} : h3 du résumé`);
-  const items = [...status.matchAll(/<li data-field="(\w+)"[^>]*><a href="([^"]*)"[^>]*>([^<]*)<\/a><\/li>/g)].map((m) => m.slice(1));
+  // Recette epic 2 (D6) : le numéro d'exemple du message téléphone est isolé dans un <bdi dir="ltr">.
+  const EXAMPLE_BDI = /<bdi dir="ltr"(?: data-astro-cid-[\w-]+)?>\+?\d[\d .()-]*\d<\/bdi>/;
+  const plain = (s) => s.replace(/<bdi dir="ltr"(?: data-astro-cid-[\w-]+)?>([^<]*)<\/bdi>/g, '$1');
+  const items = [...status.matchAll(/<li data-field="(\w+)"[^>]*><a href="([^"]*)"[^>]*>((?:[^<]|<\/?bdi\b[^>]*>)*)<\/a><\/li>/g)].map((m) => m.slice(1));
+  assert.match(items.find(([f]) => f === 'phone')?.[2] ?? '', EXAMPLE_BDI, `${where} : numéro d'exemple isolé dans le résumé`);
+  assert.ok(!/<bdi\b/.test(items.find(([f]) => f === 'name')?.[2] ?? ''), `${where} : aucun isolement dans le lien Nom`);
+  for (const item of items) item[2] = plain(item[2]);
   assert.deepEqual(items, [['name', '#contact-name', escaped(dict['form.name.error'])], ['phone', '#contact-phone', escaped(dict['form.phone.error'])]], `${where} : liens du résumé`);
   // Messages cachés juste après leur champ, icône aria-hidden puis texte traduit.
   for (const [id, key] of [['contact-name', 'form.name.error'], ['contact-phone', 'form.phone.error']]) {
@@ -569,7 +578,9 @@ function assertContactErrors(html, block, form, dict, out, where) {
     assert.equal(attr(m[1], 'class'), 'error', `${where} : classe du message de ${id}`);
     assert.ok(hasAttr(m[1], 'hidden', ''), `${where} : message de ${id} caché`);
     assert.match(m[2], ALERT_ICON, `${where} : icône du message de ${id}`);
-    assert.equal(m[2].replace(ALERT_ICON, '').match(/^<span\b[^>]*>([^<]*)<\/span>$/)?.[1], escaped(dict[key]), `${where} : texte du message de ${id}`);
+    const span = m[2].replace(ALERT_ICON, '').match(/^<span\b[^>]*>((?:[^<]|<\/?bdi\b[^>]*>)*)<\/span>$/)?.[1] ?? '';
+    if (key === 'form.phone.error') assert.match(span, EXAMPLE_BDI, `${where} : numéro d'exemple isolé sous le champ`);
+    assert.equal(plain(span), escaped(dict[key]), `${where} : texte du message de ${id}`);
   }
   assert.equal(form.match(/class="error"/g)?.length, 2, `${where} : messages d'erreur (champs facultatifs sans message)`);
   assert.ok(!/\saria-(?:invalid|describedby)=/.test(html), `${where} : aria-invalid / aria-describedby au build`);
