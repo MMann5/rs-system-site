@@ -98,5 +98,7 @@
   "city.service-hint.smart-home": "Свет, жалюзи и кондиционер",
   "city.service-hint.networks": "Дом, офис и новостройка",
   "city.neighbors.title": "Также в окрестных населённых пунктах",
+  "city.reviews.label": "Отзывы: {city} и окрестности",
+  "city.reviews.source": "Мидраг",
   "placeholder.neighbors": "соседние населённые пункты"
 }

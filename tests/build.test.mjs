@@ -1453,7 +1453,7 @@ function assertCity(html, cid, lang) {
   assert.equal(html.match(/<h1[\s>]/g)?.length, 1, `${where} : <h1>`);
   const levels = [...main.matchAll(/<h([1-6])[\s>]/g)].map((m) => Number(m[1]));
   assert.deepEqual(levels, [1, 2, 2, 2, 3, 3, 3, 3, 2], `${where} : niveaux de titres`);
-  // Ordre : héros typographique, « ce qu'on installe », localités, étapes, bloc contact ; pas de section avis.
+  // Ordre : héros typographique, « ce qu'on installe », localités, étapes, bloc contact (avis : aria-label, ci-dessous).
   const sections = [...main.matchAll(/<section class="([^"]*)" aria-labelledby="([^"]*)"/g)].map((m) => [m[1], m[2]]);
   assert.deepEqual(sections, [
     ['hero-typo', 'page-title'],
@@ -1462,7 +1462,17 @@ function assertCity(html, cid, lang) {
     ['steps reveal', 'steps-title'],
     ['band', 'contact-band-title'],
   ], `${where} : sections`);
-  assert.ok(!main.includes('<figure'), `${where} : aucune figure d'avis`);
+  // Story 4.3 (FR41, D3) : aucun avis → ni section, ni titre, ni figure. Tant que D3 tient (aucun avis dans le dépôt),
+  // la branche « avec avis » ci-dessous ne tourne pas : le rendu avec avis est couvert par tests/reviews-render.test.mjs.
+  const reviewSection = main.match(/<section class="section section-alt reveal" aria-label="([^"]*)">([\s\S]*?)<\/section>/);
+  if (data.reviews.length === 0) {
+    assert.ok(!reviewSection && !main.includes('section-alt'), `${where} : section avis absente`);
+    assert.ok(!main.includes('<figure'), `${where} : aucune figure d'avis`);
+  } else {
+    assert.equal(reviewSection?.[1], escaped(dict['city.reviews.label'].replace('{city}', name)), `${where} : aria-label des avis`);
+    assert.equal(reviewSection[2].match(/<figure\b/g)?.length, data.reviews.length, `${where} : une figure par avis`);
+    assert.ok(main.indexOf('city-services-title') < reviewSection.index && reviewSection.index < main.indexOf('city-neighbors-title'), `${where} : avis entre services et localités`);
+  }
   // Héros : fil d'Ariane = nom de la région en texte (areas inactive), h1, intro, liens Appeler › WhatsApp › Devis ›.
   const hero = main.slice(0, main.indexOf('</section>'));
   assert.equal((hero.match(/<svg\b[\s\S]*?<\/svg>/)?.[0].match(/<path\b[^>]*\spathLength="1"/g) ?? []).length, 3, `${where} : 3 arcs`);

@@ -5,12 +5,15 @@
 // - story 4.1 : les villes de src/content/cities/*.yaml entrent au même registre (`city:{id}` sous `areas`,
 //   `inheritActive: false`, comme src/lib/routes/index.ts) et chacune référence une région connue de
 //   src/content/regions/*.yaml, ancres uniques (buildAreas). Dossiers absents = aucune ville, aucune région.
-// Les messages de buildDictionary, buildRegistry et buildAreas sont repris tels quels.
+// - story 4.3 : les avis de src/content/reviews/*.yaml et leurs références dans les villes passent buildReviews
+//   (≤ 2 avis par ville, avis connu et unique, avis de la ville, localité = la ville ou une voisine).
+//   Dossier absent = aucun avis.
+// Les messages de buildDictionary, buildRegistry, buildAreas et buildReviews sont repris tels quels.
 // Usage : node scripts/checks/completeness.mjs [racine]  (défaut : racine du dépôt).
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse } from 'yaml';
-import { buildAreas, citySources } from '../../src/lib/areas/core.ts';
+import { buildAreas, buildReviews, citySources } from '../../src/lib/areas/core.ts';
 import { buildDictionary } from '../../src/lib/i18n/core.ts';
 import { LANGS } from '../../src/lib/langs.ts';
 import { buildRegistry } from '../../src/lib/routes/core.ts';
@@ -20,6 +23,7 @@ const I18N = 'src/i18n';
 const PAGES = 'src/content/pages';
 const CITIES = 'src/content/cities';
 const REGIONS = 'src/content/regions';
+const REVIEWS = 'src/content/reviews';
 const messages = (error) => String(error?.message ?? error).split('\n');
 
 function checkI18n(root, failures) {
@@ -60,12 +64,18 @@ function readYamlDir(root, dir, failures) {
   return out;
 }
 
-/** Villes valides pour le registre (région connue, ancres uniques) ; [] si buildAreas lève. */
+/** Villes pour le registre ; régions (connues, ancres uniques) et avis (buildReviews) vérifiés au passage. */
 function checkAreas(root, failures) {
   const regions = readYamlDir(root, REGIONS, failures);
   const cities = readYamlDir(root, CITIES, failures);
+  const reviews = readYamlDir(root, REVIEWS, failures);
   try {
     buildAreas(regions, cities);
+  } catch (error) {
+    for (const line of messages(error)) failures.push(line);
+  }
+  try {
+    buildReviews(reviews, cities.map(({ id, data }) => ({ ...data, id })));
   } catch (error) {
     for (const line of messages(error)) failures.push(line);
   }

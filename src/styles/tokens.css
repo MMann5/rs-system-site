@@ -517,4 +517,14 @@
   /* Canvas City.dc.html › localités alentour : « gap: 16px », texte « font-size: 20px; line-height: 1.7 » */
   --type-neighbors-size: 20px;
   --type-neighbors-leading: 1.7;
+  /* — Story 4.3 : avis Midrag sur les pages ville (canvas City.dc.html › section avis, DESIGN.md › Components › Citation Midrag) — */
+  /* Canvas City.dc.html › blockquote : « font-size: clamp(24px, 2.4vw, 32px); line-height: 1.35; font-weight: 600 » */
+  --type-midrag-quote-size: clamp(24px, 2.4vw, 32px);
+  --type-midrag-quote-weight: 600;
+  --type-midrag-quote-leading: 1.35;
+  /* Canvas City.dc.html › grille des avis : « repeat(auto-fit, minmax(min(100%, 440px), 1fr)); gap: 56px » */
+  --review-col-min: 440px;
+  --review-grid-gap: 56px;
+  /* Canvas City.dc.html › figure : « gap: 16px » entre citation et légende */
+  --review-gap: 16px;
 }

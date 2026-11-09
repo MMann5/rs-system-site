@@ -3,7 +3,7 @@
 import { defineCollection } from 'astro:content';
 import { file, glob } from 'astro/loaders';
 import { z } from 'astro/zod';
-import { citySchema, regionSchema } from './lib/areas/schema.ts';
+import { citySchema, regionSchema, reviewSchema } from './lib/areas/schema.ts';
 import { KEY_RE } from './lib/i18n/core.ts';
 import { pageSchema, perLang, text } from './lib/page-schema.ts';
 
@@ -57,4 +57,12 @@ const cities = defineCollection({
   schema: citySchema,
 });
 
-export const collections = { pages, i18n, services, proof, regions, cities };
+// Story 4.3 (FR41, AD-4, D3, D4) : avis Midrag, un fichier par avis (src/content/reviews/{id}.yaml), id = nom du
+// fichier. Schéma : src/lib/areas/schema.ts ; ≤ 2 avis par ville et provenance : src/lib/areas/core.ts.
+// Aucun avis au lancement (D3) : le dossier ne contient que son README.
+const reviews = defineCollection({
+  loader: glob({ pattern: '*.yaml', base: './src/content/reviews', generateId: fileId }),
+  schema: reviewSchema,
+});
+
+export const collections = { pages, i18n, services, proof, regions, cities, reviews };

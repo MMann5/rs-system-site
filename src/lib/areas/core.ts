@@ -112,3 +112,104 @@ export function citySources(cities: readonly { id: string; slugs: PerLang }[]) {
     inheritActive: false,
   }));
 }
+
+// — Story 4.3 (FR41, UX-DR24, AD-4, décisions D3 et D4 de l'epic 4) : avis Midrag des pages ville —
+
+export interface ReviewData {
+  /** Citation verbatim, dans la langue d'origine. */
+  quote: string;
+  /** Langue d'origine (citation, auteur, localité). */
+  lang: Lang;
+  author: string;
+  /** Localité verbatim, dans la langue d'origine : nom de la ville ou d'une de ses voisines dans `lang`. */
+  locality: string;
+  /** Id de la ville qui référence l'avis. */
+  city: string;
+  /** Traductions optionnelles, jamais affichées (D4). */
+  translations?: Partial<PerLang>;
+}
+
+export interface Review extends ReviewData {
+  id: string;
+}
+
+/** Au plus 2 avis par ville (FR41). */
+export const MAX_REVIEWS_PER_CITY = 2;
+
+/** Ville vue par `buildReviews` : champs lus tels quels (YAML brut au lint, entrées validées au build). */
+export interface ReviewCity {
+  id: string;
+  name?: Partial<PerLang>;
+  neighbors?: readonly Partial<PerLang>[];
+  reviews?: readonly string[];
+}
+
+const sameName = (a: unknown, b: unknown): boolean =>
+  typeof a === 'string' && typeof b === 'string' && a.trim().normalize('NFC') === b.trim().normalize('NFC');
+
+/**
+ * Valide les avis et leurs références, puis rend `reviewsOf(cityId)` (avis de la ville, dans l'ordre de ses
+ * `reviews`). Lève en nommant le fichier fautif, toutes les erreurs d'un coup : ville à plus de 2 avis, avis
+ * inconnu ou listé deux fois, avis d'une ville inconnue ou d'une autre ville que celle qui le référence, localité
+ * qui n'est ni le nom de la ville ni celui d'une voisine dans la langue de l'avis. Un avis non référencé est accepté.
+ */
+export function buildReviews(
+  reviewSources: readonly { id: string; data: ReviewData }[],
+  cities: readonly ReviewCity[],
+): (cityId: string) => readonly Review[] {
+  const errors: string[] = [];
+  const reviewById = new Map<string, Review>();
+  for (const { id, data } of reviewSources) {
+    if (reviewById.has(id)) {
+      errors.push(`src/content/reviews/${id}.yaml : avis « ${id} » déclaré deux fois`);
+      continue;
+    }
+    reviewById.set(id, { id, ...data });
+  }
+  const cityById = new Map(cities.map((c) => [c.id, c]));
+
+  // Provenance : ville connue, localité = la ville ou une voisine, dans la langue d'origine de l'avis.
+  for (const review of reviewById.values()) {
+    const file = `src/content/reviews/${review.id}.yaml`;
+    const city = cityById.get(review.city);
+    if (city === undefined) {
+      errors.push(`${file} : ville inconnue « ${review.city} »`);
+      continue;
+    }
+    const neighbors = Array.isArray(city.neighbors) ? city.neighbors : [];
+    const names = [city.name?.[review.lang], ...neighbors.map((n) => n?.[review.lang])];
+    if (!names.some((name) => sameName(name, review.locality))) {
+      errors.push(`${file} : localité « ${review.locality} » ni ${review.city} ni une de ses voisines (${review.lang})`);
+    }
+  }
+
+  const byCity = new Map<string, readonly Review[]>();
+  for (const city of cities) {
+    const file = `src/content/cities/${city.id}.yaml`;
+    const refs: readonly string[] = Array.isArray(city.reviews) ? city.reviews : [];
+    if (refs.length > MAX_REVIEWS_PER_CITY) errors.push(`${file} : ${refs.length} avis (au plus ${MAX_REVIEWS_PER_CITY})`);
+    const seen = new Set<string>();
+    const list: Review[] = [];
+    for (const ref of refs) {
+      if (seen.has(ref)) {
+        errors.push(`${file} : avis « ${ref} » listé deux fois`);
+        continue;
+      }
+      seen.add(ref);
+      const review = reviewById.get(ref);
+      if (review === undefined) {
+        errors.push(`${file} : avis inconnu « ${ref} »`);
+        continue;
+      }
+      if (review.city !== city.id) {
+        errors.push(`src/content/reviews/${ref}.yaml : avis de « ${review.city} », référencé par « ${city.id} »`);
+        continue;
+      }
+      list.push(review);
+    }
+    byCity.set(city.id, Object.freeze(list));
+  }
+  if (errors.length > 0) fail(errors);
+
+  return (cityId) => byCity.get(cityId) ?? fail([`ville inconnue « ${cityId} »`]);
+}

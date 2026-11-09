@@ -98,5 +98,7 @@
   "city.service-hint.smart-home": "Lighting, shutters and air conditioning",
   "city.service-hint.networks": "Home, office and new buildings",
   "city.neighbors.title": "Also in the surrounding localities",
+  "city.reviews.label": "Reviews from {city} and nearby",
+  "city.reviews.source": "Midrag",
   "placeholder.neighbors": "nearby localities"
 }

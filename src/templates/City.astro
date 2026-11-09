@@ -3,16 +3,19 @@
 // (story 4.1) : modèle des pages ville (canvas City.dc.html), piloté par l'id `city:{id}`. Ordre de <main> :
 // héros typographique navy (fil d'Ariane région, h1 nom de la ville, intro, Appeler › WhatsApp › הצעת מחיר ›),
 // « ce qu'on installe à {ville} » (5 lignes vers les pages services générales), localités alentour (texte, sans
-// liens ; placeholder tant qu'aucune n'est fournie), étapes, bloc contact. Pas de section avis (story 4.3).
+// liens ; placeholder tant qu'aucune n'est fournie), étapes, bloc contact. Story 4.3 (FR41, UX-DR24, D3, D4) : entre
+// « ce qu'on installe » et les localités, 0 à 2 avis Midrag (fond surface-alt, aria-label sans titre visible) ;
+// section absente si la ville n'a pas d'avis.
 // Contexte de page (AD-13) : `city` et `navSection: 'areas'` ; héros, barre mobile et bloc contact en tirent le
 // message WhatsApp « …ב{nom hébreu} » et le `?city=` des liens Contact. Données : src/content/cities/{id}.yaml.
+import CityReviews from '../components/CityReviews.astro';
 import ContactBand from '../components/ContactBand.astro';
 import HeroTypographic from '../components/HeroTypographic.astro';
 import Placeholder from '../components/Placeholder.astro';
 import Steps from '../components/Steps.astro';
 import TextLink from '../components/TextLink.astro';
 import Base from '../layouts/Base.astro';
-import { CITY_ID_PREFIX, city as findCity, region as findRegion } from '../lib/areas';
+import { CITY_ID_PREFIX, city as findCity, region as findRegion, reviewsOf } from '../lib/areas';
 import { bandLinks } from '../lib/contact/band';
 import { telHref, waHref } from '../lib/contact/core';
 import { cityLabels, serviceLabels, servicePage } from '../lib/contact/labels';
@@ -51,6 +54,7 @@ const rows = SERVICE_ROWS.flatMap((code) => {
   return [{ code, href: url(page, lang), label: services[code].label, hint: t(lang, `city.service-hint.${code}`) }];
 });
 const neighbors = city.neighbors.map((n) => n[lang]);
+const reviews = reviewsOf(cityId);
 ---
 <Base ctx={ctx} title={t(lang, 'city.meta-title').replace('{city}', name)} description={city.intro[lang]}>
   <HeroTypographic title={name} titleSize="city">
@@ -83,6 +87,14 @@ const neighbors = city.neighbors.map((n) => n[lang]);
             </li>
           ))}
         </ul>
+      </div>
+    </section>
+  )}
+
+  {reviews.length > 0 && (
+    <section class="section section-alt reveal" aria-label={t(lang, 'city.reviews.label').replace('{city}', name)}>
+      <div class="inner">
+        <CityReviews reviews={reviews} />
       </div>
     </section>
   )}
@@ -143,7 +155,7 @@ const neighbors = city.neighbors.map((n) => n[lang]);
     column-gap: var(--link-gap);
   }
 
-  /* — Sections blanches : « ce qu'on installe », localités alentour — */
+  /* — Sections : « ce qu'on installe », localités alentour (blanches), avis Midrag (surface-alt) — */
   .section {
     padding-block: var(--section-y);
     padding-inline: var(--page-gutter);
@@ -161,6 +173,10 @@ const neighbors = city.neighbors.map((n) => n[lang]);
     .section {
       padding-block: var(--section-y-mobile);
     }
+  }
+
+  .section-alt {
+    background-color: var(--color-surface-alt);
   }
 
   .inner {

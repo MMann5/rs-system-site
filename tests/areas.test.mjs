@@ -6,8 +6,8 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
-import { buildAreas, citySources, CITY_ID_PREFIX } from '../src/lib/areas/core.ts';
-import { citySchema, regionSchema } from '../src/lib/areas/schema.ts';
+import { buildAreas, buildReviews, citySources, CITY_ID_PREFIX, MAX_REVIEWS_PER_CITY } from '../src/lib/areas/core.ts';
+import { citySchema, regionSchema, reviewSchema } from '../src/lib/areas/schema.ts';
 import { buildRegistry } from '../src/lib/routes/core.ts';
 
 const CONTENT = fileURLToPath(new URL('../src/content/', import.meta.url));
@@ -153,4 +153,102 @@ test('areas.yaml : désactivée (story 4.4), slugs אזורים / areas / рай
   const data = parse(readFileSync(join(CONTENT, 'pages/areas.yaml'), 'utf8'));
   assert.equal(data.enabled, false);
   assert.deepEqual(data.slugs, { he: 'אזורים', en: 'areas', ru: 'районы', fr: 'zones' });
+});
+
+// — Story 4.3 (FR41, AD-4, D3, D4) : avis Midrag. Fixtures de test uniquement, jamais dans src/ (D3). —
+
+/** Ville `id` (nom hébreu `he`) avec ses voisines et ses références d'avis. */
+const reviewCity = (id, he, { neighbors = [], reviews = [] } = {}) => {
+  const c = city(id, 'center-shfela', 1);
+  return { id, ...c.data, name: { ...c.data.name, he }, neighbors, reviews };
+};
+const review = (id, cityId, locality, lang = 'he') => ({
+  id,
+  data: { quote: `citation de test ${id}`, lang, author: `auteur ${id}`, locality, city: cityId },
+});
+const MODIIN = 'מודיעין';
+const SHOHAM = { he: 'שוהם', en: 'Shoham', ru: 'Шохам', fr: 'Shoham' };
+
+test('buildReviews : 0 avis → [] ; 2 avis rendus dans l\'ordre de la ville ; avis non référencé accepté', () => {
+  assert.equal(MAX_REVIEWS_PER_CITY, 2);
+  const none = buildReviews([], [reviewCity('modiin', MODIIN)]);
+  assert.deepEqual(none('modiin'), []);
+  const of = buildReviews(
+    [review('m-1', 'modiin', MODIIN), review('m-2', 'modiin', MODIIN), review('m-3', 'modiin', MODIIN)],
+    [reviewCity('modiin', MODIIN, { reviews: ['m-2', 'm-1'] })],
+  );
+  assert.deepEqual(of('modiin').map((r) => r.id), ['m-2', 'm-1']);
+  assert.equal(of('modiin')[0].quote, 'citation de test m-2');
+  assert.throws(() => of('haifa'), { message: 'areas : ville inconnue « haifa »' });
+});
+
+test('buildReviews : localité = une voisine dans la langue de l\'avis, après trim + NFC → accepté', () => {
+  const cities = [reviewCity('modiin', MODIIN, { neighbors: [SHOHAM], reviews: ['m-1', 'm-2'] })];
+  const of = buildReviews([review('m-1', 'modiin', ' שוהם '), review('m-2', 'modiin', 'Shoham', 'fr')], cities);
+  assert.equal(of('modiin').length, 2);
+  // Même nom en NFD (é décomposé) : accepté après NFC.
+  const decomposed = 'Ville-é'.normalize('NFD');
+  assert.equal(
+    buildReviews([review('x-1', 'x', decomposed, 'fr')], [{ ...reviewCity('x', 'x', { reviews: ['x-1'] }), name: { ...four('x'), fr: 'Ville-é' } }])('x').length,
+    1,
+  );
+  // Nom d'une voisine dans une autre langue que celle de l'avis : refusé.
+  assert.throws(() => buildReviews([review('m-1', 'modiin', 'Shoham')], cities), /src\/content\/reviews\/m-1\.yaml : localité « Shoham »/);
+});
+
+test('buildReviews : 3 avis → lève en nommant la ville', () => {
+  assert.throws(
+    () =>
+      buildReviews(
+        [review('m-1', 'modiin', MODIIN), review('m-2', 'modiin', MODIIN), review('m-3', 'modiin', MODIIN)],
+        [reviewCity('modiin', MODIIN, { reviews: ['m-1', 'm-2', 'm-3'] })],
+      ),
+    { message: 'areas : src/content/cities/modiin.yaml : 3 avis (au plus 2)' },
+  );
+});
+
+test('buildReviews : hors zone (חיפה pour modiin sans voisine Haïfa) → lève en nommant l\'avis', () => {
+  assert.throws(
+    () => buildReviews([review('m-1', 'modiin', 'חיפה')], [reviewCity('modiin', MODIIN, { neighbors: [SHOHAM], reviews: ['m-1'] })]),
+    { message: 'areas : src/content/reviews/m-1.yaml : localité « חיפה » ni modiin ni une de ses voisines (he)' },
+  );
+});
+
+test('buildReviews : mauvaise ville, ville inconnue, avis inconnu, en double → lève, toutes les erreurs d\'un coup', () => {
+  assert.throws(
+    () => buildReviews([review('j-1', 'jerusalem', 'ירושלים')], [reviewCity('modiin', MODIIN, { reviews: ['j-1'] }), reviewCity('jerusalem', 'ירושלים')]),
+    { message: 'areas : src/content/reviews/j-1.yaml : avis de « jerusalem », référencé par « modiin »' },
+  );
+  assert.throws(() => buildReviews([review('h-1', 'haifa', 'חיפה')], [reviewCity('modiin', MODIIN)]), {
+    message: 'areas : src/content/reviews/h-1.yaml : ville inconnue « haifa »',
+  });
+  assert.throws(
+    () => buildReviews([review('m-1', 'modiin', MODIIN)], [reviewCity('modiin', MODIIN, { reviews: ['m-1', 'm-1', 'absent'] })]),
+    {
+      message: [
+        'areas : src/content/cities/modiin.yaml : 3 avis (au plus 2)',
+        'areas : src/content/cities/modiin.yaml : avis « m-1 » listé deux fois',
+        'areas : src/content/cities/modiin.yaml : avis inconnu « absent »',
+      ].join('\n'),
+    },
+  );
+});
+
+test('reviewSchema : strict, lang parmi les 4, citation non vide ; translations partiel accepté', () => {
+  const ok = { quote: 'citation', lang: 'he', author: 'auteur', locality: MODIIN, city: 'modiin' };
+  assert.ok(reviewSchema.safeParse(ok).success);
+  assert.ok(reviewSchema.safeParse({ ...ok, translations: { fr: 'traduction' } }).success, 'translations partiel');
+  assert.ok(!reviewSchema.safeParse({ ...ok, extra: 1 }).success, 'champ inconnu');
+  assert.ok(!reviewSchema.safeParse({ ...ok, lang: 'ar' }).success, 'lang hors des 4');
+  assert.ok(!reviewSchema.safeParse({ ...ok, quote: '  ' }).success, 'citation vide');
+  assert.ok(!reviewSchema.safeParse({ ...ok, city: 'Modiin' }).success, 'ville non kebab-case');
+  assert.ok(!reviewSchema.safeParse({ ...ok, translations: { de: 'x' } }).success, 'traduction hors des 4');
+  const { author: _a, ...noAuthor } = ok;
+  assert.ok(!reviewSchema.safeParse(noAuthor).success, 'auteur manquant');
+});
+
+test('contenus (D3) : aucun avis publié, les 15 villes à reviews: []', () => {
+  const files = readdirSync(join(CONTENT, 'reviews'));
+  assert.deepEqual(files, ['README.md']);
+  for (const { id, raw } of readDir('cities')) assert.deepEqual(raw.reviews, [], `${id} : reviews`);
 });
