@@ -32,6 +32,11 @@ export interface WaInput {
   cityHe?: string | undefined;
   /** Lignes ajoutées après le message, une par ligne (formulaire). */
   lines?: readonly string[] | undefined;
+  /**
+   * Garder « אשמח לקבל הצעת מחיר. » même sans service ni ville (formulaire seulement, décision D5 de
+   * l'epic 2). Les liens hors formulaire ne le posent pas : sans service ni ville, la salutation seule reste.
+   */
+  quote?: boolean | undefined;
 }
 
 export function telHref(): string {
@@ -45,11 +50,11 @@ const present = (value: string | undefined): string | undefined => {
 };
 
 /** Message hébreu pré-rempli (non encodé). */
-export function waMessage({ serviceHe, cityHe, lines = [] }: WaInput = {}): string {
+export function waMessage({ serviceHe, cityHe, lines = [], quote = false }: WaInput = {}): string {
   const service = present(serviceHe);
   const city = present(cityHe);
   let message = GREETING;
-  if (service || city) {
+  if (quote || service || city) {
     message += QUOTE;
     if (service) message += ` ל${service}`;
     if (city) message += ` ב${city}`;

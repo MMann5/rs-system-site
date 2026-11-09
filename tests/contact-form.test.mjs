@@ -464,7 +464,7 @@ test('envoi valide sur desktop : window.open(waHref attendu, _blank), opener ret
   const dom = await mountIsland({ search: '?service=cameras' });
   fill(dom, { name: ' Dana ', city: 'מודיעין', message: '6 caméras' });
   dom.submit();
-  const href = waHref({ serviceHe: 'מצלמות אבטחה', cityHe: 'מודיעין', lines: formLines({ name: 'Dana', phone: '050-123-4567', message: '6 caméras' }) });
+  const href = waHref({ serviceHe: 'מצלמות אבטחה', cityHe: 'מודיעין', lines: formLines({ name: 'Dana', phone: '050-123-4567', message: '6 caméras' }), quote: true });
   assert.deepEqual(dom.log, [
     ['event', 'rs:track', { name: 'form_submit', data: { lang: 'fr', service: 'cameras', from_service_param: true, city_filled: true } }],
     ['open', href, '_blank'],
@@ -477,7 +477,7 @@ test('envoi valide : unsure et ville libre hors liste → message sans service, 
   const dom = await mountIsland();
   fill(dom, { city: ' Ashdod ' });
   dom.submit();
-  const href = waHref({ cityHe: 'Ashdod', lines: formLines({ name: 'Dana', phone: '050-123-4567', message: '' }) });
+  const href = waHref({ cityHe: 'Ashdod', lines: formLines({ name: 'Dana', phone: '050-123-4567', message: '' }), quote: true });
   assert.deepEqual(dom.navigations(), [['open', href, '_blank']]);
   assert.deepEqual(dom.events(), [{ name: 'form_submit', data: { lang: 'fr', service: 'unsure', from_service_param: false, city_filled: true } }]);
 });
@@ -487,7 +487,7 @@ test('envoi valide : ville venue de ?city= → hébreu par code ; service choisi
   fill(dom, { city: dom.city.value });
   dom.service.value = 'smoke-detectors';
   dom.submit();
-  const href = waHref({ serviceHe: 'גלאי עשן', cityHe: 'מודיעין', lines: formLines({ name: 'Dana', phone: '050-123-4567', message: '' }) });
+  const href = waHref({ serviceHe: 'גלאי עשן', cityHe: 'מודיעין', lines: formLines({ name: 'Dana', phone: '050-123-4567', message: '' }), quote: true });
   assert.deepEqual(dom.navigations(), [['open', href, '_blank']]);
   assert.deepEqual(dom.events()[0].data, { lang: 'fr', service: 'smoke-detectors', from_service_param: false, city_filled: true });
 });
@@ -496,17 +496,28 @@ test('envoi valide sur appareil tactile : location.assign dans le même onglet, 
   const dom = await mountIsland({ coarse: true });
   fill(dom, { city: '   ' });
   dom.submit();
-  const href = waHref({ lines: formLines({ name: 'Dana', phone: '050-123-4567', message: '' }) });
+  const href = waHref({ lines: formLines({ name: 'Dana', phone: '050-123-4567', message: '' }), quote: true });
   assert.deepEqual(dom.log.map(([kind]) => kind), ['event', 'assign']);
   assert.deepEqual(dom.navigations(), [['assign', href]]);
   assert.equal(dom.events()[0].data.city_filled, false);
+});
+
+test('envoi valide « pas encore sûr » sans ville : la phrase de demande de devis reste (décision D5)', async () => {
+  const dom = await mountIsland();
+  fill(dom, { city: '' });
+  dom.submit();
+  const [[, href]] = dom.navigations();
+  assert.equal(
+    decodeURIComponent(href.slice(href.indexOf('?text=') + '?text='.length)),
+    'שלום RS SYSTEM, הגעתי מהאתר. אשמח לקבל הצעת מחיר.\nשם: Dana\nטלפון: 050-123-4567\nהודעה: —',
+  );
 });
 
 test('envoi valide sur desktop, popup bloquée : location.assign après window.open', async () => {
   const dom = await mountIsland({ blocked: true });
   fill(dom);
   dom.submit();
-  const href = waHref({ lines: formLines({ name: 'Dana', phone: '050-123-4567', message: '' }) });
+  const href = waHref({ lines: formLines({ name: 'Dana', phone: '050-123-4567', message: '' }), quote: true });
   assert.deepEqual(dom.navigations(), [['open', href, '_blank'], ['assign', href]]);
 });
 

@@ -213,9 +213,16 @@ test('message du formulaire : ville seule, libre hors liste, insérée telle que
   assert.equal(text(href), `${GREETING} אשמח לקבל הצעת מחיר בAshdod.\n${LINES}`);
 });
 
-test('message du formulaire : ni service ni ville (espaces)', () => {
-  const href = waHref({ serviceHe: undefined, cityHe: resolveCityHe('   ', CITIES), lines: formLines({ name: 'Dana', phone: '0501234567', message: '' }) });
-  assert.equal(text(href), `${GREETING}\nשם: Dana\nטלפון: 0501234567\nהודעה: —`);
+test('message du formulaire : ni service ni ville (espaces) → phrase de devis gardée (D5)', () => {
+  const href = waHref({ serviceHe: undefined, cityHe: resolveCityHe('   ', CITIES), lines: formLines({ name: 'Dana', phone: '0501234567', message: '' }), quote: true });
+  assert.equal(text(href), `${GREETING} אשמח לקבל הצעת מחיר.\nשם: Dana\nטלפון: 0501234567\nהודעה: —`);
+});
+
+test('quote : sans effet quand un service ou une ville est présent ; absent → salutation seule (liens hors formulaire)', () => {
+  assert.equal(text(waHref({ serviceHe: 'גלאי עשן', quote: true })), `${GREETING} אשמח לקבל הצעת מחיר לגלאי עשן.`);
+  assert.equal(text(waHref({ cityHe: 'מודיעין', quote: true })), `${GREETING} אשמח לקבל הצעת מחיר במודיעין.`);
+  assert.equal(text(waHref({})), GREETING);
+  assert.equal(text(waHref({ quote: false })), GREETING);
 });
 
 test('resolveCityHe : vide ou espaces → undefined', () => {

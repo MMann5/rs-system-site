@@ -237,6 +237,7 @@ if (form instanceof HTMLFormElement) {
         serviceHe,
         cityHe: resolveCityHe(cityText, data.cities, cityParam),
         lines: formLines({ name: nameInput.value, phone: phoneInput.value, message }),
+        quote: true,
       });
       setSending(true);
       sendingTimer = setTimeout(stopSending, 3000);
