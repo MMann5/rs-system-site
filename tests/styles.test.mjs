@@ -120,6 +120,19 @@ function findBadPreloadMarkup(component, layout) {
   return errors;
 }
 
+/**
+ * Recette 4.1 : `.crumb-link` est en inline-flex, qui supprime les espaces autour du chevron « › » ;
+ * l'écart doit venir d'un `column-gap` (ou `gap`) tiré d'un jeton (AD-8).
+ */
+function findMissingCrumbGap(astro) {
+  const rule = stripComments(astro).match(/\.crumb-link\s*\{([^}]*)\}/)?.[1];
+  if (rule === undefined) return ['City.astro : règle .crumb-link absente'];
+  if (!/(?:^|[\s;])(?:column-)?gap\s*:\s*var\(--[\w-]+\)\s*(?:;|$)/.test(rule)) {
+    return ['City.astro : .crumb-link sans column-gap: var(--…) (chevron collé au texte)'];
+  }
+  return [];
+}
+
 const publicFileExists = (url) => url.startsWith('/') && existsSync(join(PUBLIC, url));
 
 // — Le dépôt —
@@ -291,4 +304,19 @@ test('contrôle balisage preload : as, crossorigin et FontPreload absents détec
     'FontPreload.astro : crossorigin absent du <link>',
     'Base.astro : <FontPreload lang={ctx.lang} /> absent du <head>',
   ]);
+});
+
+test('fil d\'Ariane de la page ville : écart du chevron par column-gap tiré d\'un jeton', () => {
+  assert.deepEqual(findMissingCrumbGap(readFileSync(join(SRC, 'templates', 'City.astro'), 'utf8')), []);
+});
+
+test('contrôle écart du fil d\'Ariane : gap absent ou littéral détecté', () => {
+  const missing = ['City.astro : .crumb-link sans column-gap: var(--…) (chevron collé au texte)'];
+  assert.deepEqual(findMissingCrumbGap('<style>.crumb-link { display: inline-flex; align-items: center; }</style>'), missing);
+  assert.deepEqual(findMissingCrumbGap('<style>.crumb-link { display: inline-flex; column-gap: 8px; }</style>'), missing);
+  assert.deepEqual(findMissingCrumbGap('<style>.crumb-link { row-gap: var(--space-2); }</style>'), missing);
+  assert.deepEqual(findMissingCrumbGap('<style>.crumb { color: red; }</style>'), ['City.astro : règle .crumb-link absente']);
+  assert.deepEqual(findMissingCrumbGap('<style>.crumb-link { gap: 8px; }</style>'), missing);
+  assert.deepEqual(findMissingCrumbGap('<style>.crumb-link { gap: var(--space-2); }</style>'), []);
+  assert.deepEqual(findMissingCrumbGap('<style>.crumb-link { column-gap: var(--space-2); }</style>'), []);
 });
