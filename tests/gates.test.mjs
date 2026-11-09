@@ -158,6 +158,54 @@ test('completeness : deux pages au même chemin fr → message routes, même ré
   assert.match(errors[0], /^src\/content\/pages\/ : routes : « .+ » et « .+ » \(fr\) : même chemin \/fr\/contact\/$/);
 });
 
+// Story 4.1 : villes au registre (`city:{id}` sous `areas`, inheritActive false) et région connue.
+const AREAS_YAML = "slugs: { he: 'אזורים', en: 'areas', ru: 'районы', fr: 'zones' }\nenabled: false\n";
+const REGION_YAML = "name: { he: 'מרכז', en: 'C', ru: 'Ц', fr: 'C' }\nanchor: 'center-shfela'\norder: 1\n";
+const cityYaml = (fr, ru = 'модиин', regionId = 'center-shfela') =>
+  `slugs: { he: 'מודיעין', en: 'modiin', ru: '${ru}', fr: '${fr}' }\nregion: '${regionId}'\n`;
+
+test('completeness : villes saines acceptées sous areas désactivée', () => {
+  const errors = findCompletenessErrors(
+    completeRoot({
+      'src/content/pages/areas.yaml': AREAS_YAML,
+      'src/content/regions/center-shfela.yaml': REGION_YAML,
+      'src/content/cities/modiin.yaml': cityYaml('modiin'),
+    }),
+  );
+  assert.deepEqual(errors, []);
+});
+
+test('completeness : ville vers une région inconnue → message nommant le fichier', () => {
+  const errors = findCompletenessErrors(
+    completeRoot({
+      'src/content/pages/areas.yaml': AREAS_YAML,
+      'src/content/regions/center-shfela.yaml': REGION_YAML,
+      'src/content/cities/haifa.yaml': cityYaml('haifa', 'хайфа', 'north'),
+    }),
+  );
+  assert.deepEqual(errors, ['areas : src/content/cities/haifa.yaml : région inconnue « north »']);
+});
+
+test('completeness : ville sans slug ru, ou deux villes au même slug fr → message routes', () => {
+  const missing = findCompletenessErrors(
+    completeRoot({
+      'src/content/pages/areas.yaml': AREAS_YAML,
+      'src/content/regions/center-shfela.yaml': REGION_YAML,
+      'src/content/cities/modiin.yaml': "slugs: { he: 'מודיעין', en: 'modiin', fr: 'modiin' }\nregion: 'center-shfela'\n",
+    }),
+  );
+  assert.deepEqual(missing, ['src/content/cities/ : routes : « city:modiin » (ru) : slug manquant']);
+  const dup = findCompletenessErrors(
+    completeRoot({
+      'src/content/pages/areas.yaml': AREAS_YAML,
+      'src/content/regions/center-shfela.yaml': REGION_YAML,
+      'src/content/cities/modiin.yaml': cityYaml('meme'),
+      'src/content/cities/rehovot.yaml': "slugs: { he: 'רחובות', en: 'rehovot', ru: 'реховот', fr: 'meme' }\nregion: 'center-shfela'\n",
+    }),
+  );
+  assert.deepEqual(dup, ['src/content/cities/ : routes : « city:modiin » et « city:rehovot » (fr) : même chemin /fr/zones/meme/']);
+});
+
 test('completeness : le CLI sort en 1 en citant le message', () => {
   const res = cli('completeness', completeRoot({ 'src/i18n/ru.json': JSON.stringify({ 'nav.home': 'ru' }) }));
   assert.equal(res.status, 1);

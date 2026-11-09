@@ -185,6 +185,42 @@ test('parent désactivé : enfant inactif', () => {
   throwsRoutes(() => r.url('city:modiin', 'en'), /inactif/);
 });
 
+// Story 4.1 : `inheritActive: false` — le parent donne le chemin, pas l'activité.
+test('inheritActive false : enfant actif sous un parent désactivé, chemin sous le slug du parent ; parent non généré', () => {
+  const AREAS_OFF = { id: 'areas', slugs: slugs('אזורים', 'areas', 'районы', 'zones'), enabled: false };
+  const r = build([
+    HOME,
+    AREAS_OFF,
+    { id: 'city:modiin', slugs: slugs('מודיעין', 'modiin', 'модиин', 'modiin'), enabled: true, parent: 'areas', inheritActive: false },
+  ]);
+  assert.equal(r.isEnabled('city:modiin'), true);
+  assert.equal(r.isEnabled('areas'), false);
+  assert.equal(r.url('city:modiin', 'en'), '/en/areas/modiin/');
+  assert.equal(r.url('city:modiin', 'fr'), '/fr/zones/modiin/');
+  assert.equal(r.url('city:modiin', 'he'), `/he/${encodeURIComponent('אזורים')}/${encodeURIComponent('מודיעין')}/`);
+  assert.deepEqual(r.entries().find((e) => e.id === 'city:modiin' && e.lang === 'ru').segments, ['районы', 'модиин']);
+  assert.ok(!r.entries().some((e) => e.id === 'areas'), 'areas non généré');
+  throwsRoutes(() => r.url('areas', 'fr'), /inactif/);
+  // Défaut (absent ou true) inchangé : parent inactif ⇒ enfant inactif.
+  const d = build([AREAS_OFF, { id: 'city:x', slugs: slugs('x', 'x', 'x', 'x'), enabled: true, parent: 'areas', inheritActive: true }]);
+  assert.equal(d.isEnabled('city:x'), false);
+  // L'enfant reste soumis à sa propre activité.
+  const off = build([AREAS_OFF, { id: 'city:y', slugs: slugs('y', 'y', 'y', 'y'), enabled: false, parent: 'areas', inheritActive: false }]);
+  assert.equal(off.isEnabled('city:y'), false);
+});
+
+test('inheritActive false : doublon de chemin toujours détecté (deux villes, même slug fr)', () => {
+  throwsRoutes(
+    () =>
+      build([
+        { id: 'areas', slugs: slugs('אזורים', 'areas', 'районы', 'zones'), enabled: false },
+        { id: 'city:a', slugs: slugs('א', 'a', 'а', 'meme'), enabled: true, parent: 'areas', inheritActive: false },
+        { id: 'city:b', slugs: slugs('ב', 'b', 'б', 'meme'), enabled: true, parent: 'areas', inheritActive: false },
+      ]),
+    /« city:a » et « city:b » \(fr\) : même chemin \/fr\/zones\/meme\//,
+  );
+});
+
 test('parent inconnu ou cycle : lève', () => {
   throwsRoutes(() => build([{ id: 'city:x', slugs: slugs('x', 'x', 'x', 'x'), enabled: true, parent: 'areas' }]), /« city:x » : parent inconnu « areas »/);
   throwsRoutes(

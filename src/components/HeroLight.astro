@@ -19,7 +19,7 @@
 import type { ImageMetadata } from 'astro';
 import { bandLinks } from '../lib/contact/band';
 import { telHref, waHref } from '../lib/contact/core';
-import { serviceLabels } from '../lib/contact/labels';
+import { cityLabels, serviceLabels } from '../lib/contact/labels';
 import { pageWaInput } from '../lib/contact/table';
 import { t } from '../lib/i18n';
 import type { PageContext } from '../lib/page-context';
@@ -42,7 +42,7 @@ interface Props {
 
 const { ctx, photo, title, subtitle } = Astro.props;
 const { lang } = ctx;
-const wa = waHref(pageWaInput(ctx, serviceLabels('he')));
+const wa = waHref(pageWaInput(ctx, serviceLabels('he'), cityLabels('he')));
 const { detailsHref: quoteHref } = bandLinks({ lang, service: ctx.service }, { isEnabled, url });
 // Photo 4:5 sous 700px par défaut (le cadre suit sa hauteur) ; 4:3 seulement pour une photo `landscape`.
 const frameStyle = photo

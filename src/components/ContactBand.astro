@@ -6,7 +6,7 @@
 // actions Appeler › WhatsApp › puis Laisser ses coordonnées › (seulement si `contact` est actif).
 import { telHref, waHref } from '../lib/contact/core';
 import { bandLinks, formatRating, ratingLine } from '../lib/contact/band';
-import { serviceLabels } from '../lib/contact/labels';
+import { cityLabels, serviceLabels } from '../lib/contact/labels';
 import { midragProof } from '../lib/contact/proof';
 import { pageWaInput } from '../lib/contact/table';
 import { t } from '../lib/i18n';
@@ -23,8 +23,8 @@ const { ctx } = Astro.props;
 const { lang } = ctx;
 const proof = midragProof();
 const line = ratingLine(proof, lang, (key) => t(lang, key));
-const { zoneHref, detailsHref } = bandLinks({ lang, service: ctx.service }, { isEnabled, url });
-const wa = waHref(pageWaInput(ctx, serviceLabels('he')));
+const { zoneHref, detailsHref } = bandLinks({ lang, service: ctx.service, city: ctx.city }, { isEnabled, url });
+const wa = waHref(pageWaInput(ctx, serviceLabels('he'), cityLabels('he')));
 const zone = t(lang, 'contact.zone');
 ---
 <section class="band" aria-labelledby="contact-band-title" data-surface="navy">

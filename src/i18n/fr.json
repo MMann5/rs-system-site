@@ -88,5 +88,15 @@
   "steps.install.title": "Installation",
   "steps.install.text": "Nous installons, raccordons et vérifions que tout fonctionne.",
   "steps.service.title": "Prise en main et suivi",
-  "steps.service.text": "Nous vous montrons comment vous en servir, et restons joignables après la pose."
+  "steps.service.text": "Nous vous montrons comment vous en servir, et restons joignables après la pose.",
+  "city.meta-title": "Caméras de surveillance à {city} · RS SYSTEM",
+  "city.breadcrumb-label": "Fil d'Ariane",
+  "city.services.title": "Ce qu'on installe à {city}",
+  "city.service-hint.cameras": "Maisons, immeubles, commerces et chantiers",
+  "city.service-hint.smoke-detectors": "Dans chaque pièce",
+  "city.service-hint.intercom": "Maisons individuelles et immeubles d'habitation",
+  "city.service-hint.smart-home": "Éclairage, volets et climatisation",
+  "city.service-hint.networks": "Maison, bureau et immeuble neuf",
+  "city.neighbors.title": "Aussi dans les localités alentour",
+  "placeholder.neighbors": "localités voisines"
 }

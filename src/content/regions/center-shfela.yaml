@@ -1,0 +1,9 @@
+# Story 4.1 (FR9, AD-4) : région « Centre et Shfela ». Nom = valeurs de nav.region.center-shfela (src/i18n),
+# ancre identique dans les 4 langues (footer, page Zones). Ordre : 2e région.
+name:
+  he: 'המרכז והשפלה'
+  en: 'Center and Shfela'
+  ru: 'Центр и Шфела'
+  fr: 'Centre et Shfela'
+anchor: 'center-shfela'
+order: 2

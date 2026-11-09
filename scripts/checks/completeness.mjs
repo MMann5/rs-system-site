@@ -1,12 +1,16 @@
 // AD-4, AD-2, AD-11 : complétude des 4 langues.
 // - src/i18n/ contient exactement {he,en,ru,fr}.json, acceptés par buildDictionary (mêmes clés) ;
 // - les pages de src/content/pages/*.yaml (id = nom du fichier) sont acceptées par buildRegistry,
-//   sur une branche comme sur main (4 slugs par id, `(lang, chemin)` uniques).
-// Les messages de buildDictionary et de buildRegistry sont repris tels quels.
+//   sur une branche comme sur main (4 slugs par id, `(lang, chemin)` uniques) ;
+// - story 4.1 : les villes de src/content/cities/*.yaml entrent au même registre (`city:{id}` sous `areas`,
+//   `inheritActive: false`, comme src/lib/routes/index.ts) et chacune référence une région connue de
+//   src/content/regions/*.yaml, ancres uniques (buildAreas). Dossiers absents = aucune ville, aucune région.
+// Les messages de buildDictionary, buildRegistry et buildAreas sont repris tels quels.
 // Usage : node scripts/checks/completeness.mjs [racine]  (défaut : racine du dépôt).
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse } from 'yaml';
+import { buildAreas, citySources } from '../../src/lib/areas/core.ts';
 import { buildDictionary } from '../../src/lib/i18n/core.ts';
 import { LANGS } from '../../src/lib/langs.ts';
 import { buildRegistry } from '../../src/lib/routes/core.ts';
@@ -14,6 +18,8 @@ import { isMain, report, REPO_ROOT, rootArg } from './report.mjs';
 
 const I18N = 'src/i18n';
 const PAGES = 'src/content/pages';
+const CITIES = 'src/content/cities';
+const REGIONS = 'src/content/regions';
 const messages = (error) => String(error?.message ?? error).split('\n');
 
 function checkI18n(root, failures) {
@@ -39,18 +45,43 @@ function checkI18n(root, failures) {
   }
 }
 
-function checkRoutes(root, failures) {
-  const dir = join(root, PAGES);
-  if (!existsSync(dir)) return failures.push(`${PAGES}/ : dossier absent`);
-  const sources = [];
-  for (const name of readdirSync(dir).filter((n) => n.endsWith('.yaml')).sort()) {
+/** `{ id, data }` des `*.yaml` de `dir` (id = nom du fichier) ; dossier absent → []. */
+function readYamlDir(root, dir, failures) {
+  const abs = join(root, dir);
+  if (!existsSync(abs)) return [];
+  const out = [];
+  for (const name of readdirSync(abs).filter((n) => n.endsWith('.yaml')).sort()) {
     try {
-      const data = parse(readFileSync(join(dir, name), 'utf8')) ?? {};
-      sources.push({ id: name.replace(/\.yaml$/, ''), slugs: data.slugs, enabled: data.enabled, previewOnly: data.previewOnly });
+      out.push({ id: name.replace(/\.yaml$/, ''), data: parse(readFileSync(join(abs, name), 'utf8')) ?? {} });
     } catch (error) {
-      failures.push(`${PAGES}/${name} : YAML invalide (${messages(error)[0]})`);
+      failures.push(`${dir}/${name} : YAML invalide (${messages(error)[0]})`);
     }
   }
+  return out;
+}
+
+/** Villes valides pour le registre (région connue, ancres uniques) ; [] si buildAreas lève. */
+function checkAreas(root, failures) {
+  const regions = readYamlDir(root, REGIONS, failures);
+  const cities = readYamlDir(root, CITIES, failures);
+  try {
+    buildAreas(regions, cities);
+  } catch (error) {
+    for (const line of messages(error)) failures.push(line);
+  }
+  return cities.map(({ id, data }) => ({ id, slugs: data.slugs }));
+}
+
+function checkRoutes(root, failures, cities) {
+  const dir = join(root, PAGES);
+  if (!existsSync(dir)) return failures.push(`${PAGES}/ : dossier absent`);
+  const sources = readYamlDir(root, PAGES, failures).map(({ id, data }) => ({
+    id,
+    slugs: data.slugs,
+    enabled: data.enabled,
+    previewOnly: data.previewOnly,
+  }));
+  sources.push(...citySources(cities));
   const seen = new Set();
   for (const isMainBranch of [false, true]) {
     try {
@@ -59,7 +90,7 @@ function checkRoutes(root, failures) {
       for (const line of messages(error)) {
         if (seen.has(line)) continue;
         seen.add(line);
-        failures.push(`${PAGES}/ : ${line}`);
+        failures.push(`${line.includes('« city:') ? CITIES : PAGES}/ : ${line}`);
       }
     }
   }
@@ -69,7 +100,7 @@ function checkRoutes(root, failures) {
 export function findCompletenessErrors(root) {
   const failures = [];
   checkI18n(root, failures);
-  checkRoutes(root, failures);
+  checkRoutes(root, failures, checkAreas(root, failures));
   return failures;
 }
 

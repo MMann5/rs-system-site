@@ -88,5 +88,15 @@
   "steps.install.title": "התקנה",
   "steps.install.text": "מתקינים, מחברים ובודקים שהכול עובד.",
   "steps.service.title": "הדרכה ושירות",
-  "steps.service.text": "מסבירים איך להשתמש, ונשארים זמינים אחרי ההתקנה."
+  "steps.service.text": "מסבירים איך להשתמש, ונשארים זמינים אחרי ההתקנה.",
+  "city.meta-title": "מצלמות אבטחה ב{city} · RS SYSTEM",
+  "city.breadcrumb-label": "נתיב ניווט",
+  "city.services.title": "מה מתקינים ב{city}",
+  "city.service-hint.cameras": "בתים, בניינים, עסקים ואתרי בנייה",
+  "city.service-hint.smoke-detectors": "בכל חדר",
+  "city.service-hint.intercom": "בתים פרטיים ובנייני מגורים",
+  "city.service-hint.smart-home": "אור, תריסים ומיזוג",
+  "city.service-hint.networks": "בית, משרד ובניין חדש",
+  "city.neighbors.title": "גם ביישובים שמסביב",
+  "placeholder.neighbors": "יישובים בסביבה"
 }

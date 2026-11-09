@@ -313,13 +313,18 @@
   --arcs-size: 560px;
   --arcs-offset-inline: -60px;
   --arcs-offset-block: -80px;
-  /* UX-DR15 : arcs « réduits à 60 % sur mobile » */
+  /* UX-DR15 : arcs « réduits à 60 % sur mobile » (story 4.1 : appliqué sous 960px, où le dessin passe sous le texte) */
   --arcs-scale-mobile: 0.6;
-  /* UX-DR15 : « trait de 22px » (canvas About.dc.html : stroke-width 22, dans le viewBox 480) */
-  --arc-stroke-width: 22;
-  /* UX-DR15 : « opacités 1 / 0,55 / 0,25 » */
-  --arc-opacity-2: 0.55;
-  --arc-opacity-3: 0.25;
+  /* Décision D7 de l'epic 4 (DESIGN.md › components.signal-arcs) : ondes du logo, « strokeWidth: 41 » dans le viewBox 480,
+   * opacité 1 pour les trois arcs (plus de jetons d'opacité) */
+  --arc-stroke-width: 41;
+  /* Story 4.1 (D7) : emprise du dessin dans son carré de 480, trait de 41 compris (tracés : centre 100,380, rayons 110 / 175 / 242).
+   * Hauteur depuis le bas : (480 − (138 − 20,5)) / 480 = 0,755 ; largeur depuis la fin d'inline, sens le plus large (LTR,
+   * dessin jamais retourné) : (480 − (100 − 20,5)) / 480 = 0,834. Arrondis vers le haut. */
+  --arcs-ink-block: 0.756;
+  --arcs-ink-inline: 0.835;
+  /* Story 4.1 (D7) : marge entre le dessin et le texte le plus proche (= --space-4) */
+  --arcs-clearance: 16px;
   /* UX-DR38 : tracé unique des arcs (canvas About.dc.html : animation arc 1.4s, délais .3s / .5s / .7s) */
   --arc-duration: 1.4s;
   --arc-delay-1: 0.3s;
@@ -493,4 +498,23 @@
   --drift-from-mobile: -2%;
   --drift-to-mobile: 2%;
   --drift-scale-mobile: 1.05;
+  /* — Story 4.1 : modèle de page ville (canvas City.dc.html, DESIGN.md › Components) — */
+  /* DESIGN.md › Components › Héros typographique / Fil d'Ariane : « {colors.link-on-night} 18px/600 » */
+  --type-breadcrumb-size: 18px;
+  --type-breadcrumb-weight: 600;
+  /* Canvas City.dc.html › héros : sous-titre « max-width: 680px » (largeur de lecture) */
+  --hero-typo-subtitle-max: 680px;
+  /* Canvas City.dc.html › « ce qu'on installe » : titre « margin: 0 0 28px » avant les lignes */
+  --row-list-head-gap: 28px;
+  /* DESIGN.md › Components › Liste de lignes : « Cible = ligne entière, ≥ 56px » */
+  --row-min-height: 56px;
+  /* Canvas City.dc.html › ligne de service : « padding: 24px 0 », « gap: 24px » ; filet « 1px solid {colors.line} » */
+  --row-pad-block: 24px;
+  --row-gap: 24px;
+  --row-rule-width: 1px;
+  /* Canvas City.dc.html › ligne de service : description « font-size: 17px; color: #4a6280 » */
+  --type-row-hint-size: 17px;
+  /* Canvas City.dc.html › localités alentour : « gap: 16px », texte « font-size: 20px; line-height: 1.7 » */
+  --type-neighbors-size: 20px;
+  --type-neighbors-leading: 1.7;
 }

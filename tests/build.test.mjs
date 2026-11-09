@@ -1,4 +1,4 @@
-// Stories 1.3 à 1.9, 2.1 à 2.4, 3.1 à 3.5 : sortie réelle du build, sur une branche puis sur main (registre, layout Base.astro).
+// Stories 1.3 à 1.9, 2.1 à 2.4, 3.1 à 3.5, 4.1 : sortie réelle du build, sur une branche puis sur main (registre, layout Base.astro).
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
@@ -8,7 +8,7 @@ import { join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
 import { waHref } from '../src/lib/contact/core.ts';
-import { buildServiceTable, pageWaInput } from '../src/lib/contact/table.ts';
+import { buildCityTable, buildServiceTable, pageWaInput } from '../src/lib/contact/table.ts';
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
 const LANGS = ['he', 'en', 'ru', 'fr'];
@@ -37,6 +37,15 @@ const CONTRACTORS = LANGS.map((lang) => `${lang}/${CONTRACTOR_SLUGS[lang]}/index
 const SERVICE_IDS = ['cameras', 'smoke-detectors', 'smart-home', 'networks', 'intercom'];
 /** Story 3.4 : service du contexte de chaque page du modèle Service (= id, sauf Entrepreneurs → `crane-cameras`). */
 const PAGE_SERVICE = { ...Object.fromEntries(SERVICE_IDS.map((sid) => [sid, sid])), contractors: 'crane-cameras' };
+// Story 4.1 : pages ville sous le slug de `areas` (désactivée, jamais générée), dans l'ordre région puis ville.
+const AREAS_SLUGS = { he: 'אזורים', en: 'areas', ru: 'районы', fr: 'zones' };
+const CITY_DATA = Object.fromEntries(
+  ['jerusalem', 'modiin'].map((cid) => [cid, parse(readFileSync(join(ROOT, `src/content/cities/${cid}.yaml`), 'utf8'))]),
+);
+const CITY_IDS = Object.keys(CITY_DATA);
+const CITY_FILES = CITY_IDS.flatMap((cid) => LANGS.map((lang) => `${lang}/${AREAS_SLUGS[lang]}/${CITY_DATA[cid].slugs[lang]}/index.html`));
+/** Table des villes en hébreu (message WhatsApp), comme src/lib/contact/labels.ts. */
+const HE_CITIES = buildCityTable(CITY_IDS.map((cid) => ({ id: cid, name: CITY_DATA[cid].name })), 'he');
 const dirs = [];
 
 // Étapes du script `build` de package.json : `astro build`, puis chaque `node <script>` lancé sur le dossier
@@ -110,6 +119,13 @@ const PAGE_HREFS = {
   intercom: Object.fromEntries(LANGS.map((lang) => [lang, `/${lang}/${encodeURIComponent(INTERCOM_SLUGS[lang])}/`])),
   networks: Object.fromEntries(LANGS.map((lang) => [lang, `/${lang}/${encodeURIComponent(NETWORK_SLUGS[lang])}/`])),
   contractors: Object.fromEntries(LANGS.map((lang) => [lang, `/${lang}/${encodeURIComponent(CONTRACTOR_SLUGS[lang])}/`])),
+  areas: Object.fromEntries(LANGS.map((lang) => [lang, `/${lang}/${encodeURIComponent(AREAS_SLUGS[lang])}/`])),
+  ...Object.fromEntries(
+    CITY_IDS.map((cid) => [
+      `city:${cid}`,
+      Object.fromEntries(LANGS.map((lang) => [lang, `/${lang}/${encodeURIComponent(AREAS_SLUGS[lang])}/${encodeURIComponent(CITY_DATA[cid].slugs[lang])}/`])),
+    ]),
+  ),
 };
 /** Stories 3.1 à 3.4 : ids actifs du header, dans l'ordre de nav.ts (HEADER_NAV_IDS). */
 const HEADER_IDS = ['cameras', 'smoke-detectors', 'smart-home', 'networks', 'intercom', 'contractors', 'contact'];
@@ -205,7 +221,8 @@ function assertLayout(html, id, lang, out, site = '', indexable = false) {
   assert.equal(withoutIsolates.replace(phoneField, '').match(/\sdir=/g)?.length, 1, `${where} : dir= en double`);
   assert.match(html, new RegExp(`<html lang="${lang}" dir="${lang === 'he' ? 'rtl' : 'ltr'}" data-page-id="${id}"[\\s>]`), where);
   // AD-13 : un seul #rs-data, qui vaut { context } ; story 2.3 (AD-5) : sur Contact, { context, services, cities },
-  // `services` = les 7 codes dans l'ordre (libellé dans la langue + hébreu), `cities` vide avant l'epic 4.
+  // `services` = les 7 codes dans l'ordre (libellé dans la langue + hébreu) ; story 4.1 : `cities` = les villes
+  // dans l'ordre région puis ville (nom dans la langue + hébreu).
   assert.equal(html.match(/\sid="rs-data"/g)?.length, 1, `${where} : #rs-data absent ou en double`);
   const json = html.match(/<script type="application\/json" id="rs-data">([\s\S]*?)<\/script>/)?.[1];
   if (id === 'contact') {
@@ -216,7 +233,13 @@ function assertLayout(html, id, lang, out, site = '', indexable = false) {
     for (const code of SERVICE_ORDER) {
       assert.deepEqual(data.services[code], { label: serviceLabel(code, lang), he: serviceLabel(code, 'he') }, `${where} : service ${code}`);
     }
-    assert.deepEqual(data.cities, {}, `${where} : cities`);
+    assert.deepEqual(Object.keys(data.cities), CITY_IDS, `${where} : codes de villes`);
+    for (const cid of CITY_IDS) {
+      assert.deepEqual(data.cities[cid], { label: CITY_DATA[cid].name[lang], he: CITY_DATA[cid].name.he }, `${where} : ville ${cid}`);
+    }
+  } else if (id.startsWith('city:')) {
+    // Story 4.1 (AD-13) : le modèle City fixe la ville (id = code `?city=`) et la section de navigation `areas`.
+    assert.deepEqual(JSON.parse(json), { context: { id, lang, city: id.slice(5), navSection: 'areas', indexable } }, where);
   } else if (Object.hasOwn(PAGE_SERVICE, id)) {
     // Stories 3.1 à 3.4 (AD-13) : le modèle Service fixe le service (Entrepreneurs : crane-cameras) et la section de
     // navigation (= id de la page).
@@ -307,7 +330,8 @@ function assertLayout(html, id, lang, out, site = '', indexable = false) {
   assert.ok(html.indexOf(' class="mobile-bar"') > html.indexOf('</footer>'), `${where} : barre pas après </footer>`);
   const actions = [...bar.matchAll(/<a href="([^"]*)"([^>]*)>([\s\S]*?)<\/a>/g)].slice(0, 2);
   assert.equal(actions[0]?.[1], 'tel:+972509565669', `${where} : lien Appeler`);
-  const barWa = waHref(pageWaInput(context, HE_SERVICES));
+  const barWa = waHref(pageWaInput(context, HE_SERVICES, HE_CITIES));
+  if (context.city) assert.ok(decodeURIComponent(barWa).includes(`הצעת מחיר ב${CITY_DATA[context.city].name.he}.`), `${where} : ville dans le message de la barre`);
   assert.equal(actions[1]?.[1], barWa.replaceAll('&', '&amp;'), `${where} : lien WhatsApp`);
   if (Object.hasOwn(PAGE_SERVICE, id)) assert.ok(decodeURIComponent(barWa).includes(serviceLabel(PAGE_SERVICE[id], 'he')), `${where} : service dans le message de la barre`);
   for (const [[, , attrs, inner], event, label] of [[actions[0], 'call_click', CALL_LABEL[lang]], [actions[1], 'whatsapp_click', WA_LABEL[lang]]]) {
@@ -1403,14 +1427,103 @@ function assertContractors(html, lang, out) {
   assertCoverService(html, lang, out, { id: 'contractors', service: 'crane-cameras', content: CONTRACTORS_PAGE, focus: 'crane', scrim: 'crane', size: 'contractors', quoteKey: 'action.quote-site', eyebrow: true, land: ['2560', '1164'], tile: true });
 }
 
+/** Story 4.1 (FR9, FR29, FR31, NFR2, UX-DR15, UX-DR22, D5, D7) : page ville `cid` en `lang`. */
+const SERVICE_ROWS = ['cameras', 'smoke-detectors', 'intercom', 'smart-home', 'networks'];
+const REGIONS = Object.fromEntries(
+  ['jerusalem-area', 'center-shfela'].map((rid) => [rid, parse(readFileSync(join(ROOT, `src/content/regions/${rid}.yaml`), 'utf8'))]),
+);
+function assertCity(html, cid, lang) {
+  const id = `city:${cid}`;
+  const where = `${id} (${lang})`;
+  const dict = I18N[lang];
+  const data = CITY_DATA[cid];
+  const name = data.name[lang];
+  const main = (html.match(/<main id="content"[^>]*>([\s\S]*?)<\/main>/)?.[1] ?? '').replace(/ data-astro-cid-[\w-]+(?:="")?/g, '');
+  // Un seul h1 (nom de la ville en city-title), pas de saut de titre (h1, h2, h2, h2 + h3 des étapes, h2 du bloc).
+  assert.equal(html.match(/<h1[\s>]/g)?.length, 1, `${where} : <h1>`);
+  const levels = [...main.matchAll(/<h([1-6])[\s>]/g)].map((m) => Number(m[1]));
+  assert.deepEqual(levels, [1, 2, 2, 2, 3, 3, 3, 3, 2], `${where} : niveaux de titres`);
+  // Ordre : héros typographique, « ce qu'on installe », localités, étapes, bloc contact ; pas de section avis.
+  const sections = [...main.matchAll(/<section class="([^"]*)" aria-labelledby="([^"]*)"/g)].map((m) => [m[1], m[2]]);
+  assert.deepEqual(sections, [
+    ['hero-typo', 'page-title'],
+    ['section reveal', 'city-services-title'],
+    ['section reveal', 'city-neighbors-title'],
+    ['steps reveal', 'steps-title'],
+    ['band', 'contact-band-title'],
+  ], `${where} : sections`);
+  assert.ok(!main.includes('<figure'), `${where} : aucune figure d'avis`);
+  // Héros : fil d'Ariane = nom de la région en texte (areas inactive), h1, intro, liens Appeler › WhatsApp › Devis ›.
+  const hero = main.slice(0, main.indexOf('</section>'));
+  assert.equal((hero.match(/<svg\b[\s\S]*?<\/svg>/)?.[0].match(/<path\b[^>]*\spathLength="1"/g) ?? []).length, 3, `${where} : 3 arcs`);
+  // areas inactive : sur-titre en <p> simple, sans landmark <nav> vide.
+  assert.ok(!hero.includes('<nav'), `${where} : <nav> sans lien dans le héros`);
+  assert.equal(hero.match(/<p class="crumb crumb-text">([^<]*)<\/p>/)?.[1], escaped(REGIONS[data.region].name[lang]), `${where} : région sans lien`);
+  assert.equal(hero.match(/<h1 id="page-title" class="title city">([^<]*)<\/h1>/)?.[1], escaped(name), `${where} : h1`);
+  assert.ok(hero.indexOf('class="crumb"') < hero.indexOf('<h1'), `${where} : fil avant le h1`);
+  assert.equal(hero.match(/<p class="subtitle">([^<]*)<\/p>/)?.[1], escaped(data.intro[lang]), `${where} : intro`);
+  const wa = waHref(pageWaInput({ city: cid }, HE_SERVICES, HE_CITIES));
+  assert.ok(decodeURIComponent(wa).endsWith(`אשמח לקבל הצעת מחיר ב${data.name.he}.`), `${where} : message WhatsApp`);
+  const quote = `${PAGE_HREFS.contact[lang]}?city=${cid}`;
+  const heroLinks = [...hero.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)];
+  assert.equal(heroLinks.length, 3, `${where} : liens du héros`);
+  assertTextLink(heroLinks[0], 'tel:+972509565669', escaped(dict['action.call']), 'call_click', 'hero', `${where} : Appeler`);
+  assertTextLink(heroLinks[1], wa, escaped(dict['action.whatsapp']), 'whatsapp_click', 'hero', `${where} : WhatsApp`);
+  assertTextLink(heroLinks[2], quote, escaped(dict['action.quote']), undefined, undefined, `${where} : Devis (D5)`);
+  for (const [, attrs] of heroLinks) assert.match(attrs, /\sclass="text-link night"/, `${where} : ton nuit`);
+  // « Ce qu'on installe » : titre avec la ville, 5 lignes pleine largeur dans l'ordre du canvas, un <a> chacune.
+  const services = main.match(/<section class="section reveal" aria-labelledby="city-services-title">([\s\S]*?)<\/section>/)?.[1] ?? '';
+  assert.equal(services.match(/<h2 id="city-services-title" class="services-title">([^<]*)<\/h2>/)?.[1], escaped(dict['city.services.title'].replace('{city}', name)), `${where} : titre des services`);
+  const rows = [...services.matchAll(/<li><a href="([^"]*)" class="row"><span class="row-label">([^<]*)<\/span><span class="row-hint">([^<]*)<span aria-hidden="true"> ›<\/span><\/span><\/a><\/li>/g)];
+  assert.equal(services.match(/<a\b/g)?.length, 5, `${where} : un seul <a> par ligne`);
+  assert.deepEqual(
+    rows.map((m) => [m[1], m[2], m[3]]),
+    SERVICE_ROWS.map((code) => [PAGE_HREFS[code][lang], escaped(serviceLabel(code, lang)), escaped(dict[`city.service-hint.${code}`])]),
+    `${where} : lignes de services`,
+  );
+  // Localités : titre et placeholder (aucune voisine fournie), sans lien.
+  const neighbors = main.match(/<section class="section reveal" aria-labelledby="city-neighbors-title">([\s\S]*?)<\/section>/)?.[1] ?? '';
+  assert.equal(neighbors.match(/<h2 id="city-neighbors-title" class="neighbors-title">([^<]*)<\/h2>/)?.[1], escaped(dict['city.neighbors.title']), `${where} : titre des localités`);
+  assert.equal(neighbors.match(/<p class="neighbors-text"><span data-placeholder(?:="")?>([^<]*)<\/span><\/p>/)?.[1], `[${dict['placeholder.neighbors']}]`, `${where} : placeholder des localités`);
+  assert.ok(!neighbors.includes('<a'), `${where} : localités sans liens`);
+  // Bloc contact : WhatsApp avec la ville, « Laisser ses coordonnées » avec ?city=.
+  const band = main.slice(main.indexOf('<section class="band"'));
+  const bandLinks = [...band.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)];
+  assert.equal(bandLinks.length, 4, `${where} : liens du bloc`);
+  assertTextLink(bandLinks[2], wa, dict['action.whatsapp'], 'whatsapp_click', 'contact_band', `${where} : bloc WhatsApp`);
+  assertTextLink(bandLinks[3], quote, escaped(dict['contact-band.leave-details']), undefined, undefined, `${where} : bloc leave-details`);
+  // Les liens WhatsApp de la page (héros, barre mobile, bloc) contiennent « ב{nom hébreu} » encodé ; aucun autre message.
+  const cityEncoded = encodeURIComponent(`ב${data.name.he}`);
+  const waLinks = [...html.matchAll(/href="(https:\/\/wa\.me\/[^"]*)"/g)].map((m) => m[1]);
+  assert.equal(waLinks.length, 3, `${where} : liens WhatsApp`);
+  for (const href of waLinks) assert.ok(href.includes(cityEncoded), `${where} : ${href} sans la ville`);
+  if (cid === 'modiin') assert.ok(waLinks.every((href) => href.includes('%D7%91%D7%9E%D7%95%D7%93%D7%99%D7%A2%D7%99%D7%9F')), `${where} : « במודיעין » encodé`);
+  // Aucun lien vers Zones (areas désactivée) ; liens Contact de la page avec ?city=.
+  const hrefs = [...html.matchAll(/\shref="([^"]*)"/g)].map((m) => m[1]);
+  assert.ok(!hrefs.some((h) => LANGS.some((l) => h === PAGE_HREFS.areas[l] || h.startsWith(`${PAGE_HREFS.areas[l]}#`))), `${where} : lien vers Zones`);
+  assert.deepEqual(hrefs.filter((h) => h.startsWith(`${PAGE_HREFS.contact[lang]}?`)), [quote, quote], `${where} : liens Contact ?city=`);
+}
+
 /** Story 1.9 (FR39), stories 2.1, 3.1 à 3.4 : sitemap dans l'ordre du registre (ids triés : Caméras, Contact,
  * Entrepreneurs, accueil, Interphone, Réseaux, Maison connectée, Détecteurs ; 4 <url> chacun, 32 au total,
  * 5 xhtml:link chacun), robots.txt, icônes et manifeste. */
-const SITEMAP_IDS = ['cameras', 'contact', 'contractors', 'home', 'intercom', 'networks', 'smart-home', 'smoke-detectors'];
+// Story 4.1 : titre (city.meta-title) et description (intro) des pages ville, comme ceux des pages fixes.
+for (const cid of CITY_IDS) {
+  const { name, intro } = CITY_DATA[cid];
+  META[`city:${cid}`] = {
+    title: Object.fromEntries(LANGS.map((lang) => [lang, escaped(I18N[lang]['city.meta-title'].replace('{city}', name[lang]))])),
+    // Attribut entre guillemets doubles : l'apostrophe n'y est pas échappée (le texte du <title> l'est).
+    description: Object.fromEntries(LANGS.map((lang) => [lang, intro[lang]])),
+  };
+}
+// Story 4.1 : puis les pages ville, dans l'ordre région puis ville (registre : pages fixes, puis villes) ; Zones absente.
+const SITEMAP_IDS = ['cameras', 'contact', 'contractors', 'home', 'intercom', 'networks', 'smart-home', 'smoke-detectors', ...CITY_IDS.map((cid) => `city:${cid}`)];
 function assertSeoFiles(out, site, indexable) {
   const xml = readFileSync(join(out, 'sitemap.xml'), 'utf8');
   const blocks = [...xml.matchAll(/<url>([\s\S]*?)<\/url>/g)].map((m) => m[1]);
-  assert.equal(blocks.length, 32, 'sitemap : <url>');
+  assert.equal(blocks.length, SITEMAP_IDS.length * 4, 'sitemap : <url>');
+  assert.equal(blocks.length, 40, 'sitemap : <url> (8 pages fixes et 2 villes × 4 langues)');
+  assert.ok(!LANGS.some((l) => xml.includes(`/${encodeURIComponent(AREAS_SLUGS[l])}/<`)), 'sitemap : Zones');
   blocks.forEach((block, i) => {
     const hrefs = PAGE_HREFS[SITEMAP_IDS[Math.floor(i / 4)]];
     const lang = LANGS[i % 4];
@@ -1428,9 +1541,9 @@ function assertSeoFiles(out, site, indexable) {
   assert.deepEqual(manifest.icons, [{ src: '/rs-icon-512.png', sizes: '512x512', type: 'image/png' }], 'manifeste : icône 512');
 }
 
-test('build de branche : 4 accueils complets (tuiles de services) + 4 Contact + 4 Caméras + 4 Détecteurs + 4 Maison connectée + 4 Réseaux + 4 Interphone + 4 Entrepreneurs + 4 path-probe, layout Base (lang/dir, #rs-data, évitement, repères, hreflang relatifs), _redirects', { timeout: 120_000 }, () => {
+test('build de branche : 4 accueils complets (tuiles de services) + 4 Contact + 4 Caméras + 4 Détecteurs + 4 Maison connectée + 4 Réseaux + 4 Interphone + 4 Entrepreneurs + 8 pages ville + 4 path-probe, layout Base (lang/dir, #rs-data, évitement, repères, hreflang relatifs), _redirects', { timeout: 120_000 }, () => {
   const out = build({});
-  assert.deepEqual(indexFiles(out), [...HOMES, ...CONTACTS, ...CAMERAS, ...SMOKES, ...SMARTS, ...NETWORKS, ...INTERCOMS, ...CONTRACTORS, ...PROBES].sort());
+  assert.deepEqual(indexFiles(out), [...HOMES, ...CONTACTS, ...CAMERAS, ...SMOKES, ...SMARTS, ...NETWORKS, ...INTERCOMS, ...CONTRACTORS, ...CITY_FILES, ...PROBES].sort());
   assert.ok(existsSync(join(out, '_redirects')), '_redirects absent');
   assert.ok(!existsSync(join(out, 'index.html')), 'index.html racine présent');
   assert.deepEqual(Object.keys(titles), LANGS);
@@ -1479,13 +1592,22 @@ test('build de branche : 4 accueils complets (tuiles de services) + 4 Contact + 
     assertLayout(html, 'contractors', LANGS[i], out);
     assertContractors(html, LANGS[i], out);
   }
+  // Story 4.1 : 2 villes × 4 langues sous le slug de `areas`, qui n'est pas générée.
+  for (const cid of CITY_IDS) {
+    for (const lang of LANGS) {
+      const html = readFileSync(join(out, lang, AREAS_SLUGS[lang], CITY_DATA[cid].slugs[lang], 'index.html'), 'utf8');
+      assertLayout(html, `city:${cid}`, lang, out);
+      assertCity(html, cid, lang);
+    }
+  }
+  assert.ok(!LANGS.some((lang) => existsSync(join(out, lang, AREAS_SLUGS[lang], 'index.html'))), 'page Zones générée');
   assertNotFoundPages(out);
   assertSeoFiles(out, '', false);
 });
 
-test('build de main indexable avec SITE_URL : 4 accueils complets (tuiles de services) + 4 Contact + 4 Caméras + 4 Détecteurs + 4 Maison connectée + 4 Réseaux + 4 Interphone + 4 Entrepreneurs, sans noindex, canonique et hreflang absolus', { timeout: 120_000 }, () => {
+test('build de main indexable avec SITE_URL : 4 accueils complets (tuiles de services) + 4 Contact + 4 Caméras + 4 Détecteurs + 4 Maison connectée + 4 Réseaux + 4 Interphone + 4 Entrepreneurs + 8 pages ville, sans noindex, canonique et hreflang absolus', { timeout: 120_000 }, () => {
   const out = build({ WORKERS_CI_BRANCH: 'main', DOMAIN_LIVE: 'true', SITE_URL: 'https://rs.example' });
-  assert.deepEqual(indexFiles(out), [...HOMES, ...CONTACTS, ...CAMERAS, ...SMOKES, ...SMARTS, ...NETWORKS, ...INTERCOMS, ...CONTRACTORS].sort());
+  assert.deepEqual(indexFiles(out), [...HOMES, ...CONTACTS, ...CAMERAS, ...SMOKES, ...SMARTS, ...NETWORKS, ...INTERCOMS, ...CONTRACTORS, ...CITY_FILES].sort());
   assert.ok(!existsSync(join(out, 'index.html')));
   for (const lang of LANGS) {
     const html = readFileSync(join(out, lang, 'index.html'), 'utf8');
@@ -1527,6 +1649,13 @@ test('build de main indexable avec SITE_URL : 4 accueils complets (tuiles de ser
     const html = readFileSync(join(out, file), 'utf8');
     assertLayout(html, 'contractors', LANGS[i], out, 'https://rs.example', true);
     assertContractors(html, LANGS[i], out);
+  }
+  for (const cid of CITY_IDS) {
+    for (const lang of LANGS) {
+      const html = readFileSync(join(out, lang, AREAS_SLUGS[lang], CITY_DATA[cid].slugs[lang], 'index.html'), 'utf8');
+      assertLayout(html, `city:${cid}`, lang, out, 'https://rs.example', true);
+      assertCity(html, cid, lang);
+    }
   }
   // Story 1.9 : les 5 404 restent en noindex sur un build indexable ; sitemap et robots absolus.
   assertNotFoundPages(out);

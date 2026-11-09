@@ -8,7 +8,7 @@ import PhoneNumber from '../components/PhoneNumber.astro';
 import TextLink from '../components/TextLink.astro';
 import Base from '../layouts/Base.astro';
 import { telHref, waHref } from '../lib/contact/core';
-import { serviceLabels } from '../lib/contact/labels';
+import { cityLabels, serviceLabels } from '../lib/contact/labels';
 import { pageWaInput } from '../lib/contact/table';
 import { t } from '../lib/i18n';
 import type { Lang } from '../lib/langs';
@@ -22,7 +22,7 @@ interface Props {
 
 const { id, lang } = Astro.props;
 const ctx = createPageContext({ id, lang }, { indexable: false });
-const wa = waHref(pageWaInput(ctx, serviceLabels('he')));
+const wa = waHref(pageWaInput(ctx, serviceLabels('he'), cityLabels('he')));
 const links = notFoundNav(lang);
 ---
 <Base ctx={ctx} title={t(lang, 'not-found.meta-title')}>

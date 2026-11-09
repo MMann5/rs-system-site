@@ -1,0 +1,23 @@
+# Story 4.1 (FR9, AD-4, décision D1 de l'epic 4) : Jérusalem. Id du fichier = code `?city=`.
+# Intro : phrase du canvas City (« התקנה ב{עיר} והסביבה ») + une phrase propre à la ville, sans chiffre, client,
+# délai ni superlatif (NFR10). Traductions en/ru/fr par l'agent : relecture humaine recommandée.
+# Localités voisines : vides (placeholder) jusqu'à la liste validée par Ran (décision D2).
+name:
+  he: 'ירושלים'
+  en: 'Jerusalem'
+  ru: 'Иерусалим'
+  fr: 'Jérusalem'
+slugs:
+  he: 'ירושלים'
+  en: 'jerusalem'
+  ru: 'иерусалим'
+  fr: 'jerusalem'
+region: 'jerusalem-area'
+order: 1
+intro:
+  he: 'מצלמות אבטחה, גלאי עשן, אינטרקום, בית חכם ורשתות. התקנה בירושלים והסביבה. בבנייני אבן ותיקים ובשכונות חדשות, בדירות, בבתים ובעסקים.'
+  en: 'Security cameras, smoke detectors, intercoms, smart home and networks. Installed in Jerusalem and the surrounding area. In old stone buildings and new neighbourhoods alike: apartments, houses and businesses.'
+  ru: 'Камеры видеонаблюдения, датчики дыма, домофоны, умный дом и сети. Установка в Иерусалиме и окрестностях. В старых каменных домах и в новых районах: квартиры, частные дома и бизнес.'
+  fr: 'Caméras de surveillance, détecteurs de fumée, interphone, maison connectée et réseaux. Installation à Jérusalem et dans les environs. Dans les immeubles anciens en pierre comme dans les quartiers neufs : appartements, maisons et commerces.'
+neighbors: []
+reviews: []

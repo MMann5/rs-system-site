@@ -63,6 +63,16 @@ test('liens actifs : zone et contact avec ?service= encodé', () => {
   assert.deepEqual(zoneOnly.calls, ['areas']);
 });
 
+test('liens, story 4.1 : ?city= du contexte, après ?service= s’il y a les deux ; contact inactif → aucun', () => {
+  const d = deps(['contact']);
+  assert.deepEqual(bandLinks({ lang: 'fr', city: 'modiin' }, d), { detailsHref: '/fr/contact/?city=modiin' });
+  assert.equal(bandLinks({ lang: 'he', service: 'cameras', city: 'modiin' }, d).detailsHref, '/he/contact/?service=cameras&city=modiin');
+  assert.equal(bandLinks({ lang: 'fr', city: 'a b' }, d).detailsHref, '/fr/contact/?city=a%20b');
+  const none = deps(['home']);
+  assert.deepEqual(bandLinks({ lang: 'fr', city: 'modiin' }, none), {});
+  assert.deepEqual(none.calls, []);
+});
+
 test('toProof : seulement les champs présents, {} sans entrée', () => {
   assert.deepEqual(toProof({ rating: 9.94 }), { rating: 9.94 });
   assert.deepEqual(toProof({ rating: 9.94, reviews: 12 }), { rating: 9.94, reviews: 12 });

@@ -5,7 +5,7 @@
 // message WhatsApp selon le service et la ville du contexte de page (pageWaInput).
 // Rendue par Base.astro après le <footer> : ordre de lecture = ordre visuel. Icônes du canvas Header.dc.html.
 import { telHref, waHref } from '../lib/contact/core';
-import { serviceLabels } from '../lib/contact/labels';
+import { cityLabels, serviceLabels } from '../lib/contact/labels';
 import { pageWaInput } from '../lib/contact/table';
 import { t } from '../lib/i18n';
 import type { PageContext } from '../lib/page-context';
@@ -15,7 +15,7 @@ interface Props {
 }
 
 const { ctx } = Astro.props;
-const wa = waHref(pageWaInput(ctx, serviceLabels('he')));
+const wa = waHref(pageWaInput(ctx, serviceLabels('he'), cityLabels('he')));
 ---
 <div class="mobile-bar">
   <a href={telHref()} class="action call" data-surface="navy" data-track="call_click" data-placement="mobile_bar">

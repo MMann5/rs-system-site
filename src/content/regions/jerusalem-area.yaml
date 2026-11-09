@@ -1,0 +1,9 @@
+# Story 4.1 (FR9, AD-4) : région « Jérusalem et environs ». Nom = valeurs de nav.region.jerusalem-area (src/i18n),
+# ancre identique dans les 4 langues (footer, page Zones). Ordre : 1re région.
+name:
+  he: 'ירושלים והסביבה'
+  en: 'Jerusalem area'
+  ru: 'Иерусалим и окрестности'
+  fr: 'Jérusalem et environs'
+anchor: 'jerusalem-area'
+order: 1
