@@ -1,17 +1,25 @@
 ---
 // AD-7, AD-13, FR24, FR39, UX-DR9 : layout unique de toutes les pages.
 // Seul fichier de src/ qui pose lang/dir HTML (sur <html>, depuis le contexte de page).
+// Story 7.1 (AD-6, AD-10) : script Umami Cloud dans le <head> seulement sur un build indexable avec un id de site
+// (UMAMI, src/lib/env.ts), sans autre attribut de configuration ; îlot de mesure src/scripts/track.ts sur toutes
+// les pages, 404 comprise.
+// Story 7.2 (FR38, FR39, AD-9, D3, D4) : balises Open Graph / Twitter de chaque page (image par défaut = carte logo) et
+// données structurées JSON-LD de la page dans un seul <script type="application/ld+json"> (aucun sur la 404).
 import '../styles/base.css';
 import FontPreload from '../components/FontPreload.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import MobileBar from '../components/MobileBar.astro';
-import { SITE_URL } from '../lib/env';
+import { SITE_URL, UMAMI } from '../lib/env';
 import { t } from '../lib/i18n';
 import { DIR } from '../lib/langs';
 import { serializeRsData, type PageContext } from '../lib/page-context';
 import { alternates, NOT_FOUND_ID, url } from '../lib/routes';
 import { absoluteUrl, hreflangLinks, ICON_LINKS } from '../lib/seo';
+import { shareMeta, type ShareImage } from '../lib/share';
+import { SHARE_CARDS } from '../lib/share-image';
+import { serializeJsonLd, type JsonLdNode } from '../lib/structured-data';
 
 interface Props {
   ctx: PageContext;
@@ -20,14 +28,30 @@ interface Props {
   description?: string;
   /** Tables de données de la page (AD-5), fusionnées à côté de `context` dans #rs-data. */
   tables?: Record<string, unknown>;
+  /** Image de partage 1200 × 630 (D4) ; défaut : carte logo complet sur navy. */
+  ogImage?: ShareImage;
+  /** `article` pour un article de blog. */
+  ogType?: 'website' | 'article';
+  /** Nœuds JSON-LD de la page (src/lib/structured-data.ts) ; aucun : pas de script. */
+  jsonLd?: readonly JsonLdNode[];
 }
 
-const { ctx, title, description, tables } = Astro.props;
+const { ctx, title, description, tables, ogImage = SHARE_CARDS.logo, ogType = 'website', jsonLd = [] } = Astro.props;
 // La 404 n'a pas d'URL propre : ni canonique ni hreflang.
 const isNotFound = ctx.id === NOT_FOUND_ID;
 const canonical = isNotFound ? undefined : absoluteUrl(url(ctx.id, ctx.lang), SITE_URL);
 const hreflangs = isNotFound ? [] : hreflangLinks(alternates(ctx.id), SITE_URL);
 const rsData = serializeRsData(ctx, tables);
+const share = shareMeta({
+  title,
+  description,
+  lang: ctx.lang,
+  url: canonical,
+  image: { ...ogImage, src: absoluteUrl(ogImage.src, SITE_URL) },
+  type: ogType,
+});
+// AD-10 : la 404 n'a jamais de données structurées.
+const ldJson = !isNotFound && jsonLd.length > 0 ? serializeJsonLd(jsonLd) : undefined;
 ---
 <!doctype html>
 <html lang={ctx.lang} dir={DIR[ctx.lang]} data-page-id={ctx.id}>
@@ -41,6 +65,9 @@ const rsData = serializeRsData(ctx, tables);
     {canonical !== undefined && <link rel="canonical" href={canonical} />}
     {hreflangs.map(({ hreflang, href }) => <link rel="alternate" hreflang={hreflang} href={href} />)}
     {ICON_LINKS.map((icon) => <link {...icon} />)}
+    {share.map(({ attr, key, content }) => (attr === 'property' ? <meta property={key} content={content} /> : <meta name={key} content={content} />))}
+    {ldJson !== undefined && <script type="application/ld+json" is:inline set:html={ldJson} />}
+    {UMAMI !== undefined && <script is:inline defer src={UMAMI.src} data-website-id={UMAMI.websiteId}></script>}
   </head>
   <body>
     <a class="skip-link" href="#content">{t(ctx.lang, 'layout.skip-link')}</a>
@@ -53,6 +80,10 @@ const rsData = serializeRsData(ctx, tables);
     <script type="application/json" id="rs-data" is:inline set:html={rsData} />
   </body>
 </html>
+
+<script>
+  import '../scripts/track.ts';
+</script>
 
 <style>
   /* DESIGN.md › Components › Lien d'évitement : hors écran au repos ; au focus, en haut à

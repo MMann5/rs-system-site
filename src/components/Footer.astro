@@ -57,7 +57,7 @@ const baseline = t('he', 'site.tagline');
           </ul>
         </nav>
       )}
-      <LanguageSwitcher ctx={ctx} tone="light" />
+      <LanguageSwitcher ctx={ctx} tone="light" placement="footer" />
     </div>
   </div>
 </footer>
@@ -128,10 +128,12 @@ const baseline = t('he', 'site.tagline');
   }
 
   /* Cible ≥ 44px de haut (min-block-size 48px, texte centré). */
+  /* Story 7.3 (audit, EXP › Cibles ≥ 44px) : largeur minimale aussi (« Blog » faisait 32px), texte au début. */
   .link {
     display: inline-flex;
     align-items: center;
     min-block-size: var(--space-12);
+    min-inline-size: var(--space-12);
   }
 
   /* Lignes sans lien de la colonne Contact : bloc (une par ligne), même hauteur que les liens. */

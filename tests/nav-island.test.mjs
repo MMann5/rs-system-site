@@ -1,5 +1,6 @@
-// Story 1.6 (AD-14, FR17, UX-DR11) : îlot du menu mobile. Source sans aucun import (TS vanilla, aucune
-// donnée de build) ; comportement (bouton, Échap, tap dehors, lien) sur un DOM factice minimal.
+// Story 1.6 (AD-14, FR17, UX-DR11) : îlot du menu mobile. Source sans import hors du module pur track-events.ts
+// (story 7.1), aucune donnée de build ; comportement (bouton, Échap, tap dehors, lien) sur un DOM factice minimal.
+// Story 7.1 (AD-6, FR34) : `language_switch` émis par CustomEvent('rs:track') au clic dans un sélecteur.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
@@ -31,9 +32,14 @@ test('findIslandImports détecte import, import(), require et astro:', () => {
   assert.deepEqual(findIslandImports('// aucun import ici\nconst a = 1;'), []);
 });
 
-test('src/scripts/nav.ts existe et n’importe rien', () => {
+test('src/scripts/nav.ts existe et n’importe que ../lib/track-events.ts (story 7.1)', () => {
   assert.ok(existsSync(ISLAND), 'src/scripts/nav.ts absent');
-  assert.deepEqual(findIslandImports(readFileSync(ISLAND, 'utf8')), []);
+  const code = readFileSync(ISLAND, 'utf8');
+  const specs = [...stripComments(code).matchAll(/(?:^|[^\w$.])import\b[\s\S]*?from\s*['"]([^'"]+)['"]/gm)].map((m) => m[1]);
+  assert.deepEqual(specs, ['../lib/track-events.ts']);
+  // Hors de cet import : aucun autre import, require ni astro:.
+  const rest = stripComments(code).replace(/import\s*\{[^}]*\}\s*from\s*'\.\.\/lib\/track-events\.ts';/, '');
+  assert.deepEqual(findIslandImports(rest), []);
 });
 
 // Présence de l'îlot dans le build (<script type="module"> qui vise mobile-menu) : tests/build.test.mjs,
@@ -81,9 +87,14 @@ class FakeElement extends FakeNode {
     else this.attrs.delete(name);
     return Boolean(force);
   }
-  /** Sélecteurs utilisés par l'îlot : `header`, `a[href]`. */
+  /** Sélecteurs utilisés par l'îlot : `header`, `a[href]`, `[data-lang-switcher]`. */
   closest(selector) {
-    const match = (el) => (selector === 'a[href]' ? el.tag === 'a' && el.hasAttribute('href') : el.tag === selector);
+    const match = (el) =>
+      selector === 'a[href]'
+        ? el.tag === 'a' && el.hasAttribute('href')
+        : selector === '[data-lang-switcher]'
+          ? el.hasAttribute('data-lang-switcher')
+          : el.tag === selector;
     for (let n = this; n instanceof FakeElement; n = n.parent) if (match(n)) return n;
     return null;
   }
@@ -97,8 +108,10 @@ class FakeElement extends FakeNode {
 
 let round = 0;
 
-async function mountIsland(search = '', initialSearch = '') {
+async function mountIsland(search = '', initialSearch = '', { lang = 'he', pageId = 'cameras' } = {}) {
   const listeners = {};
+  /** Événements rs:track émis par l'îlot (détail). */
+  const tracked = [];
   const button = new FakeElement('button', { type: 'button', 'aria-expanded': 'false', 'aria-controls': 'mobile-menu' });
   const link = new FakeElement('a', { href: '/fr/' });
   const panel = new FakeElement('div', { id: 'mobile-menu' }).append(new FakeElement('nav').append(link));
@@ -106,14 +119,19 @@ async function mountIsland(search = '', initialSearch = '') {
   const main = new FakeElement('main');
   const body = new FakeElement('body');
   body.append(header, main);
-  const html = new FakeElement('html').append(body);
+  const html = new FakeElement('html', { lang, 'data-page-id': pageId }).append(body);
   for (const el of [body, html]) {
     el.style = {};
     el.classList = new Set();
   }
   // Liens des deux sélecteurs de langues (menu et footer), cibles de la recopie de location.search.
-  const switcherLinks = ['he', 'en', 'ru', 'fr', 'he', 'en', 'ru', 'fr'].map((l) => new FakeElement('a', { href: `/${l}/`, hreflang: l }));
+  // Story 7.1 : chaque série dans son <nav data-lang-switcher> (menu puis footer), langue de la page en aria-current.
+  const switcherLinks = ['he', 'en', 'ru', 'fr', 'he', 'en', 'ru', 'fr'].map(
+    (l) => new FakeElement('a', { href: `/${l}/`, hreflang: l, ...(l === lang ? { 'aria-current': 'true' } : {}) }),
+  );
   for (const el of switcherLinks) el.search = initialSearch;
+  const menuSwitcher = new FakeElement('nav', { 'data-lang-switcher': 'mobile_menu' }).append(...switcherLinks.slice(0, 4));
+  const footerSwitcher = new FakeElement('nav', { 'data-lang-switcher': 'footer' }).append(...switcherLinks.slice(4));
   const document = {
     activeElement: body,
     body,
@@ -122,6 +140,12 @@ async function mountIsland(search = '', initialSearch = '') {
     getElementById: (id) => (id === 'mobile-menu' ? panel : null),
     querySelectorAll: (sel) => (sel === '[data-lang-switcher] a[hreflang]' ? switcherLinks : []),
     addEventListener: (type, fn) => (listeners[type] ??= []).push(fn),
+    dispatchEvent: (event) => {
+      assert.ok(event instanceof CustomEvent);
+      assert.equal(event.type, 'rs:track');
+      tracked.push(event.detail);
+      return true;
+    },
   };
   Object.assign(globalThis, { document, location: { search }, Node: FakeNode, Element: FakeElement });
   await import(`${ISLAND_URL}?case=${++round}`);
@@ -140,7 +164,7 @@ async function mountIsland(search = '', initialSearch = '') {
     for (let n = from; n instanceof FakeElement; n = n.parent) for (const fn of n.listeners.focusout ?? []) fn(event);
   };
   const open = () => button.getAttribute('aria-expanded') === 'true';
-  return { button, link, panel, header, main, body, html, document, switcherLinks, click, key, blur, open };
+  return { button, link, panel, header, main, body, html, document, switcherLinks, menuSwitcher, footerSwitcher, tracked, click, key, blur, open };
 }
 
 const ISLAND_URL = new URL('../src/scripts/nav.ts', import.meta.url).href;
@@ -222,4 +246,40 @@ test('îlot : ?service=cameras&utm_source=van recopié sur les 8 liens de sélec
 test('îlot : sans paramètre, liens de sélecteur inchangés', async () => {
   const dom = await mountIsland('', '?keep');
   for (const link of dom.switcherLinks) assert.equal(link.search, '?keep');
+});
+
+// — Story 7.1 (AD-6, FR34) : language_switch au clic dans un sélecteur —
+
+test('îlot : clic sur ru du footer, page he cameras → language_switch { page, from, to, placement: footer }', async () => {
+  const dom = await mountIsland();
+  dom.click(dom.switcherLinks[6]);
+  assert.deepEqual(dom.tracked, [{ name: 'language_switch', data: { page: 'cameras', from: 'he', to: 'ru', placement: 'footer' } }]);
+});
+
+test('îlot : clic sur en du menu mobile, page fr city:modiin → placement mobile_menu', async () => {
+  const dom = await mountIsland('', '', { lang: 'fr', pageId: 'city:modiin' });
+  dom.click(dom.switcherLinks[1]);
+  assert.deepEqual(dom.tracked, [{ name: 'language_switch', data: { page: 'city:modiin', from: 'fr', to: 'en', placement: 'mobile_menu' } }]);
+});
+
+test('îlot : clic sur la langue courante (aria-current), menu ou footer → aucun événement', async () => {
+  const dom = await mountIsland();
+  dom.click(dom.switcherLinks[0]);
+  dom.click(dom.switcherLinks[4]);
+  assert.deepEqual(dom.tracked, []);
+});
+
+test('îlot : clics hors sélecteur (bouton, lien du panneau, <main>) → aucun événement', async () => {
+  const dom = await mountIsland();
+  dom.click(dom.button);
+  dom.click(dom.link);
+  dom.click(dom.main);
+  assert.deepEqual(dom.tracked, []);
+});
+
+test('îlot : avec ?utm_source=van&utm_medium=qr, la requête est recopiée et language_switch n’en porte rien', async () => {
+  const dom = await mountIsland('?utm_source=van&utm_medium=qr');
+  for (const link of dom.switcherLinks) assert.equal(link.search, '?utm_source=van&utm_medium=qr');
+  dom.click(dom.switcherLinks[5]);
+  assert.deepEqual(dom.tracked, [{ name: 'language_switch', data: { page: 'cameras', from: 'he', to: 'en', placement: 'footer' } }]);
 });

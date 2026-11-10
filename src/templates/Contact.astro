@@ -27,6 +27,8 @@ import type { Lang } from '../lib/langs';
 import { createPageContext } from '../lib/page-context';
 import { page } from '../lib/pages';
 import { isEnabled, url } from '../lib/routes';
+import { localBusiness } from '../lib/structured-data';
+import { business, servedCities } from '../lib/structured-data-site';
 
 interface Props {
   id: string;
@@ -38,6 +40,8 @@ const ctx = createPageContext({ id, lang, navSection: 'contact' });
 const { meta } = page(id);
 const wa = waHref(pageWaInput(ctx, serviceLabels('he'), cityLabels('he')));
 const services = serviceLabels(lang);
+// Story 7.2 (FR38, D3) : LocalBusiness avec point de contact ; image de partage = carte logo (défaut du layout).
+const jsonLd = [localBusiness({ ...business(lang), areaServed: servedCities(lang), contactPoint: true })];
 const optional = t(lang, 'form.optional');
 const nameError = t(lang, 'form.name.error');
 const phoneError = t(lang, 'form.phone.error');
@@ -48,7 +52,7 @@ const phoneErrorParts = phoneExample
   ? { before: phoneError.slice(0, phoneExample.index), number: phoneExample[0], after: phoneError.slice((phoneExample.index ?? 0) + phoneExample[0].length) }
   : { before: phoneError, number: '', after: '' };
 ---
-<Base ctx={ctx} title={meta.title[lang]} description={meta.description[lang]} tables={{ services, cities: cityLabels(lang) }}>
+<Base ctx={ctx} title={meta.title[lang]} description={meta.description[lang]} tables={{ services, cities: cityLabels(lang) }} jsonLd={jsonLd}>
   <section class="hero" aria-labelledby="contact-title">
     <h1 id="contact-title" class="title">{t(lang, 'contact.title')}</h1>
     <a href={telHref()} class="phone" data-track="call_click" data-placement="contact_page"><PhoneNumber /></a>
@@ -496,7 +500,10 @@ const phoneErrorParts = phoneExample
     color: var(--color-on-accent);
     font-size: var(--type-submit-size);
     font-weight: var(--type-submit-weight);
-    white-space: nowrap;
+    /* Story 7.3 (audit, WCAG 1.4.12) : plus de nowrap ; le libellé passe à la ligne plutôt que de déborder à 320px
+     * avec l'espacement de texte agrandi (sans lui, il tient sur une ligne). */
+    max-inline-size: 100%;
+    text-align: start;
     cursor: pointer;
   }
 

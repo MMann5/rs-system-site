@@ -33,3 +33,14 @@ export const ICON_LINKS: readonly { rel: string; type?: string; sizes?: string; 
 export function assertSiteUrl(indexable: boolean, siteUrl?: string): void {
   if (indexable && !siteUrl) throw new Error('seo : SITE_URL requis pour un build indexable (URL absolues du sitemap, de la canonique et des hreflang)');
 }
+
+/**
+ * Story 7.2 (D4) : cartes de partage 1200 × 630 générées au build par src/pages/og/[card].png.ts (fichiers, pas des
+ * pages) ; `logo` = logo complet sur navy, `detector` = détecteur dessiné.
+ */
+export const SHARE_CARD_PATHS = { logo: '/og/logo.png', detector: '/og/detector.png' } as const;
+
+export type ShareCard = keyof typeof SHARE_CARD_PATHS;
+
+/** Logo carré publié (manifeste), cité comme `logo` par les données structurées (D3). */
+export const LOGO_PATH = '/rs-icon-512.png';

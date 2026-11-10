@@ -15,6 +15,7 @@ import { copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, 
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { checkShare, imageInfo } from '../scripts/checks/share.mjs';
 import { FEATURED_PHOTO_SIZES } from '../src/lib/photos.ts';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
@@ -143,6 +144,17 @@ test('page article et cartes (fixtures hors dépôt), puis build en échec sans 
   assert.ok(cards[1][2].includes('<picture>') && cards[1][2].includes(imgs[0]), 'photo dans la carte cameras');
   assert.match(imgs[0], /\salt(?:="")?[\s>]/, 'carte photo alt=""');
   assert.match(cards[1][2], /<span class="category">Caméras de surveillance<\/span>/);
+
+  // — Story 7.2 : aperçus et JSON-LD du build fixture ; article à photo → JPEG 1200 × 630 recadré, = Article.image —
+  assert.deepEqual(checkShare(out, undefined), [], 'share');
+  const photoPost = page(out, 'fr', 'blog', 'fixture-cameras-fr');
+  const ogImage = photoPost.match(/<meta property="og:image" content="([^"]*)">/)?.[1] ?? '';
+  // fixture-dome.jpg est une copie octet pour octet de cameras-dome.jpg : Vite ne garde qu'un fichier source et le
+  // nomme d'après le premier importé ; les deux noms désignent la photo de l'article (la carte détecteur est exclue).
+  assert.match(ogImage, /^\/_astro\/(?:fixture|cameras)-dome\.[\w-]+\.jpe?g$/, `og:image ${ogImage}`);
+  assert.deepEqual(imageInfo(readFileSync(join(out, ogImage))), { type: 'image/jpeg', width: 1200, height: 630 }, 'og:image 1200 × 630');
+  const ld = JSON.parse(photoPost.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)?.[1] ?? '{}');
+  assert.equal(ld['@graph']?.find((node) => node['@type'] === 'Article')?.image, ogImage, 'Article.image = og:image');
 
   // — Article fixture à photo (cameras), en hébreu —
   const he = readFileSync(join(out, 'he', 'בלוג', 'fixture-cameras-he', 'index.html'), 'utf8');

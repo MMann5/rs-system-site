@@ -23,6 +23,9 @@ import { createPageContext } from '../lib/page-context';
 import { ARTICLE_PHOTO_SIZES } from '../lib/photos';
 import { resolveProseLinks } from '../lib/prose-links';
 import { isEnabled, url } from '../lib/routes';
+import { photoShareImage, SHARE_CARDS } from '../lib/share-image';
+import { article, breadcrumbList, type JsonLdNode } from '../lib/structured-data';
+import { business, pageUrl, siteUrl } from '../lib/structured-data-site';
 
 interface Props {
   id: string;
@@ -43,8 +46,24 @@ const reading = t(lang, 'post.reading-time').replace('{n}', String(doc.minutes))
 const image = postImage(item);
 const html = resolveProseLinks(doc.html, (target, params) => url(target, lang, params), postDocFile(postId, lang), 'blog');
 const others = related(item);
+// Story 7.2 (FR38, FR39, D4) : image de partage = photo de l'article, ou carte détecteur sans photo ; JSON-LD Article
+// (même image) + fil Blog › Article (si le blog est actif).
+const ogImage = image ? await photoShareImage(image) : SHARE_CARDS.detector;
+const selfUrl = pageUrl(id, lang);
+const jsonLd: JsonLdNode[] = [
+  article({
+    headline: doc.title,
+    description: doc.meta.description,
+    datePublished: item.meta.date,
+    image: siteUrl(ogImage.src),
+    inLanguage: lang,
+    url: selfUrl,
+    business: business(lang),
+  }),
+  ...(blogHref ? [breadcrumbList([{ name: t(lang, 'nav.blog'), url: pageUrl(BLOG_ID, lang) }, { name: doc.title, url: selfUrl }])] : []),
+];
 ---
-<Base ctx={ctx} title={doc.meta.title} description={doc.meta.description}>
+<Base ctx={ctx} title={doc.meta.title} description={doc.meta.description} ogImage={ogImage} ogType="article" jsonLd={jsonLd}>
   <article class="article">
     <div class="head">
       {blogHref ? (

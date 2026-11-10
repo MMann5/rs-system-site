@@ -7,6 +7,7 @@
 // Story 2.3 : lit #rs-data (contexte, tables `services` et `cities`), présélectionne le service et la ville
 // d'après `?service=` / `?city=`, compose le message hébreu avec waHref() et ouvre WhatsApp (même onglet sur
 // appareil tactile, nouvel onglet sinon) ; émet `form_submit` / `form_error` par CustomEvent('rs:track').
+// Story 7.1 : WhatsApp s'ouvre après l'envoi de `form_submit` (rappel `done` de track.ts), au plus tard après 300 ms.
 // Story 2.4 (FR33, UX-DR29) : état d'envoi (bouton aria-disabled, libellé d'envoi annoncé par
 // #contact-sending, nouvel envoi ignoré pendant 3 s), confirmation au retour sur la page (visibilitychange
 // hidden puis visible, ou pageshow persisted ; focus sur son titre, Réessayer = même lien), bloc hors ligne
@@ -23,7 +24,7 @@ import {
   resolveCityHe,
   waHref,
 } from '../lib/contact/core.ts';
-import { TRACK_EVENT_TYPE, type TrackDetail } from '../lib/track-events.ts';
+import { TRACK_EVENT_TYPE, type TrackRequest } from '../lib/track-events.ts';
 
 interface RsData {
   lang: string;
@@ -48,7 +49,7 @@ function readRsData(): RsData | undefined {
   }
 }
 
-const track = (detail: TrackDetail): void => {
+const track = (detail: TrackRequest): void => {
   document.dispatchEvent(new CustomEvent(TRACK_EVENT_TYPE, { detail }));
 };
 
@@ -248,12 +249,22 @@ if (form instanceof HTMLFormElement) {
       sendingTimer = setTimeout(stopSending, 3000);
       lastHref = href;
       retry?.setAttribute('href', href);
+      // Story 7.1 (AD-6) : WhatsApp s'ouvre quand track.ts a envoyé form_submit (rappel `done`), ou au plus tard
+      // après 300 ms (track.ts absent ou Umami lent), une seule fois.
+      let opened = false;
+      const open = (): void => {
+        if (opened) return;
+        opened = true;
+        clearTimeout(openTimer);
+        openWhatsApp(href);
+        awaitReturn();
+      };
+      const openTimer = setTimeout(open, 300);
       track({
         name: 'form_submit',
         data: { lang: data.lang, service: code, from_service_param: fromServiceParam, city_filled: cityText.trim() !== '' },
+        done: open,
       });
-      openWhatsApp(href);
-      awaitReturn();
     });
 
     // Liens du résumé : focus sur le champ visé (sans changer l'URL).

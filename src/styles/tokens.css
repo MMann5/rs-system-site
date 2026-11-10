@@ -303,8 +303,10 @@
   --rise-delay-1: 0.25s;
   --rise-delay-2: 0.45s;
   --rise-delay-3: 0.65s;
-  /* DESIGN.md › Scrims : calque de maintien, colors.scrim à 0,62 jusqu'au bas du bloc + 32px, puis fondu sur 64px */
-  --scrim-hold: linear-gradient(to bottom, rgba(6,16,32,.62) 0%, rgba(6,16,32,.62) calc(100% - 64px), rgba(6,16,32,0) 100%);
+  /* DESIGN.md › Scrims : calque de maintien, colors.scrim jusqu'au bas du bloc + 32px, puis fondu sur 64px.
+   * Story 7.3 (audit des scrims) : 0,63 et non 0,62 : rendu en 8 bits avec tramage du dégradé, 0,62 donnait 0,614
+   * sous le dernier lien (Interphone 320/390px en, fr, ru ; tuile Interphone de l'accueil fr 320px), sous le plancher. */
+  --scrim-hold: linear-gradient(to bottom, rgba(6,16,32,.63) 0%, rgba(6,16,32,.63) calc(100% - 64px), rgba(6,16,32,0) 100%);
   /* DESIGN.md › Scrims : le calque dépasse le bloc de texte de 32px + 64px de fondu */
   --scrim-hold-extend: 96px;
   /* EXPERIENCE.md › Accessibility Floor : h2 du bloc contact masqué visuellement (utilitaire .visually-hidden) */
