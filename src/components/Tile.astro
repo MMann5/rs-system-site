@@ -61,9 +61,13 @@ interface Props {
    * `grid` = tuile de la grille de l'accueil (voir l'en-tête).
    */
   size?: 'crane' | 'building' | 'feature' | 'crane-home' | 'grid';
+  /** Cinéma : ondes du logo (géométrie D7 de l'epic 4) dessinées au défilement, au coin bas de la tuile sombre. */
+  arcs?: boolean;
 }
 
-const { variant, id, level, eyebrow, title, text, links = [], photo, background = 'tile-night', scrim = 'tile', motion = 'zoom', size } = Astro.props;
+const { variant, id, level, eyebrow, title, text, links = [], photo, background = 'tile-night', scrim = 'tile', motion = 'zoom', size, arcs = false } = Astro.props;
+// Cinéma : titre découpé en mots (montée un à un) ; le texte lu reste le même, espaces compris.
+const words = title.split(' ');
 if (links.length > 2) throw new Error(`Tile « ${id} » : ${links.length} liens (2 au plus)`);
 const Heading = level;
 const dark = variant === 'dark';
@@ -74,7 +78,7 @@ const vars = [`--photo-position: var(--photo-focus-${photo.focus})`, dark ? `--t
 <section class:list={['tile', variant, size]} aria-labelledby={id} data-surface={dark ? 'photo' : undefined} style={vars}>
   <div class="content reveal">
     {eyebrow && <p class="eyebrow">{eyebrow}</p>}
-    <Heading id={id} class="title">{title}</Heading>
+    <Heading id={id} class="title">{words.map((word, i) => <>{i > 0 && ' '}<span class="word">{word}</span></>)}</Heading>
     {text && <p class="text">{text}</p>}
     {links.length > 0 && (
       <div class="links">
@@ -86,6 +90,15 @@ const vars = [`--photo-position: var(--photo-focus-${photo.focus})`, dark ? `--t
     <ResponsivePhoto src={photo.src} portrait={photo.portrait} alt={photo.alt} sizes={sizes} class={`photo ${motion}`} />
   </div>
   {dark && <div class="scrim"></div>}
+  {dark && arcs && (
+    <div class="arcs" aria-hidden="true">
+      <svg focusable="false" viewBox="0 0 480 480">
+        <path class="arc arc-1" pathLength="1" d="M100 270 A110 110 0 0 1 208.9 395.3" />
+        <path class="arc arc-2" pathLength="1" d="M100 205 A175 175 0 0 1 270.5 419.4" />
+        <path class="arc arc-3" pathLength="1" d="M100 138 A242 242 0 0 1 330.2 454.8" />
+      </svg>
+    </div>
+  )}
 </section>
 
 <style>
@@ -392,12 +405,129 @@ const vars = [`--photo-position: var(--photo-focus-${photo.focus})`, dark ? `--t
     }
   }
 
+  /* — Ondes du logo (Cinéma) : même dessin et mêmes jetons que le héros typographique, au coin bas de fin de ligne,
+   * sous le texte (la tuile grue a son texte en haut). Cadre qui rogne : les ondes ne débordent jamais de la tuile. — */
+  .tile {
+    view-timeline-name: --tile;
+  }
+
+  .arcs {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    overflow: clip;
+    pointer-events: none;
+  }
+
+  .arcs svg {
+    position: absolute;
+    inset-inline-end: var(--arcs-offset-inline);
+    inset-block-end: var(--arcs-offset-block);
+    inline-size: var(--arcs-size);
+    block-size: var(--arcs-size);
+  }
+
+  @media (width < 960px) {
+    .arcs svg {
+      inset-inline-end: calc(var(--arcs-offset-inline) * var(--arcs-scale-mobile));
+      inset-block-end: calc(var(--arcs-offset-block) * var(--arcs-scale-mobile));
+      inline-size: calc(var(--arcs-size) * var(--arcs-scale-mobile));
+      block-size: calc(var(--arcs-size) * var(--arcs-scale-mobile));
+    }
+  }
+
+  .arc {
+    fill: none;
+    stroke: var(--color-signal-arc);
+    stroke-width: var(--arc-stroke-width);
+    stroke-linecap: round;
+  }
+
   /* — Mouvement au défilement (EXPERIENCE.md › Mouvement) — */
   @supports (animation-timeline: view()) {
     .media :global(.zoom) {
       animation: tile-zoom var(--ease) both;
       animation-timeline: view();
       animation-range: entry 0% cover 55%;
+    }
+
+    /* Cinéma : tuile caméras de l'accueil, dézoom plus fort sous un cadre qui s'ouvre. */
+    .feature {
+      --tile-zoom-from: var(--feature-zoom-from);
+    }
+
+    .feature .media {
+      animation: tile-open var(--ease-scroll) both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 50%;
+    }
+
+    /* Cinéma : mots du titre, montée un à un (10 % de plage de plus par mot, à partir du 4e ensemble). */
+    .word {
+      display: inline-block;
+      animation: tile-word var(--ease-scroll) both;
+      animation-timeline: view();
+      animation-range: entry 10% entry 70%;
+    }
+
+    .word:nth-child(2) {
+      animation-range: entry 20% entry 80%;
+    }
+
+    .word:nth-child(3) {
+      animation-range: entry 30% entry 90%;
+    }
+
+    .word:nth-child(n + 4) {
+      animation-range: entry 40% entry 100%;
+    }
+
+    /* Cinéma : ondes du logo tracées pendant que la tuile entre. */
+    .arc {
+      stroke-dasharray: 1;
+      animation: tile-arc var(--ease-scroll) both;
+      animation-timeline: --tile;
+      animation-range: entry 30% cover 55%;
+    }
+
+    .arc-2 {
+      animation-range: entry 45% cover 62%;
+    }
+
+    .arc-3 {
+      animation-range: entry 60% cover 70%;
+    }
+
+    @keyframes tile-open {
+      from {
+        clip-path: inset(var(--open-inset));
+      }
+
+      to {
+        clip-path: inset(0);
+      }
+    }
+
+    @keyframes tile-word {
+      from {
+        opacity: 0;
+        transform: translateY(var(--word-rise));
+      }
+
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+
+    @keyframes tile-arc {
+      from {
+        stroke-dashoffset: 1;
+      }
+
+      to {
+        stroke-dashoffset: 0;
+      }
     }
 
     .media :global(.parallax) {

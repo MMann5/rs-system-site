@@ -294,12 +294,12 @@
   /* DESIGN.md › Layout › Héros photo, mobile : « max(560px, 100svh - 128px) » (écran moins header et barre) */
   --hero-photo-min-mobile: 560px;
   /* UX-DR36 : zoom du héros « scale(1.1) → 1 en 2,6 s » (canvas Main.dc.html : @keyframes kb) */
-  --hero-zoom-from: 1.1;
-  --hero-zoom-duration: 2.6s;
+  --hero-zoom-from: 1.22;
+  --hero-zoom-duration: 3s;
   /* UX-DR36 : montée décalée « 24px, 0,9 s, délais 0,25 / 0,45 / 0,65 s », opacité de départ 0,4 */
-  --rise-distance: 24px;
+  --rise-distance: 56px;
   --rise-duration: 0.9s;
-  --rise-opacity-from: 0.4;
+  --rise-opacity-from: 0;
   --rise-delay-1: 0.25s;
   --rise-delay-2: 0.45s;
   --rise-delay-3: 0.65s;
@@ -410,14 +410,14 @@
   --type-eyebrow-weight: 600;
   --type-tile-text-size: 22px;
   /* EXPERIENCE.md › Mouvement › Révélation au défilement : « opacité 0,4 → 1 + translateY(56px) → 0 » */
-  --reveal-opacity-from: 0.4;
-  --reveal-distance: 56px;
+  --reveal-opacity-from: 0;
+  --reveal-distance: 90px;
   /* EXPERIENCE.md › Mouvement › Dézoom au défilement : « scale(1.14) → 1 » */
-  --tile-zoom-from: 1.14;
+  --tile-zoom-from: 1.32;
   /* EXPERIENCE.md › Mouvement › Parallaxe : « translateY(-7%) → 7% à scale(1.16) » */
-  --drift-from: -7%;
-  --drift-to: 7%;
-  --drift-scale: 1.16;
+  --drift-from: -16%;
+  --drift-to: 16%;
+  --drift-scale: 1.38;
   /* — Story 3.2 : détecteur de fumée illustré et page Détecteurs (canvas Smoke.dc.html, Main.dc.html, Blog.dc.html) — */
   /* DESIGN.md › Components › Détecteur illustré : « 260px (accueil) / 380px max 80vw (page détecteurs) / 150px (carte blog) » */
   --detector-size-lg: 380px;
@@ -495,9 +495,9 @@
    * 390px, du début à la fin de la parallaxe. L'échelle dépasse la translation d'une marge, comme au-dessus de
    * 700px (débord (1,05 − 1) / 2 = 2,5 % > 2 % de course) : pas de bord vide, même arrondi au sous-pixel.
    * EXPERIENCE.md › Mouvement (±7 %, 1,16) reste la valeur au-dessus de 700px. — */
-  --drift-from-mobile: -2%;
-  --drift-to-mobile: 2%;
-  --drift-scale-mobile: 1.05;
+  --drift-from-mobile: -6%;
+  --drift-to-mobile: 6%;
+  --drift-scale-mobile: 1.16;
   /* — Story 4.1 : modèle de page ville (canvas City.dc.html, DESIGN.md › Components) — */
   /* DESIGN.md › Components › Héros typographique / Fil d'Ariane : « {colors.link-on-night} 18px/600 » */
   --type-breadcrumb-size: 18px;
@@ -622,4 +622,31 @@
   --type-featured-lede-leading: 1.6;
   /* Story 6.2 : espace entre les numéros de page de la pagination (= --space-2) */
   --pagination-gap: 8px;
+
+  /* — Mouvement « Cinéma » (décision de Mike, 2026-11-10) : remplace les amplitudes de UX-DR36 à UX-DR38.
+   * Valeurs ci-dessus relevées (héros, montée, révélation, dézoom, parallaxe, LED) ; ajouts ci-dessous. — */
+  /* Courbe des animations liées au défilement (dans une var() : le minifieur CSS ne replie alors pas la timeline dans
+   * le raccourci `animation`, que les navigateurs rejetteraient en entier) */
+  --ease-scroll: linear;
+  /* Héros : le h1 arrive aussi d'un flou, en 1,2 s */
+  --hero-title-blur: 10px;
+  --hero-title-duration: 1.2s;
+  /* Héros au défilement : la photo reste derrière et s'assombrit, le texte monte et s'efface */
+  --hero-stay-shift: 45%;
+  --hero-stay-scale: 1.12;
+  --hero-stay-brightness: 0.55;
+  --hero-out-distance: 70px;
+  /* Tuile caméras de l'accueil : la photo s'ouvre (clip-path, coins droits de la charte) et dézoome plus fort */
+  --open-inset: 12% 9%;
+  --feature-zoom-from: 1.4;
+  /* Titres de tuile : mots qui montent un à un */
+  --word-rise: 0.7em;
+  /* Services de l'accueil sur téléphone : cartes collantes empilées */
+  --stack-step: 14px;
+  /* Détecteur de l'accueil : arrive au défilement en tournant */
+  --detector-scroll-distance: 140px;
+  --detector-scroll-scale: 0.7;
+  --detector-scroll-rotate: -14deg;
+  /* Bloc contact : le numéro se pose en grand */
+  --band-phone-from: 1.4;
 }
