@@ -1,0 +1,118 @@
+---
+// Pages produits : cartes vers les pages produits (page service : ses produits ; page produit : les autres produits de
+// la même page service). Carte sombre au fond de la scène 3D, première image rendue du produit recadrée, nom, chevron.
+// Image de rendu 3D, pas une photo : <img> direct (exception de scripts/checks/photos.mjs).
+interface Props {
+  /** Id du h2 (aria-labelledby de la section). */
+  id: string;
+  title: string;
+  items: readonly { href: string; name: string; image: string; width: number; height: number }[];
+}
+
+const { id, title, items } = Astro.props;
+---
+<section class="products reveal" aria-labelledby={id}>
+  <h2 id={id} class="title">{title}</h2>
+  <ul class="grid" role="list">
+    {items.map((item) => (
+      <li>
+        <a class="card" href={item.href}>
+          <span class="media">
+            <img src={item.image} alt="" width={item.width} height={item.height} loading="lazy" decoding="async" />
+          </span>
+          <span class="name">{item.name}<span aria-hidden="true">{' ›'}</span></span>
+        </a>
+      </li>
+    ))}
+  </ul>
+</section>
+
+<style>
+  /* Seuils (les @media ne lisent pas les tokens) : --bp-menu 960px, --bp-mobile-bar 700px. */
+  .products {
+    display: flex;
+    flex-direction: column;
+    gap: var(--section-head-gap);
+    padding-block: var(--section-y-lg);
+    padding-inline: var(--page-gutter);
+    background-color: var(--color-surface-alt);
+    color: var(--color-ink);
+  }
+
+  @media (width < 960px) {
+    .products {
+      padding-block: var(--section-y-tablet);
+    }
+  }
+
+  @media (width < 700px) {
+    .products {
+      padding-block: var(--section-y-mobile);
+    }
+  }
+
+  .title {
+    margin: 0;
+    font-size: var(--type-section-title-size);
+    font-weight: var(--type-section-title-weight);
+    line-height: var(--type-section-title-leading);
+    text-align: center;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--product-card-col-min)), 1fr));
+    gap: var(--card-grid-gap-inline);
+    inline-size: 100%;
+    max-inline-size: var(--container-form);
+    margin: 0 auto;
+    padding: 0;
+    list-style: none;
+  }
+
+  .card {
+    display: flex;
+    flex-direction: column;
+    background-color: var(--color-tile-night);
+    background-image: var(--product-stage-glow);
+    color: var(--color-ink-dark);
+    text-decoration: none;
+  }
+
+  .media {
+    display: block;
+    aspect-ratio: var(--product-card-ratio);
+    overflow: clip;
+  }
+
+  .media img {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+    scale: var(--product-card-zoom);
+    transition: scale var(--card-zoom-duration) var(--ease);
+  }
+
+  .card:hover .media img,
+  .card:focus-visible .media img {
+    scale: calc(var(--product-card-zoom) * var(--card-zoom));
+  }
+
+  .name {
+    padding-block: var(--product-card-pad-block);
+    padding-inline: var(--product-card-pad-inline);
+    font-size: var(--type-card-title-size);
+    font-weight: var(--type-card-title-weight);
+    line-height: var(--type-card-title-leading);
+  }
+
+  .card:hover .name,
+  .card:focus-visible .name {
+    text-decoration: underline;
+  }
+
+  .card:focus-visible {
+    outline-color: var(--color-focus-ring);
+  }
+</style>

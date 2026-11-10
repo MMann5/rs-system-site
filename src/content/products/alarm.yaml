@@ -1,0 +1,128 @@
+# Système d’alarme (détecteur de mouvement). Modèle 3D : scripts/render/models/alarm.js (forme inspirée des produits Dahua / Hikvision, sans logo).
+# Textes écrits par l'agent : à confirmer par RS SYSTEM. Traductions en/ru/fr : relecture humaine recommandée.
+# `scene.inside.parts` : dans l'ordre des ancres du modèle.
+slugs:
+  he: 'מערכת-אזעקה'
+  en: 'alarm-system'
+  ru: 'сигнализация'
+  fr: 'alarme'
+enabled: true
+listedOn: cameras
+order: 4
+name:
+  he: 'מערכת אזעקה'
+  en: 'Alarm system'
+  ru: 'Сигнализация'
+  fr: 'Alarme'
+meta:
+  title:
+    he: 'מערכת אזעקה · RS SYSTEM'
+    en: 'Alarm system · RS SYSTEM'
+    ru: 'Сигнализация · RS SYSTEM'
+    fr: 'Alarme · RS SYSTEM'
+  description:
+    he: 'מערכת אזעקה עם גלאי תנועה, שמתריעה בטלפון. התקנה מסודרת מבאר שבע ועד ירושלים.'
+    en: 'An alarm system with motion detectors that alerts your phone. Installed properly, from Beer Sheva to Jerusalem.'
+    ru: 'Сигнализация с датчиками движения и оповещением на телефон. Аккуратный монтаж от Беэр-Шевы до Иерусалима.'
+    fr: 'Une alarme avec détecteurs de mouvement, qui vous alerte sur le téléphone. Bien installée, de Beer-Sheva à Jérusalem.'
+scene:
+  eyebrow:
+    he: 'מערכת אזעקה'
+    en: 'Alarm system'
+    ru: 'Сигнализация'
+    fr: 'Alarme'
+  title:
+    he: 'גלאי תנועה.'
+    en: 'Motion detector.'
+    ru: 'Датчик движения.'
+    fr: 'Détecteur de mouvement.'
+  feature:
+    title:
+      he: 'מישהו זז. אתם יודעים.'
+      en: 'Someone moves. You know.'
+      ru: 'Кто-то двигается. Вы знаете.'
+      fr: 'Quelqu’un bouge. Vous le savez.'
+    text:
+      he: 'הגלאי מזהה תנועה, והאזעקה מתריעה בטלפון.'
+      en: 'The detector senses movement and the alarm alerts your phone.'
+      ru: 'Датчик замечает движение, сигнализация сообщает на телефон.'
+      fr: 'Le détecteur repère le mouvement, l’alarme vous prévient sur le téléphone.'
+  inside:
+    title:
+      he: 'מה יש בפנים'
+      en: 'What’s inside'
+      ru: 'Что внутри'
+      fr: 'Ce qu’il y a dedans'
+    parts:
+      - he: 'חזית'
+        en: 'Front cover'
+        ru: 'Передняя крышка'
+        fr: 'Façade'
+      - he: 'עדשת פרנל'
+        en: 'Fresnel lens'
+        ru: 'Линза Френеля'
+        fr: 'Lentille de Fresnel'
+      - he: 'חיישן אינפרא־אדום'
+        en: 'Infrared sensor'
+        ru: 'Инфракрасный датчик'
+        fr: 'Capteur infrarouge'
+      - he: 'כרטיס אלקטרוני'
+        en: 'Circuit board'
+        ru: 'Электронная плата'
+        fr: 'Carte électronique'
+      - he: 'נורית חיווי'
+        en: 'Indicator LED'
+        ru: 'Светодиод-индикатор'
+        fr: 'Voyant'
+      - he: 'מתקן קיר עם מפרק'
+        en: 'Swivel wall mount'
+        ru: 'Настенное крепление с шарниром'
+        fr: 'Socle mural à rotule'
+  outro:
+    title:
+      he: 'מותקנת כמו שצריך.'
+      en: 'Installed properly.'
+      ru: 'Установлена как надо.'
+      fr: 'Bien installée.'
+    text:
+      he: 'גלאים בכל הכניסות, וחיבור לטלפון.'
+      en: 'Detectors at every entry point, linked to your phone.'
+      ru: 'Датчики у каждого входа, связь с телефоном.'
+      fr: 'Des détecteurs à chaque entrée, reliés au téléphone.'
+uses:
+  title:
+    he: 'איפה מתקינים אותה?'
+    en: 'Where does it go?'
+    ru: 'Где её ставят?'
+    fr: 'Où l’installer ?'
+  items:
+    - title:
+        he: 'בית'
+        en: 'Home'
+        ru: 'Дом'
+        fr: 'Maison'
+      text:
+        he: 'סלון, מסדרון וכניסות.'
+        en: 'Living room, hallway and entrances.'
+        ru: 'Гостиная, коридор и входы.'
+        fr: 'Salon, couloir et entrées.'
+    - title:
+        he: 'חנות או משרד'
+        en: 'Shop or office'
+        ru: 'Магазин или офис'
+        fr: 'Boutique ou bureau'
+      text:
+        he: 'שקט כשסוגרים בערב.'
+        en: 'Peace of mind when you close at night.'
+        ru: 'Спокойно, когда закрываетесь вечером.'
+        fr: 'L’esprit tranquille quand vous fermez le soir.'
+    - title:
+        he: 'מחסן'
+        en: 'Warehouse'
+        ru: 'Склад'
+        fr: 'Entrepôt'
+      text:
+        he: 'התראה ברגע שמישהו נכנס.'
+        en: 'An alert the moment someone gets in.'
+        ru: 'Сигнал, как только кто-то вошёл.'
+        fr: 'Une alerte dès que quelqu’un entre.'

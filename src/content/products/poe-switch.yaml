@@ -1,0 +1,129 @@
+# Switch réseau PoE. Modèle 3D : scripts/render/models/poe-switch.js (forme inspirée des switchs Dahua / Hikvision, sans logo).
+# Textes écrits par l'agent : à confirmer par RS SYSTEM. Traductions en/ru/fr : relecture humaine recommandée.
+# `scene.inside.parts` : dans l'ordre des ancres du modèle.
+slugs:
+  he: 'מתג-רשת'
+  en: 'network-switch'
+  ru: 'сетевой-коммутатор'
+  fr: 'switch-reseau'
+enabled: true
+parent: networks
+service: networks
+order: 1
+name:
+  he: 'מתג רשת'
+  en: 'Network switch'
+  ru: 'Сетевой коммутатор'
+  fr: 'Switch réseau'
+meta:
+  title:
+    he: 'מתג רשת · RS SYSTEM'
+    en: 'Network switch · RS SYSTEM'
+    ru: 'Сетевой коммутатор · RS SYSTEM'
+    fr: 'Switch réseau · RS SYSTEM'
+  description:
+    he: 'מתג רשת PoE שמחבר ומזין את המצלמות בכבל אחד. התקנה מסודרת מבאר שבע ועד ירושלים.'
+    en: 'A PoE network switch that connects and powers your cameras over a single cable. Installed properly, from Beer Sheva to Jerusalem.'
+    ru: 'PoE-коммутатор: подключает и питает камеры по одному кабелю. Аккуратный монтаж от Беэр-Шевы до Иерусалима.'
+    fr: 'Un switch réseau PoE qui relie et alimente vos caméras par un seul câble. Bien installé, de Beer-Sheva à Jérusalem.'
+scene:
+  eyebrow:
+    he: 'רשתות'
+    en: 'Networks'
+    ru: 'Сети'
+    fr: 'Réseaux'
+  title:
+    he: 'מתג רשת.'
+    en: 'Network switch.'
+    ru: 'Сетевой коммутатор.'
+    fr: 'Switch réseau.'
+  feature:
+    title:
+      he: 'כבל אחד. חשמל ותמונה.'
+      en: 'One cable. Power and picture.'
+      ru: 'Один кабель. Питание и картинка.'
+      fr: 'Un câble. Le courant et l’image.'
+    text:
+      he: 'כל מצלמה מקבלת חשמל ורשת מאותו כבל.'
+      en: 'Each camera gets power and network from the same cable.'
+      ru: 'Каждая камера получает питание и сеть по одному кабелю.'
+      fr: 'Chaque caméra reçoit le courant et le réseau par le même câble.'
+  inside:
+    title:
+      he: 'מה יש בפנים'
+      en: 'What’s inside'
+      ru: 'Что внутри'
+      fr: 'Ce qu’il y a dedans'
+    parts:
+      - he: 'מכסה'
+        en: 'Cover'
+        ru: 'Крышка'
+        fr: 'Capot'
+      - he: 'שקעי רשת'
+        en: 'Network ports'
+        ru: 'Сетевые порты'
+        fr: 'Ports réseau'
+      - he: 'נורות חיווי'
+        en: 'Status lights'
+        ru: 'Индикаторы'
+        fr: 'Voyants d’état'
+      - he: 'כרטיס אלקטרוני'
+        en: 'Circuit board'
+        ru: 'Электронная плата'
+        fr: 'Carte électronique'
+      - he: 'ספק כוח'
+        en: 'Power supply'
+        ru: 'Блок питания'
+        fr: 'Alimentation'
+      - he: 'כבל רשת'
+        en: 'Network cable'
+        ru: 'Сетевой кабель'
+        fr: 'Câble réseau'
+  outro:
+    title:
+      he: 'מותקן כמו שצריך.'
+      en: 'Installed properly.'
+      ru: 'Установлен как надо.'
+      fr: 'Bien installé.'
+    text:
+      he: 'כבלים מסודרים, ארון מסודר, הכול מסומן.'
+      en: 'Tidy cables, a tidy cabinet, everything labelled.'
+      ru: 'Аккуратные кабели, аккуратный шкаф, всё подписано.'
+      fr: 'Câbles rangés, baie rangée, tout est étiqueté.'
+uses:
+  title:
+    he: 'איפה מתקינים אותו?'
+    en: 'Where does it go?'
+    ru: 'Где его ставят?'
+    fr: 'Où l’installer ?'
+  items:
+    - title:
+        he: 'ארון תקשורת'
+        en: 'Network cabinet'
+        ru: 'Телекоммуникационный шкаф'
+        fr: 'Baie réseau'
+      text:
+        he: 'לב המערכת, במקום אחד.'
+        en: 'The heart of the system, in one place.'
+        ru: 'Сердце системы, в одном месте.'
+        fr: 'Le cœur du système, au même endroit.'
+    - title:
+        he: 'בית עם מצלמות'
+        en: 'Home with cameras'
+        ru: 'Дом с камерами'
+        fr: 'Maison avec caméras'
+      text:
+        he: 'בלי שקע חשמל ליד כל מצלמה.'
+        en: 'No power socket needed next to each camera.'
+        ru: 'Не нужна розетка у каждой камеры.'
+        fr: 'Pas besoin de prise à côté de chaque caméra.'
+    - title:
+        he: 'משרד'
+        en: 'Office'
+        ru: 'Офис'
+        fr: 'Bureau'
+      text:
+        he: 'מחשבים, טלפונים ומצלמות על רשת אחת.'
+        en: 'Computers, phones and cameras on one network.'
+        ru: 'Компьютеры, телефоны и камеры в одной сети.'
+        fr: 'Ordinateurs, téléphones et caméras sur un seul réseau.'

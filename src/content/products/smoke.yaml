@@ -1,0 +1,129 @@
+# Détecteur de fumée de plafond. Modèle 3D : scripts/render/models/smoke.js (forme inspirée des produits Dahua / Hikvision, sans logo).
+# Textes écrits par l'agent : à confirmer par RS SYSTEM. Traductions en/ru/fr : relecture humaine recommandée.
+# `scene.inside.parts` : dans l'ordre des ancres du modèle.
+slugs:
+  he: 'גלאי-עשן-לתקרה'
+  en: 'ceiling-smoke-detector'
+  ru: 'потолочный-датчик-дыма'
+  fr: 'detecteur-de-plafond'
+enabled: true
+parent: smoke-detectors
+service: smoke-detectors
+order: 1
+name:
+  he: 'גלאי עשן'
+  en: 'Smoke detector'
+  ru: 'Датчик дыма'
+  fr: 'Détecteur de fumée'
+meta:
+  title:
+    he: 'גלאי עשן · RS SYSTEM'
+    en: 'Smoke detector · RS SYSTEM'
+    ru: 'Датчик дыма · RS SYSTEM'
+    fr: 'Détecteur de fumée · RS SYSTEM'
+  description:
+    he: 'גלאי עשן לתקרה שמתריע מוקדם, בכל חדר. התקנה מסודרת מבאר שבע ועד ירושלים.'
+    en: 'A ceiling smoke detector that warns you early, in every room. Installed properly, from Beer Sheva to Jerusalem.'
+    ru: 'Потолочный датчик дыма, который предупреждает заранее, в каждой комнате. Аккуратный монтаж от Беэр-Шевы до Иерусалима.'
+    fr: 'Un détecteur de fumée au plafond qui prévient tôt, dans chaque pièce. Bien installé, de Beer-Sheva à Jérusalem.'
+scene:
+  eyebrow:
+    he: 'גלאי עשן'
+    en: 'Smoke detectors'
+    ru: 'Датчики дыма'
+    fr: 'Détecteurs de fumée'
+  title:
+    he: 'גלאי עשן.'
+    en: 'Smoke detector.'
+    ru: 'Датчик дыма.'
+    fr: 'Détecteur de fumée.'
+  feature:
+    title:
+      he: 'מזהה עשן. מתריע מיד.'
+      en: 'Smells smoke. Warns at once.'
+      ru: 'Чувствует дым. Сразу предупреждает.'
+      fr: 'Il sent la fumée. Il prévient tout de suite.'
+    text:
+      he: 'צפצוף חזק ונורה אדומה, גם באמצע הלילה.'
+      en: 'A loud beep and a red light, even in the middle of the night.'
+      ru: 'Громкий сигнал и красный индикатор, даже посреди ночи.'
+      fr: 'Un bip puissant et un voyant rouge, même en pleine nuit.'
+  inside:
+    title:
+      he: 'מה יש בפנים'
+      en: 'What’s inside'
+      ru: 'Что внутри'
+      fr: 'Ce qu’il y a dedans'
+    parts:
+      - he: 'מכסה'
+        en: 'Cover'
+        ru: 'Корпус'
+        fr: 'Couvercle'
+      - he: 'כפתור בדיקה'
+        en: 'Test button'
+        ru: 'Кнопка теста'
+        fr: 'Bouton test'
+      - he: 'תא אופטי'
+        en: 'Optical chamber'
+        ru: 'Оптическая камера'
+        fr: 'Chambre optique'
+      - he: 'כרטיס אלקטרוני'
+        en: 'Circuit board'
+        ru: 'Электронная плата'
+        fr: 'Carte électronique'
+      - he: 'סוללה'
+        en: 'Battery'
+        ru: 'Батарейка'
+        fr: 'Pile'
+      - he: 'בסיס לתקרה'
+        en: 'Ceiling base'
+        ru: 'Потолочное основание'
+        fr: 'Socle de plafond'
+  outro:
+    title:
+      he: 'מותקן כמו שצריך.'
+      en: 'Installed properly.'
+      ru: 'Установлен как надо.'
+      fr: 'Bien installé.'
+    text:
+      he: 'במקום הנכון בכל חדר, ובדיקה שהוא עובד.'
+      en: 'In the right spot in each room, and tested.'
+      ru: 'В правильном месте каждой комнаты, с проверкой.'
+      fr: 'Au bon endroit dans chaque pièce, et testé.'
+uses:
+  title:
+    he: 'איפה מתקינים אותו?'
+    en: 'Where does it go?'
+    ru: 'Где его ставят?'
+    fr: 'Où l’installer ?'
+  items:
+    - title:
+        he: 'חדרי שינה'
+        en: 'Bedrooms'
+        ru: 'Спальни'
+        fr: 'Chambres'
+      text:
+        he: 'מתריע גם כשכולם ישנים.'
+        en: 'It warns you even when everyone is asleep.'
+        ru: 'Предупредит, даже когда все спят.'
+        fr: 'Il prévient même quand tout le monde dort.'
+    - title:
+        he: 'מסדרון'
+        en: 'Hallway'
+        ru: 'Коридор'
+        fr: 'Couloir'
+      text:
+        he: 'בדרך החוצה מהבית.'
+        en: 'On the way out of the house.'
+        ru: 'На пути к выходу из дома.'
+        fr: 'Sur le chemin de la sortie.'
+    - title:
+        he: 'סלון'
+        en: 'Living room'
+        ru: 'Гостиная'
+        fr: 'Salon'
+      text:
+        he: 'ליד חשמל ומכשירים.'
+        en: 'Near wiring and appliances.'
+        ru: 'Рядом с проводкой и техникой.'
+        fr: 'Près des appareils et de l’électricité.'

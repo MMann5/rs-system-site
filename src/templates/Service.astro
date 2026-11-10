@@ -30,6 +30,7 @@ import smartSwitch from '../assets/photos/smart-switch.jpg';
 import ContactBand from '../components/ContactBand.astro';
 import HeroLight from '../components/HeroLight.astro';
 import HeroPhoto from '../components/HeroPhoto.astro';
+import ProductCards from '../components/ProductCards.astro';
 import SmokeDetector from '../components/SmokeDetector.astro';
 import Steps from '../components/Steps.astro';
 import Tile, { type TileLink } from '../components/Tile.astro';
@@ -41,6 +42,7 @@ import type { ServiceCode } from '../lib/contact/table';
 import { t } from '../lib/i18n';
 import type { Lang } from '../lib/langs';
 import { createPageContext } from '../lib/page-context';
+import { cardsFor } from '../lib/products/cards';
 import { page } from '../lib/pages';
 import { isEnabled, url } from '../lib/routes';
 import { heroCover, heroPhoto, tileLinks as resolveTileLinks, type HeroDef, type TileLinkDef } from '../lib/service-hero';
@@ -147,6 +149,8 @@ const tile = def.tile && content.tile ? { def: def.tile, text: content.tile } : 
 const tileLinks: TileLink[] = tile ? resolveTileLinks(tile.def.link, { lang, service: ctx.service }, { isEnabled, url, t }) : [];
 // Héros sombre : Devis › vers Contact avec `?service=` du contexte (bandLinks, comme HeroLight), omis si `contact` est inactif.
 const { detailsHref: quoteHref } = bandLinks({ lang, service: ctx.service }, { isEnabled, url });
+// Pages produits : cartes des produits actifs de cette page, après le trio (section absente sans produit).
+const products = cardsFor(id, lang);
 const quote = cover && quoteHref ? { href: quoteHref, label: t(lang, cover.quoteKey) } : undefined;
 // Story 7.2 (FR38, FR39, D4) : image de partage = héros paysage recadré, ou carte détecteur pour le héros illustré ;
 // JSON-LD Service (+ fil Accueil › Service, sauf Entrepreneurs, EXPERIENCE.md › Référencement).
@@ -182,6 +186,7 @@ const jsonLd: JsonLdNode[] = [
     title={content.trio.title[lang]}
     items={content.trio.items.map((item) => ({ title: item.title[lang], text: item.text[lang] }))}
   />
+  {products.length > 0 && <ProductCards id="products-title" title={t(lang, 'products.title')} items={products} />}
   {tile && (
     <Tile
       variant="dark"

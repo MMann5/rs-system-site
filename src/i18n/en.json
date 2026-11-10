@@ -116,5 +116,8 @@
   "blog.pagination.page": "Page {n}",
   "blog.page-title": "Blog, page {n} · RS SYSTEM",
   "seo.breadcrumb-home": "Home",
-  "seo.city-neighbors": "Nearby: {list}."
+  "seo.city-neighbors": "Nearby: {list}.",
+  "product.quote": "Get a quote on WhatsApp",
+  "products.title": "What we install",
+  "products.more": "More products"
 }

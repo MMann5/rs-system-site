@@ -1,0 +1,317 @@
+---
+// Pages produits : scène 3D pré-rendue (src/assets/frames/{id}/, scripts/render/render.mjs) que le défilement fait
+// avancer, comme les pages produits d'Apple. Sans JavaScript ou en mouvement réduit : première image fixe, puis les
+// textes à la suite, les pièces en liste et le lien devis. Avec JavaScript (src/scripts/product-scene.ts, classe
+// `is-live`) : section haute, scène collée sous le header, images dessinées dans un <canvas>, textes affichés par
+// plages de défilement (`data-range`, lues dans scene.json), étiquettes posées sur les pièces éclatées.
+// Les images sont des rendus 3D, pas des photos : <img> direct, sans ResponsivePhoto (exception de photos.mjs).
+import type { Frames, SceneJson } from '../lib/products';
+
+interface Props {
+  eyebrow: string;
+  title: string;
+  feature: { title: string; text: string };
+  inside: { title: string; parts: readonly string[] };
+  outro: { title: string; text: string };
+  scene: SceneJson;
+  frames: Frames;
+  quote: { href: string; label: string };
+}
+
+const { eyebrow, title, feature, inside, outro, scene, frames, quote } = Astro.props;
+const range = (r: readonly number[]) => r.join(',');
+const [w, h] = scene.size.landscape;
+const [pw, ph] = scene.size.portrait;
+const data = JSON.stringify({ frames, labels: { portrait: scene.labels.portrait, landscape: scene.labels.landscape }, size: scene.size }).replace(
+  /</g,
+  '\\u003c',
+);
+---
+<section class="product-scene" data-product-scene aria-labelledby="product-title">
+  <div class="stage">
+    <picture class="poster">
+      <source media="(width < 700px)" srcset={frames.portrait[0]} width={pw} height={ph} />
+      <img src={frames.landscape[0]} alt="" width={w} height={h} fetchpriority="high" />
+    </picture>
+    <canvas class="canvas" aria-hidden="true"></canvas>
+    <div class="step step-top" data-range={range(scene.steps[0] as number[])}>
+      <p class="eyebrow">{eyebrow}</p>
+      <h1 id="product-title" class="title">{title}</h1>
+    </div>
+    <div class="step step-bottom" data-range={range(scene.steps[1] as number[])}>
+      <h2 class="lead">{feature.title}</h2>
+      <p class="text">{feature.text}</p>
+    </div>
+    <div class="step step-top" data-range={range(scene.steps[2] as number[])}>
+      <h2 class="lead">{inside.title}</h2>
+    </div>
+    <ol class="parts" role="list" data-range={range(scene.labels.range)}>
+      {inside.parts.map((part, i) => <li class="part" data-label={i}>{part}</li>)}
+    </ol>
+    <div class="step step-top" data-range={range(scene.steps[3] as number[])}>
+      <h2 class="lead">{outro.title}</h2>
+      <p class="text">{outro.text}</p>
+    </div>
+    <a class="quote" href={quote.href} data-track="whatsapp_click" data-placement="hero">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path d="M4 20l1.3-3.9A8 8 0 1 1 8 19z" /></svg>
+      <span>{quote.label}</span>
+    </a>
+  </div>
+  <script type="application/json" data-scene set:html={data} />
+</section>
+
+<script>
+  import '../scripts/product-scene';
+</script>
+
+<style>
+  /* Seuil (les @media ne lisent pas les tokens) : --bp-mobile-bar 700px. */
+  .product-scene {
+    background-color: var(--color-tile-night);
+    background-image: var(--product-stage-glow);
+    color: var(--color-ink-dark);
+  }
+
+  /* — Sans JavaScript ou en mouvement réduit : tout à la suite. — */
+  .stage {
+    display: grid;
+    justify-items: center;
+    gap: var(--product-flow-gap);
+    padding-block: var(--section-y-mobile);
+    padding-inline: var(--page-gutter);
+    text-align: center;
+  }
+
+  .poster {
+    order: 1;
+    inline-size: 100%;
+    max-inline-size: var(--product-poster-max);
+  }
+
+  .poster img {
+    display: block;
+    inline-size: 100%;
+    block-size: auto;
+  }
+
+  .step:first-of-type {
+    order: 0;
+  }
+
+  .step,
+  .parts,
+  .quote {
+    order: 2;
+  }
+
+  .canvas {
+    display: none;
+  }
+
+  .eyebrow {
+    margin: 0;
+    font-size: var(--type-eyebrow-size);
+    font-weight: var(--type-eyebrow-weight);
+    color: var(--color-link-on-night);
+  }
+
+  .title {
+    margin: 0;
+    font-size: var(--type-page-title-size);
+    font-weight: var(--type-page-title-weight);
+    line-height: var(--type-page-title-leading);
+    text-wrap: balance;
+  }
+
+  .lead {
+    margin: 0;
+    font-size: var(--type-product-lead-size);
+    font-weight: var(--type-product-lead-weight);
+    line-height: var(--type-product-lead-leading);
+    text-wrap: balance;
+  }
+
+  .text {
+    margin: 0;
+    margin-block-start: var(--product-text-gap);
+    font-size: var(--type-subhead-size);
+    line-height: var(--type-subhead-leading);
+    color: var(--color-nav-idle);
+  }
+
+  .parts {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--stack-gap);
+    max-inline-size: var(--product-parts-max);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .part {
+    padding-block: var(--product-chip-pad-block);
+    padding-inline: var(--product-chip-pad-inline);
+    border: var(--row-rule-width) solid var(--color-product-chip-line);
+    border-radius: var(--radius-full);
+    background-color: var(--color-product-chip);
+    font-size: var(--type-small-size);
+    font-weight: var(--type-label-weight);
+  }
+
+  .quote {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--stack-gap);
+    min-block-size: var(--submit-min-height);
+    padding-inline: var(--submit-pad-inline);
+    border-radius: var(--radius-full);
+    background-color: var(--color-signal-blue);
+    color: var(--color-on-accent);
+    font-size: var(--type-submit-size);
+    font-weight: var(--type-submit-weight);
+    text-decoration: none;
+  }
+
+  .quote:hover,
+  .quote:focus-visible {
+    text-decoration: underline;
+  }
+
+  .quote:focus-visible {
+    outline-color: var(--color-focus-ring-dark);
+  }
+
+  .icon {
+    inline-size: var(--icon-size);
+    block-size: var(--icon-size);
+    stroke-width: var(--icon-stroke-width);
+  }
+
+  /* — Avec JavaScript : scène collée, images au défilement. — */
+  .product-scene:global(.is-live) {
+    block-size: var(--product-scene-length);
+  }
+
+  .is-live .stage {
+    display: block;
+    position: sticky;
+    inset-block-start: var(--header-height);
+    block-size: calc(100svh - var(--header-height));
+    padding: 0;
+    overflow: clip;
+  }
+
+  @media (width < 700px) {
+    .is-live .stage {
+      block-size: calc(100svh - var(--header-height) - var(--mobile-bar-height));
+    }
+  }
+
+  .is-live .poster,
+  .is-live .canvas {
+    display: block;
+    position: absolute;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    max-inline-size: none;
+  }
+
+  .is-live .poster img {
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  .is-drawn .poster {
+    visibility: hidden;
+  }
+
+  .is-live .step {
+    position: absolute;
+    inset-inline: 0;
+    padding-inline: var(--page-gutter);
+    opacity: 0;
+    translate: 0 var(--product-step-shift);
+    transition:
+      opacity var(--product-step-duration) var(--ease),
+      translate var(--product-step-duration) var(--ease);
+    pointer-events: none;
+  }
+
+  /* Un voile sombre derrière chaque texte : lisible même quand le produit passe dessous. */
+  .is-live .step-top {
+    inset-block-start: 0;
+    padding-block: var(--product-step-offset) var(--product-scrim-extend);
+    background-image: var(--product-scrim-top);
+  }
+
+  .is-live .step-bottom {
+    inset-block-end: 0;
+    padding-block: var(--product-scrim-extend) var(--product-step-offset-end);
+    background-image: var(--product-scrim-bottom);
+  }
+
+  .is-live .parts {
+    position: absolute;
+    inset: 0;
+    display: block;
+    max-inline-size: none;
+    opacity: 0;
+    transition: opacity var(--product-step-duration) var(--ease);
+    pointer-events: none;
+  }
+
+  /* Étiquettes : point sur la pièce, pastille de texte vers l'extérieur de l'image (`data-side`, posé par le script).
+   * Coordonnées de l'image rendue : physiques, jamais retournées en RTL. */
+  .is-live .part {
+    position: absolute;
+    top: 0; /* physical-ok : coordonnées de l'image rendue */
+    left: 0; /* physical-ok : coordonnées de l'image rendue */
+    translate: calc(var(--x, 0px) + var(--product-label-gap)) calc(var(--y, 0px) - 50%);
+    background-color: var(--color-product-label);
+    white-space: nowrap;
+  }
+
+  .is-live .part::before {
+    content: '';
+    position: absolute;
+    top: 50%; /* physical-ok : coordonnées de l'image rendue */
+    left: calc(var(--product-label-gap) * -1); /* physical-ok : le point sur l'ancre */
+    inline-size: var(--product-label-dot);
+    block-size: var(--product-label-dot);
+    translate: -50% -50%;
+    border-radius: var(--radius-full);
+    background-color: var(--color-signal-blue);
+  }
+
+  @media (width < 700px) {
+    .is-live .part {
+      padding-block: var(--product-label-pad-block-mobile);
+      padding-inline: var(--product-label-pad-inline-mobile);
+      font-size: var(--type-label-size);
+    }
+  }
+
+  .is-live .part[data-side='left'] {
+    translate: calc(var(--x, 0px) - 100% - var(--product-label-gap)) calc(var(--y, 0px) - 50%);
+  }
+
+  .is-live .part[data-side='left']::before {
+    left: calc(100% + var(--product-label-gap)); /* physical-ok : le point sur l'ancre */
+  }
+
+  .is-live :is(.step, .parts):global(.on) {
+    opacity: 1;
+    translate: none;
+  }
+
+  .is-live .quote {
+    position: absolute;
+    inset-block-end: var(--product-quote-offset);
+    inset-inline: 0;
+    inline-size: fit-content;
+    margin-inline: auto;
+  }
+</style>

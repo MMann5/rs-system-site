@@ -651,4 +651,36 @@
   --detector-scroll-rotate: -14deg;
   /* Bloc contact : le numéro se pose en grand */
   --band-phone-from: 1.4;
+  /* Pages produits : scène 3D pré-rendue (fond lumineux bleu nuit, textes par étapes, étiquettes), cartes produits */
+  --product-stage-glow: radial-gradient(120% 70% at 50% 55%, #0d2f5c 0%, #06183a 38%, #020814 76%);
+  --color-product-chip: rgba(7,155,255,.08);
+  --color-product-chip-line: rgba(79,186,255,.4);
+  --product-scene-length: 640svh;
+  --product-flow-gap: 32px;
+  --product-poster-max: 720px;
+  --product-text-gap: 10px;
+  --product-parts-max: 560px;
+  --product-chip-pad-block: 6px;
+  --product-chip-pad-inline: 14px;
+  --product-step-shift: 16px;
+  --product-step-duration: 0.45s;
+  --product-step-offset: 6svh;
+  --product-step-offset-end: 120px;
+  --product-quote-offset: 24px;
+  --product-label-gap: 14px;
+  --product-label-dot: 10px;
+  --type-product-lead-size: clamp(26px, 5.6vw, 52px);
+  --type-product-lead-weight: 700;
+  --type-product-lead-leading: 1.15;
+  --product-card-col-min: 260px;
+  --product-card-ratio: 16 / 9;
+  --product-card-zoom: 1.7;
+  --product-card-pad-block: 18px;
+  --product-card-pad-inline: 22px;
+  --color-product-label: rgba(2,8,20,.72);
+  --product-scrim-top: linear-gradient(to bottom, rgba(2,8,20,.78) 0%, rgba(2,8,20,.5) 55%, rgba(2,8,20,0) 100%);
+  --product-scrim-bottom: linear-gradient(to top, rgba(2,8,20,.85) 0%, rgba(2,8,20,.55) 60%, rgba(2,8,20,0) 100%);
+  --product-scrim-extend: 72px;
+  --product-label-pad-block-mobile: 3px;
+  --product-label-pad-inline-mobile: 10px;
 }
