@@ -17,6 +17,8 @@ import { checkLinks, collectLinks } from '../scripts/checks/links.mjs';
 import { checkNotFound, findMissingNotFound } from '../scripts/checks/not-found.mjs';
 import { findPhysicalProperties } from '../scripts/checks/physical-css.mjs';
 import { checkPlaceholders, countArticlePlaceholders, countPlaceholders, placeholderVerdict } from '../scripts/checks/placeholders.mjs';
+import { checkTrackLinks, findUntrackedLinks } from '../scripts/checks/track-links.mjs';
+import { findUmamiAttrs } from '../scripts/checks/umami-attrs.mjs';
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
 const LANGS = ['he', 'en', 'ru', 'fr'];
@@ -586,4 +588,65 @@ test('completeness (6.2) : un article au slug « 2 » heurte blog-page:2 (14 art
   // 13 articles : pas de page 2, le slug « 2 » est libre.
   const thirteen = Object.assign({}, ...Array.from({ length: 12 }, (_, i) => numberedPost(i + 1)), numberedPost(13, '2'));
   assert.deepEqual(findCompletenessErrors(completeRoot({ 'src/content/pages/blog.yaml': BLOG_PAGE, ...thirteen })), []);
+});
+
+// — umami-attrs (story 7.1, AD-6) : aucun data-umami-* dans src/ ni public/ —
+
+test('umami-attrs : data-umami-event dans un composant et DATA-UMAMI- dans public/ détectés ; ailleurs ignoré', () => {
+  const root = fixture({
+    'src/components/Bad.astro': '---\n---\n<a href={h}\n  data-umami-event="call">x</a>',
+    'public/x.html': '<button DATA-UMAMI-EVENT="y">',
+    'src/components/Ok.astro': '<a href={h} data-track="call_click" data-placement="hero">x</a>',
+    'scripts/other.mjs': "const a = 'data-umami-event';",
+    'src/assets/bin.png': Buffer.from([0, 1, 2, ...Buffer.from('data-umami-x')]),
+  });
+  assert.deepEqual(findUmamiAttrs(root).map((f) => f.split(' : ')[0]), ['src/components/Bad.astro:4', 'public/x.html:1']);
+  assert.deepEqual(findUmamiAttrs(fixture({ 'src/components/Ok.astro': '<a data-track="call_click">x</a>' })), []);
+});
+
+test('umami-attrs : le CLI sort en 1 et cite le fichier ; le dépôt passe ; branché sur npm run lint', () => {
+  const res = cli('umami-attrs', fixture({ 'src/layouts/Bad.astro': '<script data-umami-auto-track="false"></script>' }));
+  assert.equal(res.status, 1);
+  assert.match(res.output, /umami-attrs : 1 échec\(s\)\n {2}- src\/layouts\/Bad\.astro:1 : /);
+  assert.deepEqual(findUmamiAttrs(ROOT), []);
+  assert.equal(cli('umami-attrs', ROOT).status, 0);
+  const scripts = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).scripts;
+  assert.ok(scripts.lint.split(' && ').includes('node scripts/checks/umami-attrs.mjs'), 'lint');
+});
+
+// — track-links (story 7.1, AD-6) : chaque tel: / wa.me de dist/ porte data-track et data-placement —
+
+const CALL = '<a href="tel:+972509565669" data-track="call_click" data-placement="hero">x</a>';
+const WA = '<a href="https://wa.me/972509565669?text=a&amp;b" data-track="whatsapp_click" data-placement="mobile_bar">x</a>';
+
+test('track-links : liens mesurés, Réessayer exempté, liens ordinaires ignorés → OK', () => {
+  const html = page('he', `${CALL}${WA}<a id="contact-sent-retry" href="https://wa.me/972509565669">r</a><a href="/he/">h</a><a name="x">n</a>`);
+  assert.deepEqual(findUntrackedLinks(html), []);
+  assert.deepEqual(findUntrackedLinks(page('fr', `<a data-placement='404' href='TEL:+972509565669' data-track='call_click'>x</a>`)), []);
+});
+
+test('track-links : data-track absent ou erroné, data-placement absent ou hors liste → échec', () => {
+  const cases = [
+    '<a href="tel:+972509565669" data-placement="hero">x</a>',
+    '<a href="tel:+972509565669" data-track="whatsapp_click" data-placement="hero">x</a>',
+    '<a href="https://wa.me/972509565669" data-track="whatsapp_click">x</a>',
+    '<a href="https://wa.me/972509565669" data-track="whatsapp_click" data-placement="sidebar">x</a>',
+    '<a class="x" href="https://wa.me/972509565669">x</a>',
+  ];
+  assert.deepEqual(cases.map((c) => findUntrackedLinks(page('he', c)).length), [1, 1, 1, 1, 2]);
+  // Lien du bloc hors ligne dans un <template> : contrôlé aussi ; contenu d'un <script> ignoré.
+  assert.equal(findUntrackedLinks(page('he', '<template><a href="tel:+972509565669">x</a></template>')).length, 2);
+  assert.deepEqual(findUntrackedLinks(page('he', '<script>const s = \'<a href="tel:1">\';</script>')), []);
+});
+
+test('track-links : le CLI sort en 1 en citant la page ; fixture saine OK ; branché sur check:dist', () => {
+  const bad = fixture({ 'he/index.html': page('he', CALL), 'fr/contact/index.html': page('fr', '<a href="tel:+972509565669">x</a>') });
+  assert.equal(checkTrackLinks(bad).length, 2);
+  const res = cli('track-links', bad);
+  assert.equal(res.status, 1);
+  assert.match(res.output, /track-links : 2 échec\(s\)\n {2}- fr\/contact\/index\.html : tel:\+972509565669 : data-track/);
+  const ok = fixture({ 'he/index.html': page('he', `${CALL}${WA}`) });
+  assert.equal(cli('track-links', ok).status, 0);
+  const scripts = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).scripts;
+  assert.ok(scripts['check:dist'].split(' && ').includes('node scripts/checks/track-links.mjs'), 'check:dist');
 });

@@ -6,9 +6,9 @@
     "dev": "astro dev",
     "build": "astro build && node scripts/postbuild/headers.mjs && node scripts/postbuild/not-found.mjs && node scripts/checks/noindex.mjs",
     "check": "astro check",
-    "check:dist": "node scripts/checks/noindex.mjs && node scripts/checks/not-found.mjs && node scripts/checks/links.mjs && node scripts/checks/js-budget.mjs && node scripts/checks/placeholders.mjs",
+    "check:dist": "node scripts/checks/noindex.mjs && node scripts/checks/not-found.mjs && node scripts/checks/links.mjs && node scripts/checks/js-budget.mjs && node scripts/checks/placeholders.mjs && node scripts/checks/track-links.mjs",
     "test": "node --test",
-    "lint": "node scripts/checks/contact-literals.mjs && node scripts/checks/photos.mjs && node scripts/checks/internal-hrefs.mjs && node scripts/checks/colors.mjs && node scripts/checks/physical-css.mjs && node scripts/checks/completeness.mjs && node scripts/checks/editorial.mjs",
+    "lint": "node scripts/checks/contact-literals.mjs && node scripts/checks/photos.mjs && node scripts/checks/internal-hrefs.mjs && node scripts/checks/colors.mjs && node scripts/checks/physical-css.mjs && node scripts/checks/completeness.mjs && node scripts/checks/editorial.mjs && node scripts/checks/umami-attrs.mjs",
     "preview": "npm run build && wrangler dev"
   },
   "dependencies": {

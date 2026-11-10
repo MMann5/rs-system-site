@@ -3,13 +3,15 @@
 // d'une espace insécable, dans un <span aria-hidden> : le bidi le retourne en RTL, jamais le CSS.
 // Trois tons : `light` (fond clair, link), `night` (navy, link-on-night), `photo` (sous scrim, blanc 600).
 // Souligné au survol et au focus seulement ; cible ≥ 44px de haut. data-track / data-placement (AD-6)
-// seulement s'ils sont fournis.
+// seulement s'ils sont fournis, typés par les listes fermées de src/lib/track-events.ts.
+import type { TrackEvent, TrackPlacement } from '../lib/track-events';
+
 interface Props {
   href: string;
   label: string;
   tone: 'light' | 'night' | 'photo';
-  track?: string;
-  placement?: string;
+  track?: TrackEvent;
+  placement?: TrackPlacement;
 }
 
 const { href, label, tone, track, placement } = Astro.props;

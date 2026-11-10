@@ -8,6 +8,7 @@ import { join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
 import { checkPlaceholders, countArticlePlaceholders } from '../scripts/checks/placeholders.mjs';
+import { checkTrackLinks } from '../scripts/checks/track-links.mjs';
 import { buildAreas } from '../src/lib/areas/core.ts';
 import { citySchema, regionSchema } from '../src/lib/areas/schema.ts';
 import { waHref } from '../src/lib/contact/core.ts';
@@ -98,6 +99,7 @@ function build(extraEnv) {
   if (!extraEnv.WORKERS_CI_BRANCH) delete env.WORKERS_CI_BRANCH;
   if (!extraEnv.SITE_URL) delete env.SITE_URL;
   if (!extraEnv.DOMAIN_LIVE) delete env.DOMAIN_LIVE;
+  if (!extraEnv.UMAMI_WEBSITE_ID) delete env.UMAMI_WEBSITE_ID;
   execFileSync('npx', ['astro', 'build', '--outDir', out], { cwd: ROOT, env, stdio: 'pipe' });
   // Post-build et contrôles de package.json (story 1.9), dans son ordre.
   for (const script of NODE_STEPS) {
@@ -371,11 +373,13 @@ function assertLayout(html, id, lang, out, site = '', indexable = false) {
       assert.equal(attr(`<a${links[i][1]}>`, 'aria-current'), currentNav === navId ? 'page' : undefined, `${where} : aria-current ${navId}`);
     });
   }
-  assert.match(menu, new RegExp(`<nav aria-label="${SWITCHER_LABEL[lang]}"[^>]*\\sdata-lang-switcher[\\s>]`), `${where} : <nav> du sélecteur`);
+  // Story 7.1 : la valeur de data-lang-switcher est l'emplacement de language_switch (mobile_menu, footer).
+  assert.match(menu, new RegExp(`<nav aria-label="${SWITCHER_LABEL[lang]}"[^>]*\\sdata-lang-switcher="mobile_menu"[\\s>]`), `${where} : <nav> du sélecteur`);
   // Story 1.7 : deux sélecteurs (menu, footer), chacun <nav aria-label data-lang-switcher>.
-  const switcherNavs = html.match(new RegExp(`<nav aria-label="${SWITCHER_LABEL[lang]}"[^>]*\\sdata-lang-switcher[\\s>]`, 'g')) ?? [];
+  const switcherNavs = html.match(new RegExp(`<nav aria-label="${SWITCHER_LABEL[lang]}"[^>]*\\sdata-lang-switcher="(?:mobile_menu|footer)"[\\s>]`, 'g')) ?? [];
   assert.equal(switcherNavs.length, 2, `${where} : <nav> de sélecteur`);
   const footer = html.match(/<footer[\s>][\s\S]*?<\/footer>/)?.[0] ?? '';
+  assert.match(footer, new RegExp(`<nav aria-label="${SWITCHER_LABEL[lang]}"[^>]*\\sdata-lang-switcher="footer"[\\s>]`), `${where} : <nav> du sélecteur du footer`);
   // Sélecteurs : 8 liens (4 dans #mobile-menu, puis 4 dans <footer>), chaque série vers la même page,
   // ordre he, en, ru, fr, lang + hreflang, libellé dans sa langue, aria-current="true" sur la seule
   // langue de la page.
@@ -726,6 +730,35 @@ function assertNotFound(html, lang, where) {
   assertFooter(footer, lang, where);
   const json = html.match(/<script type="application\/json" id="rs-data">([\s\S]*?)<\/script>/)?.[1];
   assert.deepEqual(JSON.parse(json), { context: { id: 'not-found', lang, indexable: false } }, `${where} : #rs-data`);
+}
+
+/**
+ * Story 7.1 (AD-6, AD-10) : sur chaque page .html de `out` (404 comprises), script Umami Cloud dans le <head> avec
+ * `data-website-id` = `websiteId` si fourni, sinon aucun script Umami ; jamais data-exclude-search ni data-umami-* ;
+ * îlot de mesure (track.ts) embarqué partout ; chaque lien d'appel / WhatsApp mesuré (porte track-links).
+ */
+function assertMeasure(out, websiteId) {
+  const pages = readdirSync(out, { recursive: true }).filter((f) => String(f).endsWith('.html'));
+  assert.ok(pages.length > 100, 'pages .html');
+  for (const file of pages) {
+    const html = readFileSync(join(out, file), 'utf8');
+    const head = html.slice(0, html.indexOf('</head>'));
+    const umami = html.match(/<script\b[^>]*cloud\.umami\.is[^>]*>/g) ?? [];
+    if (websiteId === undefined) {
+      assert.deepEqual(umami, [], `${file} : script Umami sur un build sans mesure`);
+      assert.ok(!html.includes('umami.is'), `${file} : umami.is`);
+    } else {
+      assert.equal(umami.length, 1, `${file} : script Umami`);
+      assert.equal(umami[0], `<script defer src="https://cloud.umami.is/script.js" data-website-id="${websiteId}">`, `${file} : balise Umami`);
+      assert.ok(head.includes(umami[0]), `${file} : script Umami hors du <head>`);
+    }
+    assert.ok(!html.includes('data-exclude-search'), `${file} : data-exclude-search`);
+    assert.ok(!/data-umami-/i.test(html), `${file} : data-umami-*`);
+    const modules = [...html.matchAll(/<script type="module"(?:\s+src="([^"]+)")?[^>]*>([\s\S]*?)<\/script>/g)];
+    const code = modules.map(([, src, inline]) => (src ? readFileSync(join(out, src), 'utf8') : inline)).join('\n');
+    assert.match(code, /script\[data-website-id\]/, `${file} : îlot de mesure absent`);
+  }
+  assert.deepEqual(checkTrackLinks(out), [], 'track-links');
 }
 
 /** Story 1.9 : les 5 pages 404 (racine en hébreu), plus de dossier {lang}/404/. */
@@ -2022,10 +2055,14 @@ test('build de branche : 4 accueils complets (tuiles de services) + 4 Contact + 
   }
   assertNotFoundPages(out);
   assertSeoFiles(out, '', false);
+  // Story 7.1 : non indexable → aucun script Umami (non indexable avec un id : tests umamiScript de tests/env.test.mjs) ;
+  // îlot et liens mesurés.
+  assertMeasure(out, undefined);
 });
 
 test('build de main indexable avec SITE_URL : 4 accueils complets (tuiles de services) + 4 Contact + 4 Caméras + 4 Détecteurs + 4 Maison connectée + 4 Réseaux + 4 Interphone + 4 Entrepreneurs + 4 Zones + 4 À propos + 8 pages légales + 60 pages ville + 4 index du blog + 4 articles, sans noindex, canonique et hreflang absolus', { timeout: 120_000 }, () => {
-  const out = build({ WORKERS_CI_BRANCH: 'main', DOMAIN_LIVE: 'true', SITE_URL: 'https://rs.example' });
+  // Story 7.1 : id de site Umami fourni au build (factice, jamais un vrai id dans le dépôt).
+  const out = build({ WORKERS_CI_BRANCH: 'main', DOMAIN_LIVE: 'true', SITE_URL: 'https://rs.example', UMAMI_WEBSITE_ID: 'test-site-id' });
   assert.deepEqual(indexFiles(out), [...HOMES, ...CONTACTS, ...CAMERAS, ...SMOKES, ...SMARTS, ...NETWORKS, ...INTERCOMS, ...CONTRACTORS, ...AREAS_FILES, ...ABOUT_FILES, ...LEGAL_FILES, ...CITY_FILES, ...BLOG_FILES, ...POST_FILES].sort());
   assert.ok(!existsSync(join(out, 'index.html')));
   for (const lang of LANGS) {
@@ -2107,4 +2144,10 @@ test('build de main indexable avec SITE_URL : 4 accueils complets (tuiles de ser
   // Story 1.9 : les 5 404 restent en noindex sur un build indexable ; sitemap et robots absolus.
   assertNotFoundPages(out);
   assertSeoFiles(out, 'https://rs.example', true);
+  // Story 7.1 : indexable avec id → script Umami Cloud sur chaque page, 404 comprises.
+  assertMeasure(out, 'test-site-id');
+});
+
+test('story 7.1 : build de main indexable sans UMAMI_WEBSITE_ID → aucun script Umami, build vert', { timeout: 120_000 }, () => {
+  assertMeasure(build({ WORKERS_CI_BRANCH: 'main', DOMAIN_LIVE: 'true', SITE_URL: 'https://rssystem.co.il' }), undefined);
 });

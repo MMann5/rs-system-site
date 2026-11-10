@@ -26,12 +26,13 @@ import type { ImageMetadata } from 'astro';
 import { FEATURE_TILE_PHOTO_SIZES, GRID_TILE_PHOTO_SIZES, TILE_PHOTO_SIZES } from '../lib/photos';
 import ResponsivePhoto from './ResponsivePhoto.astro';
 import TextLink from './TextLink.astro';
+import type { TrackEvent, TrackPlacement } from '../lib/track-events';
 
 export interface TileLink {
   href: string;
   label: string;
-  track?: string;
-  placement?: string;
+  track?: TrackEvent;
+  placement?: TrackPlacement;
 }
 
 interface Props {
