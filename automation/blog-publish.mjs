@@ -18,7 +18,10 @@ import { scopeErrors } from './blog-routine.mjs';
 
 const HOUR = 60 * 60 * 1000;
 
-/** Âge minimal d'une PR `blog-auto` avant fusion automatique (FR37). */
+/**
+ * Âge minimal d'une PR `blog-auto` avant fusion automatique (FR37), mesuré depuis sa création **et** depuis la date du
+ * dernier commit de sa tête (`commit.committer.date`, recette D7-C) : un push tardif relance le délai.
+ */
 export const MIN_AGE_MS = 48 * HOUR;
 /** Silence de la routine au-delà duquel le watchdog ouvre une issue (FR37). */
 export const SILENCE_MS = 8 * 24 * HOUR;
@@ -59,24 +62,39 @@ class Skip extends Error {}
 
 // — Décisions pures —
 
-const labelNames = (pr) => (Array.isArray(pr?.labels) ? pr.labels.map((l) => (typeof l === 'string' ? l : l?.name)).filter(Boolean) : []);
-const createdMs = (item) => {
-  const ms = Date.parse(item?.created_at ?? '');
+/** Noms des étiquettes d'une PR, en minuscules : `blog-auto` et `hold` se comparent sans casse (recette D7-D). */
+const labelNames = (pr) =>
+  Array.isArray(pr?.labels) ? pr.labels.map((l) => (typeof l === 'string' ? l : l?.name)).filter((n) => typeof n === 'string' && n).map((n) => n.toLowerCase()) : [];
+/** La PR porte-t-elle l'étiquette `name` (sans casse) ? */
+export const hasLabel = (pr, name) => labelNames(pr).includes(name.toLowerCase());
+const dateMs = (value) => {
+  const ms = Date.parse(value ?? '');
   return Number.isNaN(ms) ? null : ms;
 };
+const createdMs = (item) => dateMs(item?.created_at);
 
-/** Éligibilité d'une PR à la fusion automatique : `{ eligible: true }` ou `{ eligible: false, reason }`. */
-export function prEligibility(pr, { now, repo }) {
-  const labels = labelNames(pr);
+/**
+ * Éligibilité d'une PR à la fusion automatique : `{ eligible: true }` ou `{ eligible: false, reason }`.
+ * `headCommittedAt` (facultatif) : date du dernier commit de la tête (`commit.committer.date`) ; fournie, elle doit
+ * aussi avoir 48 h (D7-C). Une PR en brouillon n'est jamais publiée (D7-B).
+ */
+export function prEligibility(pr, { now, repo, headCommittedAt }) {
   if (pr?.state !== 'open') return { eligible: false, reason: 'PR non ouverte' };
-  if (!labels.includes(LABEL)) return { eligible: false, reason: `sans étiquette ${LABEL}` };
-  if (labels.includes(HOLD_LABEL)) return { eligible: false, reason: `retenue (étiquette ${HOLD_LABEL})` };
+  if (!hasLabel(pr, LABEL)) return { eligible: false, reason: `sans étiquette ${LABEL}` };
+  if (hasLabel(pr, HOLD_LABEL)) return { eligible: false, reason: `retenue (étiquette ${HOLD_LABEL})` };
+  if (pr?.draft !== false) return { eligible: false, reason: 'brouillon' };
   if (pr?.base?.ref !== BASE_BRANCH) return { eligible: false, reason: `ne vise pas ${BASE_BRANCH}` };
   if (!pr?.head?.repo?.full_name || pr.head.repo.full_name !== repo) return { eligible: false, reason: 'tête dans un autre dépôt (fork)' };
   const created = createdMs(pr);
   if (created === null) return { eligible: false, reason: 'date de création illisible' };
   const age = now - created;
   if (age < MIN_AGE_MS) return { eligible: false, reason: `trop jeune (${Math.floor(age / HOUR)} h sur 48 h)` };
+  if (headCommittedAt !== undefined) {
+    const committed = dateMs(headCommittedAt);
+    if (committed === null) return { eligible: false, reason: 'date du dernier commit illisible' };
+    const commitAge = now - committed;
+    if (commitAge < MIN_AGE_MS) return { eligible: false, reason: `dernier commit trop récent (${Math.floor(commitAge / HOUR)} h sur 48 h)` };
+  }
   return { eligible: true };
 }
 
@@ -161,7 +179,7 @@ export function watchdogIssueBody(latest, now) {
 
 const nextLink = (header) => /<([^>]+)>;\s*rel="next"/.exec(header ?? '')?.[1] ?? null;
 
-/** Client REST + GraphQL minimal ; `fetch` injecté ; erreurs avec statut, sans jeton. */
+/** Client REST minimal ; `fetch` injecté ; erreurs avec statut, sans jeton. */
 export function githubClient({ token, repo, fetch: fetchImpl = globalThis.fetch, api = GITHUB_API }) {
   if (typeof token !== 'string' || token.trim() === '') throw new GitHubError(0, 'GITHUB_TOKEN absent');
   if (!/^[\w.-]+\/[\w.-]+$/.test(String(repo))) throw new GitHubError(0, `GITHUB_REPOSITORY invalide : ${String(repo)}`);
@@ -214,18 +232,9 @@ export function githubClient({ token, repo, fetch: fetchImpl = globalThis.fetch,
     }
     return items;
   }
-  async function graphql(query, variables) {
-    const { json } = await send('POST', `${api}/graphql`, { query, variables });
-    if (Array.isArray(json?.errors) && json.errors.length) {
-      throw new GitHubError(200, clean(`GraphQL : ${json.errors.map((e) => e?.message).join(' ; ')}`));
-    }
-    return json?.data;
-  }
-
   return {
     repo,
     request,
-    graphql,
     /** Plus anciennes d'abord : après un retard, les articles partent dans l'ordre. */
     listOpenPullRequests: () => paginate(`/pulls?state=open&base=${BASE_BRANCH}&sort=created&direction=asc&per_page=100`),
     getPullRequest: (n) => request('GET', `/pulls/${n}`),
@@ -236,8 +245,8 @@ export function githubClient({ token, repo, fetch: fetchImpl = globalThis.fetch,
         status,
         ...(previous_filename ? { previous_filename } : {}),
       })),
-    markReadyForReview: (nodeId) =>
-      graphql('mutation($id: ID!) { markPullRequestReadyForReview(input: { pullRequestId: $id }) { pullRequest { isDraft } } }', { id: nodeId }),
+    /** Date du dernier commit `sha` côté committer (`commit.committer.date`, ISO 8601), `null` si absente. */
+    getCommitDate: async (sha) => (await request('GET', `/commits/${encodeURIComponent(sha)}`))?.commit?.committer?.date ?? null,
     compare: (base, head) => request('GET', `/compare/${encodeURIComponent(base)}...${encodeURIComponent(head)}`),
     updateBranch: (n, expectedHeadSha) => request('PUT', `/pulls/${n}/update-branch`, { expected_head_sha: expectedHeadSha }),
     listCheckRuns: (sha) => paginate(`/commits/${sha}/check-runs?check_name=${CI_CHECK}&per_page=100`, (j) => j?.check_runs),
@@ -290,8 +299,12 @@ const assertScope = (files) => {
 
 /** Traite une PR éligible ; rend le SHA fusionné. Lève Failure (non fusionnée) ou Skip (plus éligible). */
 async function publish({ gh, pr, now, sleep }) {
+  // D7-C : 48 h aussi depuis le dernier commit de la tête (avant toute écriture). Date illisible → pas de fusion.
+  const committedAt = await gh.getCommitDate(pr.head.sha);
+  if (dateMs(committedAt) === null) throw new Failure(`date du dernier commit illisible (${pr.head.sha.slice(0, 7)})`);
+  const eligibility = prEligibility(pr, { now: now(), repo: gh.repo, headCommittedAt: committedAt });
+  if (!eligibility.eligible) throw new Skip(eligibility.reason);
   assertScope(await gh.listPullRequestFiles(pr.number));
-  if (pr.draft) await gh.markReadyForReview(pr.node_id);
   let head = pr.head.sha;
   const cmp = await gh.compare(BASE_BRANCH, head);
   if (Number(cmp?.behind_by) > 0) {
@@ -302,10 +315,10 @@ async function publish({ gh, pr, now, sleep }) {
   // Relecture juste avant la fusion : périmètre de la tête vérifiée, étiquettes, tête inchangée.
   assertScope(await gh.listPullRequestFiles(pr.number));
   const fresh = await gh.getPullRequest(pr.number);
-  const labels = labelNames(fresh);
   if (fresh?.state !== 'open') throw new Skip('PR fermée pendant la passe');
-  if (labels.includes(HOLD_LABEL)) throw new Skip(`retenue (étiquette ${HOLD_LABEL} posée pendant la passe)`);
-  if (!labels.includes(LABEL)) throw new Skip(`étiquette ${LABEL} retirée pendant la passe`);
+  if (hasLabel(fresh, HOLD_LABEL)) throw new Skip(`retenue (étiquette ${HOLD_LABEL} posée pendant la passe)`);
+  if (!hasLabel(fresh, LABEL)) throw new Skip(`étiquette ${LABEL} retirée pendant la passe`);
+  if (fresh?.draft !== false) throw new Skip('brouillon (repassée en brouillon pendant la passe)');
   if (fresh?.head?.sha !== head) throw new Failure(`tête modifiée pendant la passe (${head.slice(0, 7)} → ${String(fresh?.head?.sha).slice(0, 7)})`);
   await gh.mergePullRequest(pr.number, head);
   return head;
@@ -317,7 +330,7 @@ async function publish({ gh, pr, now, sleep }) {
  */
 export async function runAutomerge({ gh, now = Date.now, sleep = delay, log = () => {} }) {
   const results = [];
-  const prs = (await gh.listOpenPullRequests()).filter((pr) => labelNames(pr).includes(LABEL));
+  const prs = (await gh.listOpenPullRequests()).filter((pr) => hasLabel(pr, LABEL));
   for (const pr of prs) {
     const name = `#${pr.number} « ${pr.title ?? ''} »`;
     const eligibility = prEligibility(pr, { now: now(), repo: gh.repo });

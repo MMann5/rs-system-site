@@ -6,6 +6,7 @@ import {
   CI_TIMEOUT_MS,
   GitHubError,
   MIN_AGE_MS,
+  hasLabel,
   SILENCE_MS,
   WATCHDOG_MARKER,
   ciVerdict,
@@ -49,10 +50,11 @@ const green = (sha, id = 1) => [run(id, sha, 'completed', 'success')];
 
 /**
  * Faux client GitHub. `checks[sha]` : réponses successives (la dernière se répète). `writes` : appels d'écriture.
+ * `commits[sha]` : date du dernier commit de la tête (défaut : 49 h avant NOW). `commitReads` : têtes lues.
  * Crochets : `onUpdate(state)`, `onDispatch(state)`, `onSleep(state)`, `mergeError`.
  */
-function fakeGh({ prs = [pr()], files = {}, behind = {}, checks = {}, onUpdate, onDispatch, mergeError } = {}) {
-  const state = { prs: structuredClone(prs), checks: structuredClone(checks), writes: [], reads: 0 };
+function fakeGh({ prs = [pr()], files = {}, behind = {}, checks = {}, commits = {}, onUpdate, onDispatch, mergeError } = {}) {
+  const state = { prs: structuredClone(prs), checks: structuredClone(checks), writes: [], reads: 0, commitReads: [] };
   const find = (n) => state.prs.find((p) => p.number === n);
   const gh = {
     repo: REPO,
@@ -65,8 +67,9 @@ function fakeGh({ prs = [pr()], files = {}, behind = {}, checks = {}, onUpdate, 
       if (queue.length === 0) return [];
       return Array.isArray(queue[0]) ? (queue.length > 1 ? queue.shift() : queue[0]) : queue;
     },
-    markReadyForReview: async (id) => {
-      state.writes.push(['ready', id]);
+    getCommitDate: async (sha) => {
+      state.commitReads.push(sha);
+      return sha in commits ? commits[sha] : iso(NOW - 49 * HOUR);
     },
     updateBranch: async (n, sha) => {
       state.writes.push(['update', n, sha]);
@@ -104,6 +107,32 @@ test('prEligibility : 48 h pile éligible, 47 h 59 trop jeune, hold, fork, base,
   assert.match(ok(pr({ base: { ref: 'dev' } })).reason, /main/);
   assert.match(ok(pr({ labels: [] })).reason, /blog-auto/);
   assert.match(ok(pr({ created_at: 'n/a' })).reason, /illisible/);
+});
+
+test('prEligibility (D7-B) : brouillon jamais éligible, raison « brouillon »', () => {
+  const ok = (p) => prEligibility(p, { now: NOW, repo: REPO });
+  assert.deepEqual(ok(pr({ draft: true, created_at: iso(NOW - 50 * HOUR) })), { eligible: false, reason: 'brouillon' });
+  assert.deepEqual(ok(pr({ draft: undefined })), { eligible: false, reason: 'brouillon' });
+});
+
+test('prEligibility (D7-C) : 48 h aussi depuis le dernier commit de la tête (committer.date)', () => {
+  const at = (headCommittedAt) => prEligibility(pr({ created_at: iso(NOW - 10 * DAY) }), { now: NOW, repo: REPO, headCommittedAt });
+  assert.deepEqual(at(iso(NOW - MIN_AGE_MS)), { eligible: true });
+  assert.match(at(iso(NOW - 47 * HOUR - 59 * 60 * 1000)).reason, /dernier commit trop récent \(47 h sur 48 h\)/);
+  assert.match(at('n/a').reason, /date du dernier commit illisible/);
+  assert.match(at(null).reason, /date du dernier commit illisible/);
+  // Création récente, commit ancien : toujours trop jeune.
+  assert.match(prEligibility(pr({ created_at: iso(NOW - HOUR) }), { now: NOW, repo: REPO, headCommittedAt: iso(NOW - 10 * DAY) }).reason, /trop jeune/);
+});
+
+test('prEligibility et hasLabel (D7-D) : étiquettes blog-auto et hold comparées sans casse', () => {
+  const ok = (labels) => prEligibility(pr({ labels }), { now: NOW, repo: REPO });
+  assert.deepEqual(ok([{ name: 'Blog-Auto' }]), { eligible: true });
+  assert.deepEqual(ok(['BLOG-AUTO']), { eligible: true });
+  assert.match(ok([{ name: 'blog-auto' }, { name: 'HOLD' }]).reason, /retenue/);
+  assert.match(ok([{ name: 'BLOG-AUTO' }, { name: 'Hold' }]).reason, /retenue/);
+  assert.equal(hasLabel(pr({ labels: [{ name: 'Hold' }] }), 'hold'), true);
+  assert.equal(hasLabel(pr({ labels: [{ name: 'holder' }] }), 'hold'), false);
 });
 
 test('postIdFromFiles et prScopeErrors : un seul article, ses fichiers et sa photo (DW-25)', () => {
@@ -191,11 +220,73 @@ test('PR sans blog-auto : jamais touchée', async () => {
   assert.equal(report.exitCode, 0);
 });
 
-test('brouillon (50 h) : passée en prête puis fusionnée', async () => {
+test('brouillon (50 h, D7-B) : jamais publiée, ignorée « brouillon », aucun appel d’écriture, code 0', async () => {
   const fake = fakeGh({ prs: [pr({ draft: true, created_at: iso(NOW - 50 * HOUR) })], checks: { aaaaaaa1: green('aaaaaaa1') } });
   const report = await automerge(fake);
-  assert.deepEqual(fake.state.writes, [['ready', 'PR_node7'], ['merge', 7, 'aaaaaaa1']]);
+  assert.deepEqual(fake.state.writes, []);
   assert.equal(report.exitCode, 0);
+  assert.equal(report.results[0].status, 'ignored');
+  assert.equal(report.results[0].reason, 'brouillon');
+  assert.match(report.lines[0], /ignorée : brouillon/);
+});
+
+test('repassée en brouillon pendant l’attente (D7-B) : relecture avant fusion, pas de fusion, ignorée, code 0', async () => {
+  const fake = fakeGh({ checks: { aaaaaaa1: [[], green('aaaaaaa1')] } });
+  const c = clock(NOW, () => {
+    fake.state.prs[0].draft = true;
+  });
+  const report = await automerge(fake, c);
+  assert.ok(!fake.state.writes.some(([w]) => w === 'merge'));
+  assert.equal(report.results[0].status, 'ignored');
+  assert.match(report.results[0].reason, /brouillon/);
+  assert.equal(report.exitCode, 0);
+});
+
+test('dernier commit de la tête < 48 h (D7-C) : ignorée, aucun appel d’écriture, code 0', async () => {
+  const fake = fakeGh({
+    prs: [pr({ created_at: iso(NOW - 5 * DAY) })],
+    commits: { aaaaaaa1: iso(NOW - 47 * HOUR) },
+    checks: { aaaaaaa1: green('aaaaaaa1') },
+  });
+  const report = await automerge(fake);
+  assert.deepEqual(fake.state.commitReads, ['aaaaaaa1']);
+  assert.deepEqual(fake.state.writes, []);
+  assert.equal(report.results[0].status, 'ignored');
+  assert.match(report.results[0].reason, /dernier commit trop récent/);
+  assert.equal(report.exitCode, 0);
+});
+
+test('dernier commit de la tête ≥ 48 h (D7-C) : fusion ; date illisible : pas de fusion, code 1', async () => {
+  const ok = fakeGh({ commits: { aaaaaaa1: iso(NOW - MIN_AGE_MS) }, checks: { aaaaaaa1: green('aaaaaaa1') } });
+  assert.deepEqual((await automerge(ok)).results[0].status, 'merged');
+  const bad = fakeGh({ commits: { aaaaaaa1: null }, checks: { aaaaaaa1: green('aaaaaaa1') } });
+  const report = await automerge(bad);
+  assert.deepEqual(bad.state.writes, []);
+  assert.equal(report.results[0].status, 'failed');
+  assert.match(report.results[0].reason, /date du dernier commit illisible/);
+  assert.equal(report.exitCode, 1);
+});
+
+test('trop jeune à la création : date du commit jamais lue', async () => {
+  const fake = fakeGh({ prs: [pr({ created_at: iso(NOW - HOUR) })] });
+  await automerge(fake);
+  assert.deepEqual(fake.state.commitReads, []);
+});
+
+test('étiquettes sans casse (D7-D) : « Blog-Auto » fusionnée, « HOLD » retenue, « Hold » posée pendant l’attente retient', async () => {
+  const merged = fakeGh({ prs: [pr({ labels: [{ name: 'Blog-Auto' }] })], checks: { aaaaaaa1: green('aaaaaaa1') } });
+  assert.equal((await automerge(merged)).results[0].status, 'merged');
+  const held = fakeGh({ prs: [pr({ labels: [{ name: 'BLOG-AUTO' }, { name: 'HOLD' }] })], checks: { aaaaaaa1: green('aaaaaaa1') } });
+  const heldReport = await automerge(held);
+  assert.deepEqual(held.state.writes, []);
+  assert.equal(heldReport.results[0].status, 'ignored');
+  const late = fakeGh({ checks: { aaaaaaa1: [[], green('aaaaaaa1')] } });
+  const c = clock(NOW, () => {
+    late.state.prs[0].labels = [{ name: 'blog-auto' }, { name: 'Hold' }];
+  });
+  const lateReport = await automerge(late, c);
+  assert.ok(!late.state.writes.some(([w]) => w === 'merge'));
+  assert.match(lateReport.results[0].reason, /hold/);
 });
 
 test('en retard (behind 3) : update-branch, nouvelle tête, dispatch ci (blog_auto), attente, fusion si vert', async () => {
@@ -469,16 +560,16 @@ test('githubClient : réseau en panne → statut 0, sans jeton', async () => {
   assert.ok(!error.message.includes(TOKEN));
 });
 
-test('githubClient : GraphQL markPullRequestReadyForReview, erreurs GraphQL levées', async () => {
-  let body;
-  const { fetch } = fakeFetch((url, init) => {
-    body = JSON.parse(init.body);
-    return { body: { errors: [{ message: 'not allowed' }] } };
-  });
+test('githubClient : date du dernier commit (commit.committer.date) ; plus de passage en prête (D7-B)', async () => {
+  const { fetch, calls } = fakeFetch(() => ({ body: { commit: { author: { date: '2026-11-01T00:00:00Z' }, committer: { date: '2026-11-08T07:00:00Z' } } } }));
   const gh = githubClient({ token: TOKEN, repo: REPO, fetch });
-  await assert.rejects(gh.markReadyForReview('PR_x'), /GraphQL : not allowed/);
-  assert.match(body.query, /markPullRequestReadyForReview/);
-  assert.deepEqual(body.variables, { id: 'PR_x' });
+  assert.equal(await gh.getCommitDate('abc'), '2026-11-08T07:00:00Z');
+  assert.equal(calls.at(-1).init.method, 'GET');
+  assert.equal(calls.at(-1).url, `https://api.github.com/repos/${REPO}/commits/abc`);
+  assert.equal(gh.markReadyForReview, undefined);
+  assert.equal(gh.graphql, undefined);
+  const empty = githubClient({ token: TOKEN, repo: REPO, fetch: fakeFetch(() => ({ body: { commit: {} } })).fetch });
+  assert.equal(await empty.getCommitDate('abc'), null);
 });
 
 test('githubClient : fichiers du diff (anciens noms compris), check-runs, dispatch, PR blog-auto, issues', async () => {

@@ -229,7 +229,7 @@ La PR passe par `ci.yml` (contrôle `ci`, exigé pour fusionner). Elle est **rou
 
 Les placeholders partagés du site (e-mail du footer, À propos…) ne bloquent pas une PR `blog-auto` : ils ne font qu'avertir.
 
-Publication : chaque jour à 06:00 UTC, `.github/workflows/blog-automerge.yml` (`node automation/blog-publish.mjs automerge`) fusionne une PR `blog-auto` ouverte depuis au moins 48 h si son contrôle `ci` est vert sur sa tête à jour avec `main` et si son diff reste dans le périmètre d'un seul article (§10) ; l'étiquette `hold` la retient. `.github/workflows/blog-watchdog.yml` (`node automation/blog-publish.mjs watchdog`) ouvre une issue si aucune PR `blog-auto` n'est apparue depuis 8 jours.
+Publication : chaque jour à 06:00 UTC, `.github/workflows/blog-automerge.yml` (`node automation/blog-publish.mjs automerge`) fusionne une PR `blog-auto` ouverte depuis au moins 48 h, dont le dernier commit de la tête (date du committer) a lui aussi au moins 48 h, si son contrôle `ci` est vert sur sa tête à jour avec `main` et si son diff reste dans le périmètre d'un seul article (§10) ; l'étiquette `hold` la retient (`blog-auto` et `hold` sont lues sans casse). Une PR en **brouillon** n'est jamais publiée : elle reste ouverte, ignorée (raison « brouillon »), jusqu'à ce que Mike la passe en prête. Un nouveau commit poussé sur la branche relance le délai de 48 h. `.github/workflows/blog-watchdog.yml` (`node automation/blog-publish.mjs watchdog`) ouvre une issue si aucune PR `blog-auto` n'est apparue depuis 8 jours.
 
 ## 10. Vérification locale avant d'ouvrir la PR
 

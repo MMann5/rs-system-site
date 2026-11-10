@@ -28,7 +28,7 @@ Mise en service :
 3. Vérifier la PR : `ci` vert, étiquette `blog-auto` posée, aperçu Cloudflare (non indexé) qui montre l'article dans les 4 langues, photo correcte (rien de reconnaissable, aucun texte), ton juste.
 4. Mike valide, puis on **active** le planning hebdomadaire. Si Mike ne valide pas : fermer la PR, supprimer la branche, corriger `blog-routine.md` ou ce prompt, recommencer en 2.
 
-Les étiquettes `blog-auto` et `hold` existent déjà sur le dépôt (créées par l'orchestrateur). La publication après 48 h et l'alerte si la routine se tait sont faites par les workflows de la story 6.5, pas par la routine. Chaque jour à 06:00 UTC, `.github/workflows/blog-automerge.yml` fusionne une PR `blog-auto` ouverte depuis 48 h, dans le périmètre d'un seul article, à jour et au contrôle `ci` vert, et `.github/workflows/blog-watchdog.yml` ouvre une issue si aucune PR `blog-auto` n'est apparue depuis 8 jours ; tous deux lancent `automation/blog-publish.mjs`. L'étiquette `hold` retient la PR.
+Les étiquettes `blog-auto` et `hold` existent déjà sur le dépôt (créées par l'orchestrateur). La publication après 48 h et l'alerte si la routine se tait sont faites par les workflows de la story 6.5, pas par la routine. Chaque jour à 06:00 UTC, `.github/workflows/blog-automerge.yml` fusionne une PR `blog-auto` ouverte depuis 48 h et dont le dernier commit a lui aussi 48 h, hors brouillon, dans le périmètre d'un seul article, à jour et au contrôle `ci` vert, et `.github/workflows/blog-watchdog.yml` ouvre une issue si aucune PR `blog-auto` n'est apparue depuis 8 jours ; tous deux lancent `automation/blog-publish.mjs`. L'étiquette `hold` retient la PR (étiquettes lues sans casse) ; une PR en brouillon n'est **jamais** publiée.
 
 ## B. Prompt de la tâche
 
@@ -175,7 +175,7 @@ gh pr create --base main --head "blog/{runDate}" --title "blog: {id} · {title h
 gh api -X POST "repos/{owner}/{repo}/issues/{n}/labels" -f 'labels[]=blog-auto'
 ```
 
-`{n}` est le numéro de la PR rendu par `gh pr create` ; `{owner}` et `{repo}` sont remplis par `gh api` lui-même pour le dépôt courant. La PR est ouverte prête (pas en brouillon). La pose de `blog-auto` relance la CI en mode `blog-auto`.
+`{n}` est le numéro de la PR rendu par `gh pr create` ; `{owner}` et `{repo}` sont remplis par `gh api` lui-même pour le dépôt courant. La PR est ouverte prête (pas en brouillon) : une PR en brouillon n'est jamais publiée par `blog-automerge.yml`. La pose de `blog-auto` relance la CI en mode `blog-auto`.
 
 Si `gh pr create` ou la pose de l'étiquette échoue, réessaie une fois. Si l'étiquette ne peut pas être posée, ajoute en tête du corps de la PR (`gh pr edit {n} --body-file …`) : « Étiquette `blog-auto` non posée : à poser à la main. » (sans cette étiquette, la PR n'est jamais publiée seule).
 
