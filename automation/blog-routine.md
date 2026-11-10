@@ -2,7 +2,7 @@
 
 Ce fichier est lu par la routine hebdomadaire **à chaque exécution**, avant d'écrire quoi que ce soit. Il se suffit : tout ce qu'il faut savoir sur le ton, les interdits, le format et la photo est ici. Il est versionné dans le dépôt : Mike le modifie quand il veut (liste de sujets comprise), la routine suit la version de `main`.
 
-Sources : FR36, NFR10, AD-4, AD-11, AD-12 ; décisions D1, D3, D4, D5 de l'epic 6 ; EXPERIENCE.md › Voice and Tone et › Publication du blog ; DESIGN.md › fiche « Carte de blog ». Le pas à pas d'une exécution (branche, PR, étiquette `blog-auto`, cas d'échec) est dans les instructions de la routine (story 6.4) ; ce fichier fixe **ce qu'on écrit** et **comment on le range**.
+Sources : FR36, NFR10, AD-4, AD-11, AD-12 ; décisions D1, D3, D4, D5 de l'epic 6 ; EXPERIENCE.md › Voice and Tone et › Publication du blog ; DESIGN.md › fiche « Carte de blog ». Le pas à pas d'une exécution (branche, PR, étiquette `blog-auto`, cas d'échec) est dans le prompt de la routine, [`automation/routine-prompt.md`](routine-prompt.md) (story 6.4), et les gestes mécaniques (dates, choix du sujet, photo Pexels, périmètre des fichiers) sont faits par l'outil [`automation/blog-routine.mjs`](blog-routine.mjs) : `plan`, `photo-search`, `photo-download`, `scope`. Ce fichier fixe **ce qu'on écrit** et **comment on le range**.
 
 ## 1. Rôle et cadence
 
@@ -214,7 +214,7 @@ Les `...` de l'exemple sont à remplacer par du vrai texte : ils ne doivent jama
   - **recadrable en 3:2** (carte de blog) **et en 16:9** (en-tête de l'article) : sujet près du centre, marge autour, photo **horizontale** ;
   - **aucune personne reconnaissable** (visage, plaque, nom), **aucun texte** lisible dans l'image (pas de logo, marque, panneau, écran avec texte) ;
   - pas d'illustration, de rendu 3D, de montage ni de photo d'archive sur fond blanc.
-- Fichier : **JPEG, au moins 1920 px de large** (télécharger la taille originale, ou `large2x` si elle atteint 1920 px). Le site en tire lui-même les formats AVIF, WebP et JPEG et les tailles (carte de blog ≤ 60 Ko, photo d'article ≤ 180 Ko).
+- Fichier : **JPEG, au moins 1920 px de large**. Recherche et téléchargement passent par l'outil : `node automation/blog-routine.mjs photo-search --query "…"` (candidats horizontaux, au moins 1920 px, rapport 1,3 à 1,9) puis `node automation/blog-routine.mjs photo-download --photo <id> --post {id} --category <code>` (écrit `src/assets/blog/{id}.jpg`, au plus 2400 px de large, octets contrôlés ; refuse `smoke-detectors`). Le site en tire lui-même les formats AVIF, WebP et JPEG et les tailles (carte de blog ≤ 60 Ko, photo d'article ≤ 180 Ko).
 - Crédit : **non requis** par la licence Pexels, et non affiché. L'adresse de la page Pexels de la photo peut être notée en commentaire dans `meta.yaml` (`# Photo : https://www.pexels.com/photo/…`).
 - `alt` : décrit ce que montre la photo, dans chaque langue (« Une caméra de surveillance au-dessus d’une porte d’entrée, la nuit. »), sans « photo de » ni « image de ».
 
@@ -239,7 +239,11 @@ Dans cet ordre, toutes doivent réussir :
 4. `npm run build` : succès.
 5. `BLOG_AUTO=true npm run check:dist` : `placeholders` sans échec (portes de `dist/`, comme en CI).
 
-En cas d'échec, corriger l'article (jamais le contrôle, le test ni le schéma) et relancer les cinq commandes. Puis relire une dernière fois :
+En cas d'échec, corriger l'article (jamais le contrôle, le test ni le schéma) et relancer les cinq commandes.
+
+Puis le périmètre : `node automation/blog-routine.mjs scope --post {id}` refuse si la branche courante est `main` ou si un fichier modifié par rapport à `origin/main` (commits, index, arbre, non suivis) sort des 5 fichiers de `src/content/posts/{id}/` et de `src/assets/blog/{id}.jpg`.
+
+Puis relire une dernière fois :
 
 - [ ] 5 fichiers dans `src/content/posts/{id}/` (+ la photo dans `src/assets/blog/` sauf `smoke-detectors`), rien d'autre de modifié ;
 - [ ] `date` = exécution + 2 jours ; `category` = le code du sujet ; `enabled: true` ;
