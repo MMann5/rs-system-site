@@ -28,7 +28,7 @@ Mise en service :
 3. Vérifier la PR : `ci` vert, étiquette `blog-auto` posée, aperçu Cloudflare (non indexé) qui montre l'article dans les 4 langues, photo correcte (rien de reconnaissable, aucun texte), ton juste.
 4. Mike valide, puis on **active** le planning hebdomadaire. Si Mike ne valide pas : fermer la PR, supprimer la branche, corriger `blog-routine.md` ou ce prompt, recommencer en 2.
 
-Les étiquettes `blog-auto` et `hold` existent déjà sur le dépôt (créées par l'orchestrateur). La publication après 48 h et l'alerte si la routine se tait sont faites par les workflows de la story 6.5, pas par la routine.
+Les étiquettes `blog-auto` et `hold` existent déjà sur le dépôt (créées par l'orchestrateur). La publication après 48 h et l'alerte si la routine se tait sont faites par les workflows de la story 6.5, pas par la routine. Chaque jour à 06:00 UTC, `.github/workflows/blog-automerge.yml` fusionne une PR `blog-auto` ouverte depuis 48 h, dans le périmètre d'un seul article, à jour et au contrôle `ci` vert, et `.github/workflows/blog-watchdog.yml` ouvre une issue si aucune PR `blog-auto` n'est apparue depuis 8 jours ; tous deux lancent `automation/blog-publish.mjs`. L'étiquette `hold` retient la PR.
 
 ## B. Prompt de la tâche
 

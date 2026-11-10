@@ -1,0 +1,39 @@
+name: blog-watchdog
+
+# FR37, AD-12, D4 (epic 6), story 6.5 : chaque jour à 06:00 UTC, ouvre une issue assignée au propriétaire du dépôt si
+# aucune PR `blog-auto` n'a été ouverte depuis 8 jours (une seule tant qu'elle reste ouverte) ; la ferme à la reprise.
+# Logique : automation/blog-publish.mjs (tests : tests/blog-publish.test.mjs).
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: blog-watchdog
+  cancel-in-progress: false
+
+jobs:
+  watchdog:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      # contents: read : checkout de main (sans lui, le jeton n'a aucun accès au contenu du dépôt).
+      contents: read
+      issues: write
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      - run: node automation/blog-publish.mjs watchdog
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WATCHDOG_ASSIGNEE: ${{ github.repository_owner }}

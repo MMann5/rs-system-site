@@ -6,6 +6,14 @@ on:
     types: [opened, synchronize, reopened, labeled, unlabeled]
   push:
     branches: [main]
+  # Story 6.5 : relance par blog-automerge.yml (GITHUB_TOKEN) sur une branche blog/… mise à jour avec main, qui pose le
+  # contrôle `ci` sur sa tête exacte. Une mise à jour ou une fusion faite par GITHUB_TOKEN ne déclenche pas ci.yml.
+  workflow_dispatch:
+    inputs:
+      blog_auto:
+        description: 'Traiter le build comme une PR blog-auto (placeholder dans un article bloquant, D2)'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -17,7 +25,8 @@ jobs:
     env:
       # FR40, D2 (epic 6) : sur une PR étiquetée blog-auto, un placeholder dans l'<article> d'une page de dist/
       # bloque ; ailleurs (footer, À propos…) il ne fait qu'avertir. Build INDEXABLE : tout placeholder bloque.
-      BLOG_AUTO: ${{ contains(github.event.pull_request.labels.*.name, 'blog-auto') }}
+      # Story 6.5 : vrai aussi sur un workflow_dispatch lancé avec blog_auto (blog-automerge.yml).
+      BLOG_AUTO: ${{ contains(github.event.pull_request.labels.*.name, 'blog-auto') || inputs.blog_auto == true }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
