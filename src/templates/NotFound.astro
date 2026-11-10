@@ -33,7 +33,7 @@ const links = notFoundNav(lang);
       <TextLink href={wa} label={t(lang, 'action.whatsapp')} tone="night" track="whatsapp_click" placement="404" />
     </div>
     {links.length > 0 && (
-      <div class="row">
+      <div class="row pages">
         {links.map(({ href, label }) => <TextLink href={href} label={label} tone="night" />)}
       </div>
     )}
@@ -61,5 +61,16 @@ const links = notFoundNav(lang);
     display: flex;
     flex-wrap: wrap;
     column-gap: var(--link-gap);
+  }
+
+  /* Story 7.3 (audit, NFR3, CLS) : sous 700px (--bp-mobile-bar ; les @media ne lisent pas les tokens), liens Accueil ›
+   * Zones › Contact › l'un sous l'autre. En ligne, le passage à la ligne dépendait de la police : Noto Sans, plus large
+   * que la police de repli, renvoyait « Контакты › » à la ligne à son arrivée (412px, russe) et la section grandissait
+   * sous les arcs (CLS 0,158). En colonne, la hauteur ne dépend plus de la police. */
+  @media (width < 700px) {
+    .row.pages {
+      flex-direction: column;
+      align-items: flex-start;
+    }
   }
 </style>

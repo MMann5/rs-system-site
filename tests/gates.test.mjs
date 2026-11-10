@@ -16,7 +16,15 @@ import { findJsBudgetViolations, JS_BUDGET } from '../scripts/checks/js-budget.m
 import { checkLinks, collectLinks } from '../scripts/checks/links.mjs';
 import { checkNotFound, findMissingNotFound } from '../scripts/checks/not-found.mjs';
 import { findPhysicalProperties } from '../scripts/checks/physical-css.mjs';
-import { checkPlaceholders, countArticlePlaceholders, countPlaceholders, placeholderVerdict } from '../scripts/checks/placeholders.mjs';
+import {
+  checkPlaceholders,
+  countArticlePlaceholders,
+  countPlaceholders,
+  groupPlaceholders,
+  listPlaceholders,
+  placeholdersOf,
+  placeholderVerdict,
+} from '../scripts/checks/placeholders.mjs';
 import { checkTrackLinks, findUntrackedLinks } from '../scripts/checks/track-links.mjs';
 import { findUmamiAttrs } from '../scripts/checks/umami-attrs.mjs';
 
@@ -479,6 +487,46 @@ test('placeholders : build indexable → tout placeholder bloque, même dans le 
     warnings: [],
   });
   assert.equal(checkPlaceholders(dist, { indexable: true, blogAuto: true }).failures.length, 1);
+});
+
+// Story 7.3 (D7) : liste brute (page, langue, chemin, contenu) et groupes (page, rang).
+const pageWithId = (lang, id, body) => `<!doctype html><html lang="${lang}" dir="ltr" data-page-id="${id}"><head><title>x</title></head><body>${body}</body></html>`;
+
+test('placeholdersOf : texte sans crochets, balises retirées, entités décodées, dans l’ordre', () => {
+  assert.deepEqual(placeholdersOf('<p><span data-placeholder>[Histoire]</span> <span data-placeholder>[texte juridique — fourni par l&#39;avocat]</span><em data-placeholder="x">[<b>a</b> &amp; b]</em></p>'), [
+    'Histoire',
+    "texte juridique — fourni par l'avocat",
+    'a & b',
+  ]);
+});
+
+test('listPlaceholders / groupPlaceholders : `about · fr · /fr/a-propos/ · Histoire`, groupe (page, rang) au libellé fr', () => {
+  const dist = fixture({
+    'fr/a-propos/index.html': pageWithId('fr', 'about', '<span data-placeholder>[Histoire]</span><footer><span data-placeholder>[e-mail]</span></footer>'),
+    'he/אודות/index.html': pageWithId('he', 'about', '<span data-placeholder>[היסטוריה]</span><footer><span data-placeholder>[אימייל]</span></footer>'),
+    'en/about/index.html': pageWithId('en', 'about', '<span data-placeholder>[Story]</span><footer><span data-placeholder>[email]</span></footer>'),
+    'fr/contact/index.html': pageWithId('fr', 'contact', '<p>rien</p>'),
+  });
+  const rows = listPlaceholders(dist);
+  assert.deepEqual(rows.find((r) => r.lang === 'fr' && r.rank === 0), { page: 'about', lang: 'fr', path: '/fr/a-propos/', text: 'Histoire', rank: 0 });
+  assert.equal(rows.length, 6);
+  assert.ok(rows.some((r) => r.path === '/he/אודות/' && r.text === 'היסטוריה'));
+  assert.deepEqual(
+    groupPlaceholders(rows).map(({ page, rank, label, langs }) => ({ page, rank, label, langs: [...langs].sort() })),
+    [
+      { page: 'about', rank: 0, label: 'Histoire', langs: ['en', 'fr', 'he'] },
+      { page: 'about', rank: 1, label: 'e-mail', langs: ['en', 'fr', 'he'] },
+    ],
+  );
+});
+
+test('placeholders --list : tableaux brut et groupé, verdict inchangé (code 0, avertissement)', () => {
+  const dist = fixture({ 'fr/a-propos/index.html': pageWithId('fr', 'about', '<span data-placeholder>[Histoire]</span>') });
+  const res = spawnSync(process.execPath, [join(ROOT, 'scripts', 'checks', 'placeholders.mjs'), '--list', dist], { cwd: ROOT, encoding: 'utf8', env: { ...process.env, BLOG_AUTO: 'false' } });
+  assert.equal(res.status, 0, res.stderr);
+  assert.match(res.stdout, /\| about \| fr \| \/fr\/a-propos\/ \| Histoire \|/);
+  assert.match(res.stdout, /\| about \| 0 \| Histoire \| fr \|/);
+  assert.match(res.stdout, /::warning::placeholders : fr\/a-propos\/index\.html : 1 placeholder\(s\)\nplaceholders : OK/);
 });
 
 // — astro check et Zod, sur une copie du projet —

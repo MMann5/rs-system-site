@@ -40,10 +40,12 @@ const links = alternates(switcherTargetId(ctx.id));
   }
 
   /* Corps 16px ; cible ≥ 44px de haut (min-block-size 48px, texte centré). */
+  /* Story 7.3 (audit, EXP › Cibles ≥ 44px) : largeur minimale aussi (« עברית » faisait 42px). */
   .link {
     display: inline-flex;
     align-items: center;
     min-block-size: var(--space-12);
+    min-inline-size: var(--space-12);
     font-size: var(--type-body-size);
     font-weight: var(--type-body-weight);
     line-height: var(--type-body-leading);

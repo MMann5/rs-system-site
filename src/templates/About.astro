@@ -138,7 +138,9 @@ const how = about.how.items.map((item) => {
     line-height: var(--type-stat-number-leading);
   }
 
+  /* Story 7.3 (audit, WCAG 1.4.12) : un mot long passe à la ligne au lieu de déborder à 320px. */
   .stat-text {
+    overflow-wrap: anywhere;
     font-size: var(--type-stat-text-size);
     font-weight: var(--type-stat-text-weight);
     line-height: var(--type-stat-text-leading);

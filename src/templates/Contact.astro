@@ -500,7 +500,10 @@ const phoneErrorParts = phoneExample
     color: var(--color-on-accent);
     font-size: var(--type-submit-size);
     font-weight: var(--type-submit-weight);
-    white-space: nowrap;
+    /* Story 7.3 (audit, WCAG 1.4.12) : plus de nowrap ; le libellé passe à la ligne plutôt que de déborder à 320px
+     * avec l'espacement de texte agrandi (sans lui, il tient sur une ligne). */
+    max-inline-size: 100%;
+    text-align: start;
     cursor: pointer;
   }
 

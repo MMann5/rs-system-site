@@ -258,7 +258,10 @@ const vars = [`--photo-position: var(--photo-focus-${photo.focus})`, dark ? `--t
     color: var(--color-navy);
   }
 
+  /* Story 7.3 (audit, WCAG 2.4.11) : texte au-dessus de la photo. Pendant la révélation au défilement, le bloc descend
+   * sur la photo (positionnée dans la grille) : un lien focalisé au clavier passait dessous. */
   .light .content {
+    z-index: 1;
     inline-size: 100%;
     box-sizing: border-box;
   }
