@@ -8,7 +8,8 @@
 // (`resolveCityHe`) à partir de la table `{ code: { label, he } }` que l'îlot lit dans #rs-data.
 // Syntaxe TypeScript effaçable uniquement : Node l'importe directement (tests).
 
-const PHONE_E164 = '+972509565669';
+/** Numéro au format E.164 (liens `tel:`, données structurées JSON-LD, story 7.2). */
+export const PHONE_E164 = '+972509565669';
 const WA_BASE = 'https://wa.me/972509565669';
 
 /** Affichage du numéro, toujours dans `<bdi dir="ltr">`, dans les 4 langues. */

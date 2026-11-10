@@ -115,6 +115,8 @@
   "blog.pagination.next": "לעמוד הבא",
   "blog.pagination.page": "עמוד {n}",
   "blog.page-title": "בלוג, עמוד {n} · RS SYSTEM",
+  "seo.breadcrumb-home": "דף הבית",
+  "seo.city-neighbors": "יישובים סמוכים: {list}.",
   "product.quote": "הצעת מחיר בוואטסאפ",
   "products.title": "מה אנחנו מתקינים",
   "products.more": "עוד מוצרים"

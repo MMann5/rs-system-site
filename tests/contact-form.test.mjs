@@ -3,7 +3,8 @@
 // résumé, liens) sur un DOM factice minimal. Story 2.3 (FR29, FR30, AD-6) : lecture de #rs-data, présélection
 // par ?service= / ?city=, message WhatsApp, ouverture (nouvel onglet, même onglet), événements rs:track.
 // Story 2.4 (FR33, UX-DR29) : état d'envoi (3 s, double envoi ignoré), retour (visibilitychange, pageshow),
-// Réessayer, hors ligne.
+// Réessayer, hors ligne. Story 7.1 (AD-6) : WhatsApp ouvert au rappel `done` de form_submit, ou après 300 ms.
+// Par défaut, le faux document appelle `done` aussitôt l'événement reçu (comme track.ts sans Umami).
 // L'îlot s'exécute à l'import : chaque cas l'importe à neuf (?case=n) après avoir posé les globaux.
 import { mock, test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -11,7 +12,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { formLines, waHref } from '../src/lib/contact/core.ts';
 
-// Minuteurs simulés (3 s de l'état d'envoi) : avancés par mock.timers.tick().
+// Minuteurs simulés (3 s de l'état d'envoi, 300 ms d'attente de form_submit) : avancés par mock.timers.tick().
 mock.timers.enable({ apis: ['setTimeout'] });
 
 const ISLAND_URL = new URL('../src/scripts/contact-form.ts', import.meta.url).href;
@@ -217,9 +218,12 @@ let round = 0;
 /**
  * rsData : objet sérialisé dans #rs-data, chaîne brute, ou null (bloc absent). search : `location.search`.
  * coarse : `(pointer: coarse)`. blocked : window.open renvoie null. city : valeur initiale du champ ville.
+ * done : `sync` (rappel appelé à la réception de l'événement) ou `held` (gardé dans `dones`, appelé par le test).
  */
-async function mountIsland({ withForm = true, rsData = RS_DATA, search = '', coarse = false, blocked = false, city: cityValue = '', online = true } = {}) {
+async function mountIsland({ withForm = true, rsData = RS_DATA, search = '', coarse = false, blocked = false, city: cityValue = '', online = true, done: doneMode = 'sync' } = {}) {
   const docListeners = {};
+  /** Rappels `done` reçus (mode `held`). */
+  const dones = [];
   const winListeners = {};
   /** Journal ordonné : événements rs:track, window.open, location.assign. */
   const log = [];
@@ -281,7 +285,12 @@ async function mountIsland({ withForm = true, rsData = RS_DATA, search = '', coa
     addEventListener: (type, fn) => (docListeners[type] ??= []).push(fn),
     dispatchEvent: (event) => {
       assert.ok(event instanceof FakeCustomEvent);
-      log.push(['event', event.type, event.detail]);
+      // Le journal garde le détail sans le rappel ; seul form_submit en porte un.
+      const { done, ...detail } = event.detail;
+      assert.equal(typeof done, event.detail.name === 'form_submit' ? 'function' : 'undefined', 'rappel done');
+      log.push(['event', event.type, detail]);
+      if (done && doneMode === 'sync') done();
+      else if (done) dones.push(done);
       return true;
     },
   };
@@ -334,7 +343,7 @@ async function mountIsland({ withForm = true, rsData = RS_DATA, search = '', coa
   const sending = () => [button.getAttribute('aria-disabled'), !idle.hidden, !sendingLabel.hidden, sendingStatus.textContent];
   return {
     form, name, phone, city, service, message, nameError, phoneError, summary, button, body, document, docListeners, winListeners,
-    submit, click, links, log, events, navigations, popup, nav, sent, sentTitle, retry, offline, sendingStatus, visibility, pageshow, sending,
+    submit, click, links, log, events, navigations, popup, nav, sent, sentTitle, retry, offline, sendingStatus, visibility, pageshow, sending, dones,
   };
 }
 
@@ -789,4 +798,65 @@ test('attente expirée après Réessayer : même délai de 3 s', async () => {
   dom.visibility('hidden');
   dom.visibility('visible');
   assert.equal(dom.document.activeElement, dom.body);
+});
+
+// — Story 7.1 (AD-6) : ouverture de WhatsApp après l'envoi de form_submit, au plus tard après 300 ms —
+
+test('7.1 : WhatsApp ouvert à l’appel de done, pas avant ; form_submit émis d’abord', async () => {
+  const dom = await mountIsland({ done: 'held' });
+  fill(dom);
+  dom.submit();
+  assert.deepEqual(dom.log.map(([kind]) => kind), ['event'], 'rien d’ouvert avant done');
+  assert.deepEqual(dom.sending(), SENDING, 'état d’envoi immédiat');
+  mock.timers.tick(100);
+  assert.equal(dom.navigations().length, 0);
+  dom.dones[0]();
+  assert.deepEqual(dom.log.map(([kind]) => kind), ['event', 'open']);
+  // Le délai de 300 ms est annulé ; un second appel de done n'ouvre rien.
+  mock.timers.tick(300);
+  dom.dones[0]();
+  assert.equal(dom.navigations().length, 1);
+  mock.timers.tick(3000);
+});
+
+test('7.1 : done jamais appelé → WhatsApp ouvert à 300 ms exactement, une fois ; done tardif sans effet', async () => {
+  const dom = await mountIsland({ done: 'held' });
+  fill(dom);
+  dom.submit();
+  mock.timers.tick(299);
+  assert.equal(dom.navigations().length, 0);
+  mock.timers.tick(1);
+  assert.deepEqual(dom.log.map(([kind]) => kind), ['event', 'open']);
+  dom.dones[0]();
+  mock.timers.tick(1000);
+  assert.equal(dom.navigations().length, 1);
+  mock.timers.tick(3000);
+});
+
+test('7.1 : ouverture différée puis retour → confirmation (awaitReturn après l’ouverture)', async () => {
+  const dom = await mountIsland({ done: 'held', coarse: true });
+  fill(dom);
+  dom.submit();
+  mock.timers.tick(300);
+  assert.equal(dom.navigations()[0][0], 'assign');
+  dom.visibility('hidden');
+  dom.visibility('visible');
+  assert.equal(dom.sent.hidden, false);
+  assert.equal(dom.document.activeElement, dom.sentTitle);
+});
+
+test('7.1 : form_error sans rappel done ; Réessayer sans événement ni attente', async () => {
+  const dom = await mountIsland({ done: 'held' });
+  dom.submit();
+  assert.deepEqual(dom.events().map((d) => d.name), ['form_error']);
+  assert.equal(dom.dones.length, 0);
+  fill(dom);
+  dom.submit();
+  dom.dones[0]();
+  dom.visibility('hidden');
+  dom.visibility('visible');
+  dom.click(dom.retry);
+  assert.equal(dom.navigations().length, 2, 'Réessayer ouvre tout de suite');
+  assert.equal(dom.events().length, 2);
+  mock.timers.tick(3000);
 });

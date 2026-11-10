@@ -4,20 +4,24 @@
 // la page porte aria-current="true". Sur la 404, les 4 liens mènent à l'accueil de chaque langue.
 // Deux variantes : `dark` (défaut, bas du menu mobile, sur navy-deep) et `light` (ligne basse du
 // footer : liens `link`, actif navy 700 non souligné).
-// `data-lang-switcher` : l'îlot src/scripts/nav.ts y recopie location.search (?service=, utm_*).
+// `data-lang-switcher` : l'îlot src/scripts/nav.ts y recopie location.search (?service=, utm_*). Sa valeur
+// (`placement` : `mobile_menu` dans le menu, `footer` dans le footer) dit à nav.ts d'où vient le clic mesuré
+// `language_switch` (story 7.1), sans data-track sur ces liens.
 import { t } from '../lib/i18n';
 import type { PageContext } from '../lib/page-context';
 import { alternates, switcherTargetId } from '../lib/routes';
+import type { LanguageSwitchPlacement } from '../lib/track-events';
 
 interface Props {
   ctx: PageContext;
   tone?: 'dark' | 'light';
+  placement: LanguageSwitchPlacement;
 }
 
-const { ctx, tone = 'dark' } = Astro.props;
+const { ctx, tone = 'dark', placement } = Astro.props;
 const links = alternates(switcherTargetId(ctx.id));
 ---
-<nav aria-label={t(ctx.lang, 'lang-switcher.label')} class:list={['switcher', tone]} data-lang-switcher>
+<nav aria-label={t(ctx.lang, 'lang-switcher.label')} class:list={['switcher', tone]} data-lang-switcher={placement}>
   <ul class="list">
     {links.map(({ lang, href }) => (
       <li><a href={href} lang={lang} hreflang={lang} class="link" aria-current={lang === ctx.lang ? 'true' : undefined}>{t(lang, 'lang.name')}</a></li>
@@ -36,10 +40,12 @@ const links = alternates(switcherTargetId(ctx.id));
   }
 
   /* Corps 16px ; cible ≥ 44px de haut (min-block-size 48px, texte centré). */
+  /* Story 7.3 (audit, EXP › Cibles ≥ 44px) : largeur minimale aussi (« עברית » faisait 42px). */
   .link {
     display: inline-flex;
     align-items: center;
     min-block-size: var(--space-12);
+    min-inline-size: var(--space-12);
     font-size: var(--type-body-size);
     font-weight: var(--type-body-weight);
     line-height: var(--type-body-leading);

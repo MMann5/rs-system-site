@@ -24,6 +24,8 @@ import { t } from '../lib/i18n';
 import type { Lang } from '../lib/langs';
 import { createPageContext } from '../lib/page-context';
 import { isEnabled, url } from '../lib/routes';
+import { breadcrumbList, localBusiness, type JsonLdNode } from '../lib/structured-data';
+import { business, pageUrl } from '../lib/structured-data-site';
 
 interface Props {
   id: string;
@@ -55,8 +57,23 @@ const rows = SERVICE_ROWS.flatMap((code) => {
 });
 const neighbors = city.neighbors.map((n) => n[lang]);
 const reviews = reviewsOf(cityId);
+// Story 7.2 (FR38, EXPERIENCE.md › Référencement) : description = intro + localités voisines s'il y en a ; LocalBusiness
+// desservant la ville + fil Zones › Région › Ville (si Zones est active). Image de partage = carte logo (défaut).
+const description = neighbors.length > 0 ? `${city.intro[lang]} ${t(lang, 'seo.city-neighbors').replace('{list}', neighbors.join(', '))}` : city.intro[lang];
+const jsonLd: JsonLdNode[] = [
+  localBusiness({ ...business(lang), areaServed: [name] }),
+  ...(isEnabled('areas')
+    ? [
+        breadcrumbList([
+          { name: t(lang, 'nav.areas'), url: pageUrl('areas', lang) },
+          { name: region.name[lang], url: pageUrl('areas', lang, { hash: region.anchor }) },
+          { name, url: pageUrl(id, lang) },
+        ]),
+      ]
+    : []),
+];
 ---
-<Base ctx={ctx} title={t(lang, 'city.meta-title').replace('{city}', name)} description={city.intro[lang]}>
+<Base ctx={ctx} title={t(lang, 'city.meta-title').replace('{city}', name)} description={description} jsonLd={jsonLd}>
   <HeroTypographic title={name} titleSize="city">
     {areasHref ? (
       <nav slot="eyebrow" class="crumb" aria-label={t(lang, 'city.breadcrumb-label')}>
@@ -224,7 +241,9 @@ const reviews = reviewsOf(cityId);
     text-decoration: underline;
   }
 
+  /* Story 7.3 (audit, WCAG 1.4.12) : un mot long (« видеонаблюдения ») passe à la ligne au lieu de déborder à 320px. */
   .row-label {
+    overflow-wrap: anywhere;
     font-size: var(--type-h2-size);
     font-weight: var(--type-h2-weight);
     line-height: var(--type-h2-leading);

@@ -37,6 +37,8 @@ import Tile, { type TileLink } from '../components/Tile.astro';
 import Trio from '../components/Trio.astro';
 import Base from '../layouts/Base.astro';
 import { bandLinks } from '../lib/contact/band';
+import { serviceLabels } from '../lib/contact/labels';
+import type { ServiceCode } from '../lib/contact/table';
 import { t } from '../lib/i18n';
 import type { Lang } from '../lib/langs';
 import { createPageContext } from '../lib/page-context';
@@ -44,6 +46,9 @@ import { cardsFor } from '../lib/products/cards';
 import { page } from '../lib/pages';
 import { isEnabled, url } from '../lib/routes';
 import { heroCover, heroPhoto, tileLinks as resolveTileLinks, type HeroDef, type TileLinkDef } from '../lib/service-hero';
+import { photoShareImage, SHARE_CARDS } from '../lib/share-image';
+import { breadcrumbList, service as serviceNode, type JsonLdNode } from '../lib/structured-data';
+import { business, pageUrl, servedCities } from '../lib/structured-data-site';
 
 interface Props {
   id: string;
@@ -147,8 +152,19 @@ const { detailsHref: quoteHref } = bandLinks({ lang, service: ctx.service }, { i
 // Pages produits : cartes des produits actifs de cette page, après le trio (section absente sans produit).
 const products = cardsFor(id, lang);
 const quote = cover && quoteHref ? { href: quoteHref, label: t(lang, cover.quoteKey) } : undefined;
+// Story 7.2 (FR38, FR39, D4) : image de partage = héros paysage recadré, ou carte détecteur pour le héros illustré ;
+// JSON-LD Service (+ fil Accueil › Service, sauf Entrepreneurs, EXPERIENCE.md › Référencement).
+const ogImage = def.hero.kind === 'detector' ? SHARE_CARDS.detector : await photoShareImage(def.hero.src);
+const serviceName = serviceLabels(lang)[def.service as ServiceCode].label;
+const selfUrl = pageUrl(id, lang);
+const jsonLd: JsonLdNode[] = [
+  serviceNode({ name: serviceName, description: meta.description[lang], url: selfUrl, provider: business(lang), areaServed: servedCities(lang) }),
+  ...(id === 'contractors'
+    ? []
+    : [breadcrumbList([{ name: t(lang, 'seo.breadcrumb-home'), url: pageUrl('home', lang) }, { name: serviceName, url: selfUrl }])]),
+];
 ---
-<Base ctx={ctx} title={meta.title[lang]} description={meta.description[lang]}>
+<Base ctx={ctx} title={meta.title[lang]} description={meta.description[lang]} ogImage={ogImage} jsonLd={jsonLd}>
   {cover ? (
     <HeroPhoto
       ctx={ctx}
