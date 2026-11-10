@@ -5,6 +5,7 @@ import { file, glob } from 'astro/loaders';
 import { z } from 'astro/zod';
 import { citySchema, regionSchema, reviewSchema } from './lib/areas/schema.ts';
 import { KEY_RE } from './lib/i18n/core.ts';
+import { productSchema } from './lib/products/schema.ts';
 import { legalDocSchema, legalMetaSchema, pageSchema, perLang, postDocSchema, postMetaSchema, text } from './lib/page-schema.ts';
 
 // Id = nom de fichier brut : l'id par défaut est slugifié et masquerait les ids invalides ou en double.
@@ -91,4 +92,11 @@ const posts = defineCollection({
   schema: postDocSchema,
 });
 
-export const collections = { pages, i18n, services, proof, regions, cities, reviews, legalMeta, legal, postsMeta, posts };
+// Pages produits : src/content/products/{id}.yaml, id = nom du fichier = nom du modèle 3D (scripts/render/models/{id}.js).
+// Schéma : src/lib/products/schema.ts ; scènes rendues et contrôle : src/lib/products/index.ts.
+const products = defineCollection({
+  loader: glob({ pattern: '*.yaml', base: './src/content/products', generateId: fileId }),
+  schema: productSchema,
+});
+
+export const collections = { products, pages, i18n, services, proof, regions, cities, reviews, legalMeta, legal, postsMeta, posts };

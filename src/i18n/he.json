@@ -114,5 +114,8 @@
   "blog.pagination.label": "עמודי הבלוג",
   "blog.pagination.next": "לעמוד הבא",
   "blog.pagination.page": "עמוד {n}",
-  "blog.page-title": "בלוג, עמוד {n} · RS SYSTEM"
+  "blog.page-title": "בלוג, עמוד {n} · RS SYSTEM",
+  "product.quote": "הצעת מחיר בוואטסאפ",
+  "products.title": "מה אנחנו מתקינים",
+  "products.more": "עוד מוצרים"
 }

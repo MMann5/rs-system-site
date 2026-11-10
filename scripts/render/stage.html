@@ -1,0 +1,89 @@
+<!doctype html>
+<!-- Studio de rendu des scènes produits (scripts/render/render.mjs). Jamais publié : seul le rendu (images WebP) l'est. -->
+<meta charset="utf-8">
+<style>html,body{margin:0;background:transparent}canvas{display:block}</style>
+<canvas id="gl"></canvas>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script type="module">
+import { createKit } from './kit.js';
+const id = new URLSearchParams(location.search).get('model');
+const model = (await import(`./models/${id}.js`)).default;
+const canvas = document.getElementById('gl');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, preserveDrawingBuffer: true });
+renderer.setClearColor(0x000000, 0);
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = model.exposure ?? 0.92;
+const scene = new THREE.Scene();
+const cam = new THREE.PerspectiveCamera(32, 1, 0.1, 300);
+
+// Studio : grandes boîtes à lumière blanches + un liseré bleu de marque (#079bff).
+const env = new THREE.Scene();
+env.background = new THREE.Color(0x03070f);
+const panel = (w, h, c, i, pos) => {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: new THREE.Color(c).multiplyScalar(i), side: THREE.DoubleSide }));
+  m.position.set(...pos); m.lookAt(0, 0, 0); env.add(m);
+};
+panel(26, 8, 0xffffff, 2.6, [0, 16, 8]);
+panel(8, 20, 0xffffff, 1.3, [-16, 2, 6]);
+panel(8, 20, 0xffffff, 0.7, [16, 2, 10]);
+panel(3, 14, 0x079bff, 1.4, [12, 0, -12]);
+panel(30, 5, 0xffffff, 0.35, [0, -14, 0]);
+scene.environment = new THREE.PMREMGenerator(renderer).fromScene(env, 0.02).texture;
+scene.add(new THREE.AmbientLight(0xffffff, 0.08));
+const key = new THREE.DirectionalLight(0xffffff, 1.3); key.position.set(5, 12, 10); scene.add(key);
+const rim = new THREE.PointLight(0x079bff, 45, 70, 2); rim.position.set(-8, 4, -10); scene.add(rim);
+const rim2 = new THREE.PointLight(0x4fbaff, 14, 60, 2); rim2.position.set(9, -5, -6); scene.add(rim2);
+
+const kit = createKit(THREE);
+const root = new THREE.Group(); scene.add(root);
+const built = model.build(THREE, kit);
+root.add(built.body);
+
+// Ombre douce au sol.
+const sh = document.createElement('canvas'); sh.width = sh.height = 128;
+const sx = sh.getContext('2d'); const gr = sx.createRadialGradient(64, 64, 0, 64, 64, 64);
+gr.addColorStop(0, 'rgba(0,0,0,.55)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); sx.fillStyle = gr; sx.fillRect(0, 0, 128, 128);
+const shadow = new THREE.Mesh(new THREE.PlaneGeometry(...(model.shadow ?? [16, 9])), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(sh), transparent: true, depthWrite: false }));
+shadow.rotation.x = -Math.PI / 2; shadow.position.y = model.floorY ?? -6.2; scene.add(shadow);
+
+const sm = (t) => t * t * (3 - 2 * t);
+function pose(K, p) {
+  let i = 0;
+  while (i < K.length - 2 && p > K[i + 1][0]) i++;
+  const a = K[i], b = K[i + 1];
+  const t = sm(Math.min(1, Math.max(0, (p - a[0]) / (b[0] - a[0]))));
+  return a.map((v, j) => (j ? v + (b[j] - v) * t : p));
+}
+
+function apply(p, variant, w, h) {
+  renderer.setSize(w, h, false);
+  cam.aspect = w / h; cam.fov = variant === 'portrait' ? 38 : 30; cam.updateProjectionMatrix();
+  const [, ry, rx, d, ex, yo] = pose(model.poses[variant], p);
+  root.rotation.set(rx, ry, 0);
+  for (const part of built.parts) { const e = part.ex; part.group.position.set(e[0] * ex, e[1] * ex, e[2] * ex); }
+  built.night?.(model.nightAt ? model.nightAt(p) : 0);
+  built.update?.(p);
+  cam.position.set(0, yo, d); cam.lookAt(0, yo * 0.6, 0); cam.updateMatrixWorld();
+  shadow.material.opacity = 1 - Math.min(1, ex) * 0.6;
+  scene.updateMatrixWorld(true);
+}
+
+window.renderFrame = (p, variant, w, h, ratio) => {
+  renderer.setPixelRatio(ratio);
+  apply(p, variant, w, h);
+  renderer.render(scene, cam);
+  return canvas.toDataURL('image/png');
+};
+
+// Position à l'écran (0–1, origine en haut à gauche de l'image) de l'ancre de chaque pièce étiquetée.
+window.labelsAt = (p, variant, w, h) => {
+  apply(p, variant, w, h);
+  return built.parts.filter((part) => part.anchor).map((part) => {
+    const v = new THREE.Vector3(...part.anchor);
+    part.group.localToWorld(v); v.project(cam);
+    return [+((v.x + 1) / 2).toFixed(4), +((1 - v.y) / 2).toFixed(4)];
+  });
+};
+window.ready = true;
+</script>

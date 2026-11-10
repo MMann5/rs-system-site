@@ -17,6 +17,16 @@ const ROOT = fileURLToPath(new URL('../', import.meta.url));
 const LANGS = ['he', 'en', 'ru', 'fr'];
 const HOMES = LANGS.map((lang) => `${lang}/index.html`);
 const PROBES = ['en/path-probe/index.html', 'fr/test-de-chemin/index.html', 'he/בדיקת-נתיב/index.html', 'ru/проверка-пути/index.html'];
+// Pages produits : une par produit activé (src/content/products/{id}.yaml), sous le slug de sa page service.
+const PRODUCTS = readdirSync(join(ROOT, 'src/content/products'))
+  .filter((f) => f.endsWith('.yaml'))
+  .map((f) => ({ id: f.replace(/\.yaml$/, ''), data: parse(readFileSync(join(ROOT, 'src/content/products', f), 'utf8')) }))
+  .filter(({ data }) => data.enabled);
+const productFile = ({ data }, lang) => {
+  const parent = data.parent ? `${parse(readFileSync(join(ROOT, 'src/content/pages', `${data.parent}.yaml`), 'utf8')).slugs[lang]}/` : '';
+  return `${lang}/${parent}${data.slugs[lang]}/index.html`;
+};
+const PRODUCT_FILES = PRODUCTS.flatMap((p) => LANGS.map((lang) => productFile(p, lang)));
 // Story 2.1 : page Contact, slugs des décisions de l'epic 2.
 const CONTACT_SLUGS = { he: 'צור-קשר', en: 'contact', ru: 'контакты', fr: 'contact' };
 const CONTACTS = LANGS.map((lang) => `${lang}/${CONTACT_SLUGS[lang]}/index.html`);
@@ -261,6 +271,30 @@ function assertFooter(footer, lang, where) {
 }
 
 /** Story 1.4 : sortie du layout unique pour la page `id` en `lang` ; `out` = dossier du build, `site` = SITE_URL. */
+/** Pages produits : titre, h1, scène (images et étiquettes), lien devis WhatsApp au nom hébreu du produit. */
+function assertProducts(out) {
+  for (const p of PRODUCTS) {
+    for (const lang of LANGS) {
+      const where = `product:${p.id} (${lang})`;
+      const html = readFileSync(join(out, productFile(p, lang)), 'utf8');
+      assert.equal(html.match(/<title>(.*?)<\/title>/)?.[1], p.data.meta.title[lang], `${where} : <title>`);
+      assert.match(html, new RegExp(`data-page-id="product:${p.id}"`), `${where} : data-page-id`);
+      assert.equal(html.match(/<h1\b/g)?.length, 1, `${where} : un seul h1`);
+      assert.ok(html.includes(p.data.scene.title[lang]), `${where} : titre de la scène`);
+      const scene = JSON.parse(html.match(/<script type="application\/json" data-scene[^>]*>([\s\S]*?)<\/script>/)?.[1] ?? 'null');
+      assert.equal(scene.frames.portrait.length, scene.frames.landscape.length, `${where} : images`);
+      assert.equal(scene.labels.portrait.length, p.data.scene.inside.parts.length, `${where} : étiquettes`);
+      const wa = waHref({ serviceHe: p.data.name.he }).replaceAll('&', '&amp;');
+      assert.ok(html.includes(`href="${wa}"`), `${where} : lien WhatsApp au nom du produit`);
+      if (p.data.parent) {
+        const parent = readFileSync(join(out, productFile(p, lang).replace(/[^/]+\/index\.html$/, 'index.html')), 'utf8');
+        const href = `/${productFile(p, lang).replace(/index\.html$/, '')}`.split('/').map((seg) => encodeURIComponent(seg)).join('/');
+        assert.ok(parent.includes('<section class="products reveal"') && parent.includes(`href="${href}"`), `${where} : carte sur la page service`);
+      }
+    }
+  }
+}
+
 function assertLayout(html, id, lang, out, site = '', indexable = false) {
   const where = `${id} (${lang})`;
   // Titre et description depuis le YAML de la page ; noindex si et seulement si non indexable.
@@ -572,7 +606,8 @@ function assertHome(html, lang, out) {
   const dict = I18N[lang];
   const main = html.match(/<main id="content"[^>]*>([\s\S]*?)<\/main>/)?.[1] ?? '';
   // Story 3.5 : ordre de <main> (les tuiles de la grille sont dans la section `services`), rien d'autre.
-  const sections = [...main.matchAll(/<section class="([^"]*)"/g)].map((m) => m[1]);
+  // Pages produits : la section des cartes produits est vérifiée par assertProducts.
+  const sections = [...main.matchAll(/<section class="([^"]*)"/g)].map((m) => m[1]).filter((c) => c !== 'products reveal');
   assert.deepEqual(sections, ['hero', 'tile light feature', 'tile dark crane-home', 'services', 'tile dark grid', 'tile light grid', 'tile light grid', 'tile dark grid', 'smoke reveal', 'band'], `${where} : sections de <main>`);
   // Héros en tête de <main> ; plus de h1 site.name ni de baseline.
   assert.match(main, /^<section class="hero" aria-labelledby="hero-title" data-surface="photo"[\s>]/, `${where} : héros en tête`);
@@ -1039,7 +1074,8 @@ function assertCameras(html, lang, out) {
   const quote = `${PAGE_HREFS.contact[lang]}?service=cameras`;
   const main = html.match(/<main id="content"[^>]*>([\s\S]*?)<\/main>/)?.[1] ?? '';
   // Ordre de <main> : héros clair, trio, tuile grue, étapes, bloc contact ; rien d'autre.
-  const sections = [...main.matchAll(/<section class="([^"]*)"/g)].map((m) => m[1]);
+  // Pages produits : la section des cartes produits est vérifiée par assertProducts.
+  const sections = [...main.matchAll(/<section class="([^"]*)"/g)].map((m) => m[1]).filter((c) => c !== 'products reveal');
   assert.deepEqual(sections, ['hero', 'trio reveal', 'tile dark crane', 'steps reveal', 'band'], `${where} : sections de <main>`);
   assert.match(main, /^<section class="hero"/, `${where} : héros en tête`);
   const sectionAt = (cls) => main.match(new RegExp(`<section class="${cls}"[\\s\\S]*?</section>`))?.[0] ?? '';
@@ -1064,7 +1100,7 @@ function assertCameras(html, lang, out) {
   const pictures = html.match(/<picture>[\s\S]*?<\/picture>/g) ?? [];
   assert.equal(pictures.length, 2, `${where} : <picture>`);
   assert.ok(hero.includes(pictures[0]) && tile.includes(pictures[1]), `${where} : <picture> hors du héros ou de la tuile`);
-  assert.equal(html.match(/<img\b/g)?.length, 3, `${where} : <img> (logo + 2 photos)`);
+  assert.equal(html.replace(/<section class="products reveal"[\s\S]*?<\/section>/, '').match(/<img\b/g)?.length, 3, `${where} : <img> (logo + 2 photos)`);
   assert.equal(html.match(/\sfetchpriority="high"/g)?.length, 1, `${where} : une seule image prioritaire`);
   assertServicePicture(pictures[0], { alt: CAMERAS_PAGE.hero.alt[lang], sizes: 'min(1180px, calc(100vw - 44px))', land: ['2560', '1280'], portrait: ['1440', '1800'], priority: true, budgets: { land: 250_000, portrait: 120_000 } }, out, `${where} : dôme`);
   // Story 3.3 : cadre du héros de Caméras inchangé, point focal du dôme et ratio 4:5 par défaut (pas de ratio paysage).
@@ -1180,7 +1216,8 @@ function assertSmokeDetectors(html, lang, out) {
   const quote = `${PAGE_HREFS.contact[lang]}?service=smoke-detectors`;
   const main = html.match(/<main id="content"[^>]*>([\s\S]*?)<\/main>/)?.[1] ?? '';
   // Ordre de <main> : héros clair illustré, trio, étapes, bloc contact ; pas de tuile.
-  const sections = [...main.matchAll(/<section class="([^"]*)"/g)].map((m) => m[1]);
+  // Pages produits : la section des cartes produits est vérifiée par assertProducts.
+  const sections = [...main.matchAll(/<section class="([^"]*)"/g)].map((m) => m[1]).filter((c) => c !== 'products reveal');
   assert.deepEqual(sections, ['hero', 'trio reveal', 'steps reveal', 'band'], `${where} : sections de <main>`);
   assert.match(main, /^<section class="hero"/, `${where} : héros en tête`);
   const sectionAt = (cls) => main.match(new RegExp(`<section class="${cls}"[\\s\\S]*?</section>`))?.[0] ?? '';
@@ -1202,7 +1239,7 @@ function assertSmokeDetectors(html, lang, out) {
   for (const [, attrs] of heroLinks) assert.match(attrs, /\sclass="text-link light"/, `${where} : ton clair`);
   // Aucune photo : pas de <picture>, seul <img> = logo, rien de prioritaire.
   assert.ok(!/<picture[\s>]/.test(html), `${where} : <picture>`);
-  assert.equal(html.match(/<img\b/g)?.length, 1, `${where} : <img> (logo seul)`);
+  assert.equal(html.replace(/<section class="products reveal"[\s\S]*?<\/section>/, '').match(/<img\b/g)?.length, 1, `${where} : <img> (logo seul)`);
   assert.ok(!html.includes('fetchpriority'), `${where} : fetchpriority`);
   // Détecteur illustré dans le héros, après les liens : décoratif, taille lg, qui monte, avec grille et LED.
   const detectors = html.match(/<div class="detector\b[^"]*"[^>]*>/g) ?? [];
@@ -1281,7 +1318,8 @@ function assertPhotoService(html, lang, out, { id, content, focus, tile: withTil
   const quote = `${PAGE_HREFS.contact[lang]}?service=${id}`;
   const main = html.match(/<main id="content"[^>]*>([\s\S]*?)<\/main>/)?.[1] ?? '';
   // Ordre de <main> : héros clair, trio, (tuile immeuble), étapes, bloc contact ; rien d'autre.
-  const sections = [...main.matchAll(/<section class="([^"]*)"/g)].map((m) => m[1]);
+  // Pages produits : la section des cartes produits est vérifiée par assertProducts.
+  const sections = [...main.matchAll(/<section class="([^"]*)"/g)].map((m) => m[1]).filter((c) => c !== 'products reveal');
   const expected = withTile ? ['hero', 'trio reveal', 'tile dark building', 'steps reveal', 'band'] : ['hero', 'trio reveal', 'steps reveal', 'band'];
   assert.deepEqual(sections, expected, `${where} : sections de <main>`);
   assert.match(main, /^<section class="hero"/, `${where} : héros en tête`);
@@ -1316,7 +1354,7 @@ function assertPhotoService(html, lang, out, { id, content, focus, tile: withTil
   const pictures = html.match(/<picture>[\s\S]*?<\/picture>/g) ?? [];
   assert.equal(pictures.length, withTile ? 2 : 1, `${where} : <picture>`);
   assert.ok(hero.includes(pictures[0]), `${where} : <picture> hors du héros`);
-  assert.equal(html.match(/<img\b/g)?.length, withTile ? 3 : 2, `${where} : <img> (logo + photos)`);
+  assert.equal(html.replace(/<section class="products reveal"[\s\S]*?<\/section>/, '').match(/<img\b/g)?.length, withTile ? 3 : 2, `${where} : <img> (logo + photos)`);
   assert.equal(html.match(/\sfetchpriority="high"/g)?.length, 1, `${where} : une seule image prioritaire`);
   assertServicePicture(pictures[0], { alt: content.hero.alt[lang], sizes: 'min(1180px, calc(100vw - 44px))', land: ['2560', '1280'], portrait: ['1440', '1080'], priority: true, budgets: { land: 250_000, portrait: 120_000 } }, out, `${where} : héros`);
   // Trio : h2 puis 3 h3 (YAML), aucun lien.
@@ -1402,7 +1440,8 @@ function assertCoverService(html, lang, out, { id, service, content, focus, scri
   const quote = `${PAGE_HREFS.contact[lang]}?service=${service}`;
   const main = html.match(/<main id="content"[^>]*>([\s\S]*?)<\/main>/)?.[1] ?? '';
   // Ordre de <main> : héros sombre, trio, (tuile immeuble), étapes, bloc contact ; rien d'autre.
-  const sections = [...main.matchAll(/<section class="([^"]*)"/g)].map((m) => m[1]);
+  // Pages produits : la section des cartes produits est vérifiée par assertProducts.
+  const sections = [...main.matchAll(/<section class="([^"]*)"/g)].map((m) => m[1]).filter((c) => c !== 'products reveal');
   const expected = withTile ? ['hero', 'trio reveal', 'tile dark building', 'steps reveal', 'band'] : ['hero', 'trio reveal', 'steps reveal', 'band'];
   assert.deepEqual(sections, expected, `${where} : sections de <main>`);
   const sectionAt = (cls) => main.match(new RegExp(`<section class="${cls}"[\\s\\S]*?</section>`))?.[0] ?? '';
@@ -1441,7 +1480,7 @@ function assertCoverService(html, lang, out, { id, service, content, focus, scri
   const pictures = html.match(/<picture>[\s\S]*?<\/picture>/g) ?? [];
   assert.equal(pictures.length, withTile ? 2 : 1, `${where} : <picture>`);
   assert.ok(hero.includes(pictures[0]), `${where} : <picture> hors du héros`);
-  assert.equal(html.match(/<img\b/g)?.length, withTile ? 3 : 2, `${where} : <img> (logo + photos)`);
+  assert.equal(html.replace(/<section class="products reveal"[\s\S]*?<\/section>/, '').match(/<img\b/g)?.length, withTile ? 3 : 2, `${where} : <img> (logo + photos)`);
   assert.equal(html.match(/\sfetchpriority="high"/g)?.length, 1, `${where} : une seule image prioritaire`);
   assertServicePicture(pictures[0], { alt: content.hero.alt[lang], sizes: '100vw', land, portrait: ['1440', '1800'], priority: true, budgets: { land: 250_000, portrait: 120_000 } }, out, `${where} : héros`);
   // Correctif 3.1 (D5) : le héros Entrepreneurs (grue) sert lui aussi le recadrage téléphone crane-mast-portrait.jpg.
@@ -1699,7 +1738,8 @@ function assertAbout(html, lang, out) {
   const dict = I18N[lang];
   const main = (html.match(/<main id="content"[^>]*>([\s\S]*?)<\/main>/)?.[1] ?? '').replace(/ data-astro-cid-[\w-]+(?:="[^"]*")?/g, '');
   // Ordre de <main> : héros, chiffres, trio, bloc contact ; rien d'autre.
-  const sections = [...main.matchAll(/<section class="([^"]*)"/g)].map((m) => m[1]);
+  // Pages produits : la section des cartes produits est vérifiée par assertProducts.
+  const sections = [...main.matchAll(/<section class="([^"]*)"/g)].map((m) => m[1]).filter((c) => c !== 'products reveal');
   assert.deepEqual(sections, ['hero-typo plain', 'stats reveal', 'trio reveal', 'band'], `${where} : sections de <main>`);
   // Un seul h1, puis h2 du trio, 3 h3, h2 du bloc contact.
   assert.equal(html.match(/<h1[\s>]/g)?.length, 1, `${where} : <h1>`);
@@ -1845,7 +1885,12 @@ for (const cid of CITY_IDS) {
 // Story 5.2 : puis les pages légales actives (`accessibility`, `privacy` ; `terms` désactivée), avant les villes.
 // Story 6.1 : puis le premier article (`post:` après les villes). Story 6.2 : `blog` active (pages fixes triées par id), sans
 // `blog-page:` (1 article).
-const SITEMAP_IDS = ['about', 'areas', 'blog', 'cameras', 'contact', 'contractors', 'home', 'intercom', 'networks', 'smart-home', 'smoke-detectors', ...LEGAL_IDS, ...CITY_IDS.map((cid) => `city:${cid}`), POST_ID];
+// Pages produits : après les pages fixes, par ordre puis par id (registre).
+const PRODUCT_IDS = [...PRODUCTS].sort((a, b) => a.data.order - b.data.order || (a.id < b.id ? -1 : 1)).map((p) => `product:${p.id}`);
+for (const p of PRODUCTS) {
+  PAGE_HREFS[`product:${p.id}`] = Object.fromEntries(LANGS.map((lang) => [lang, `/${productFile(p, lang).replace(/index\.html$/, '')}`.split('/').map((seg) => encodeURIComponent(seg)).join('/')]));
+}
+const SITEMAP_IDS = ['about', 'areas', 'blog', 'cameras', 'contact', 'contractors', 'home', 'intercom', 'networks', 'smart-home', 'smoke-detectors', ...PRODUCT_IDS, ...LEGAL_IDS, ...CITY_IDS.map((cid) => `city:${cid}`), POST_ID];
 // Story 6.1 : <title> = meta.title du .md, description = meta.description, lus dans src/content/posts/.
 const postFrontmatter = (lang) => parse(readFileSync(join(ROOT, 'src/content/posts/how-many-smoke-detectors', `${lang}.md`), 'utf8').split(/^---$/m)[1]);
 META[POST_ID] = {
@@ -1901,7 +1946,7 @@ function assertSeoFiles(out, site, indexable) {
   const xml = readFileSync(join(out, 'sitemap.xml'), 'utf8');
   const blocks = [...xml.matchAll(/<url>([\s\S]*?)<\/url>/g)].map((m) => m[1]);
   assert.equal(blocks.length, SITEMAP_IDS.length * 4, 'sitemap : <url>');
-  assert.equal(blocks.length, 116, 'sitemap : <url> (11 pages fixes, 2 pages légales, 15 villes et 1 article × 4 langues)');
+  assert.equal(blocks.length, 116 + PRODUCT_IDS.length * 4, 'sitemap : <url> (11 pages fixes, les produits, 2 pages légales, 15 villes et 1 article × 4 langues)');
   assert.ok(LANGS.every((l) => xml.includes(`/${encodeURIComponent(BLOG_SLUGS[l])}/<`)), 'sitemap : index du blog');
   for (const lid of LEGAL_IDS) assert.ok(LANGS.every((l) => xml.includes(`/${encodeURIComponent(LEGAL_SLUGS[lid][l])}/<`)), `sitemap : ${lid}`);
   assert.ok(LANGS.every((l) => xml.includes(`/${encodeURIComponent(AREAS_SLUGS[l])}/<`)), 'sitemap : Zones');
@@ -1925,7 +1970,8 @@ function assertSeoFiles(out, site, indexable) {
 
 test('build de branche : 4 accueils complets (tuiles de services) + 4 Contact + 4 Caméras + 4 Détecteurs + 4 Maison connectée + 4 Réseaux + 4 Interphone + 4 Entrepreneurs + 4 Zones + 4 À propos + 8 pages légales + 60 pages ville + 4 index du blog + 4 articles + 4 path-probe, layout Base (lang/dir, #rs-data, évitement, repères, hreflang relatifs), _redirects', { timeout: 120_000 }, () => {
   const out = build({});
-  assert.deepEqual(indexFiles(out), [...HOMES, ...CONTACTS, ...CAMERAS, ...SMOKES, ...SMARTS, ...NETWORKS, ...INTERCOMS, ...CONTRACTORS, ...AREAS_FILES, ...ABOUT_FILES, ...LEGAL_FILES, ...CITY_FILES, ...BLOG_FILES, ...POST_FILES, ...PROBES].sort());
+  assert.deepEqual(indexFiles(out), [...HOMES, ...CONTACTS, ...CAMERAS, ...SMOKES, ...SMARTS, ...NETWORKS, ...INTERCOMS, ...CONTRACTORS, ...AREAS_FILES, ...ABOUT_FILES, ...LEGAL_FILES, ...CITY_FILES, ...BLOG_FILES, ...POST_FILES, ...PROBES, ...PRODUCT_FILES].sort());
+  assertProducts(out);
   assert.ok(existsSync(join(out, '_redirects')), '_redirects absent');
   assert.ok(!existsSync(join(out, 'index.html')), 'index.html racine présent');
   assert.deepEqual(Object.keys(titles), LANGS);
@@ -2029,7 +2075,7 @@ test('build de branche : 4 accueils complets (tuiles de services) + 4 Contact + 
 
 test('build de main indexable avec SITE_URL : 4 accueils complets (tuiles de services) + 4 Contact + 4 Caméras + 4 Détecteurs + 4 Maison connectée + 4 Réseaux + 4 Interphone + 4 Entrepreneurs + 4 Zones + 4 À propos + 8 pages légales + 60 pages ville + 4 index du blog + 4 articles, sans noindex, canonique et hreflang absolus', { timeout: 120_000 }, () => {
   const out = build({ WORKERS_CI_BRANCH: 'main', DOMAIN_LIVE: 'true', SITE_URL: 'https://rs.example' });
-  assert.deepEqual(indexFiles(out), [...HOMES, ...CONTACTS, ...CAMERAS, ...SMOKES, ...SMARTS, ...NETWORKS, ...INTERCOMS, ...CONTRACTORS, ...AREAS_FILES, ...ABOUT_FILES, ...LEGAL_FILES, ...CITY_FILES, ...BLOG_FILES, ...POST_FILES].sort());
+  assert.deepEqual(indexFiles(out), [...HOMES, ...CONTACTS, ...CAMERAS, ...SMOKES, ...SMARTS, ...NETWORKS, ...INTERCOMS, ...CONTRACTORS, ...AREAS_FILES, ...ABOUT_FILES, ...LEGAL_FILES, ...CITY_FILES, ...BLOG_FILES, ...POST_FILES, ...PRODUCT_FILES].sort());
   assert.ok(!existsSync(join(out, 'index.html')));
   for (const lang of LANGS) {
     const html = readFileSync(join(out, lang, 'index.html'), 'utf8');

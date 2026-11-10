@@ -1,0 +1,134 @@
+# Caméra bullet extérieure. Modèle 3D : scripts/render/models/bullet.js (forme inspirée des bullets Dahua, sans logo).
+# Textes hébreux validés par Mike sur la démo du 2026-11-10 ; « רואה רחוק. גם בלילה. » et « גוף אטום » à confirmer
+# par RS SYSTEM. Traductions en/ru/fr réécrites par l'agent : relecture humaine recommandée.
+# `scene.inside.parts` : dans l'ordre des ancres du modèle (corps, visière, vitre, éclairage, objectif, capteur, bras).
+slugs:
+  he: 'מצלמה-חיצונית'
+  en: 'outdoor-camera'
+  ru: 'уличная-камера'
+  fr: 'camera-exterieure'
+enabled: true
+parent: cameras
+service: cameras
+order: 1
+name:
+  he: 'מצלמה חיצונית'
+  en: 'Outdoor camera'
+  ru: 'Уличная камера'
+  fr: 'Caméra extérieure'
+meta:
+  title:
+    he: 'מצלמה חיצונית · RS SYSTEM'
+    en: 'Outdoor camera · RS SYSTEM'
+    ru: 'Уличная камера · RS SYSTEM'
+    fr: 'Caméra extérieure · RS SYSTEM'
+  description:
+    he: 'מצלמת אבטחה חיצונית שרואה רחוק, גם בלילה. התקנה מסודרת מבאר שבע ועד ירושלים.'
+    en: 'An outdoor security camera that sees far, even at night. Installed properly, from Beer Sheva to Jerusalem.'
+    ru: 'Уличная камера видеонаблюдения, которая видит далеко, даже ночью. Аккуратный монтаж от Беэр-Шевы до Иерусалима.'
+    fr: 'Une caméra de surveillance extérieure qui voit loin, même la nuit. Bien installée, de Beer-Sheva à Jérusalem.'
+scene:
+  eyebrow:
+    he: 'מצלמות אבטחה'
+    en: 'Security cameras'
+    ru: 'Камеры видеонаблюдения'
+    fr: 'Caméras de surveillance'
+  title:
+    he: 'מצלמה חיצונית.'
+    en: 'Outdoor camera.'
+    ru: 'Уличная камера.'
+    fr: 'Caméra extérieure.'
+  feature:
+    title:
+      he: 'רואה רחוק. גם בלילה.'
+      en: 'Sees far. Even at night.'
+      ru: 'Видит далеко. Даже ночью.'
+      fr: 'Voit loin. Même la nuit.'
+    text:
+      he: 'חצר, חניה, כניסה. ביום ובחושך.'
+      en: 'Yard, parking, entrance. By day and in the dark.'
+      ru: 'Двор, парковка, вход. Днём и в темноте.'
+      fr: 'Cour, parking, entrée. De jour comme dans le noir.'
+  inside:
+    title:
+      he: 'מה יש בפנים'
+      en: 'What’s inside'
+      ru: 'Что внутри'
+      fr: 'Ce qu’il y a dedans'
+    parts:
+      - he: 'גוף אטום'
+        en: 'Sealed housing'
+        ru: 'Герметичный корпус'
+        fr: 'Boîtier étanche'
+      - he: 'מגן שמש'
+        en: 'Sun shield'
+        ru: 'Козырёк'
+        fr: 'Pare-soleil'
+      - he: 'זכוכית קדמית'
+        en: 'Front glass'
+        ru: 'Защитное стекло'
+        fr: 'Vitre avant'
+      - he: 'תאורת לילה'
+        en: 'Night lighting'
+        ru: 'Ночная подсветка'
+        fr: 'Éclairage de nuit'
+      - he: 'עדשה'
+        en: 'Lens'
+        ru: 'Объектив'
+        fr: 'Objectif'
+      - he: 'חיישן תמונה'
+        en: 'Image sensor'
+        ru: 'Матрица'
+        fr: 'Capteur d’image'
+      - he: 'זרוע לקיר'
+        en: 'Wall arm'
+        ru: 'Кронштейн'
+        fr: 'Bras mural'
+  outro:
+    title:
+      he: 'מותקנת כמו שצריך.'
+      en: 'Installed properly.'
+      ru: 'Установлена как надо.'
+      fr: 'Bien installée.'
+    text:
+      he: 'מגיעים, מתקינים, מחברים לטלפון.'
+      en: 'We come, install it and connect it to your phone.'
+      ru: 'Приезжаем, устанавливаем, подключаем к телефону.'
+      fr: 'On vient, on l’installe, on la relie à votre téléphone.'
+uses:
+  title:
+    he: 'איפה מתקינים אותה?'
+    en: 'Where does it go?'
+    ru: 'Где её ставят?'
+    fr: 'Où l’installer ?'
+  items:
+    - title:
+        he: 'חצר וגינה'
+        en: 'Yard and garden'
+        ru: 'Двор и сад'
+        fr: 'Cour et jardin'
+      text:
+        he: 'כל השטח בפריים אחד.'
+        en: 'The whole area in one frame.'
+        ru: 'Вся территория в одном кадре.'
+        fr: 'Tout le terrain dans une seule image.'
+    - title:
+        he: 'חניה'
+        en: 'Parking'
+        ru: 'Парковка'
+        fr: 'Parking'
+      text:
+        he: 'רואים מי נכנס ויוצא.'
+        en: 'See who comes and goes.'
+        ru: 'Видно, кто въезжает и выезжает.'
+        fr: 'Vous voyez qui entre et qui sort.'
+    - title:
+        he: 'כניסה לבית'
+        en: 'Front door'
+        ru: 'Вход в дом'
+        fr: 'Entrée de la maison'
+      text:
+        he: 'מי בדלת, גם בלילה.'
+        en: 'Who is at the door, even at night.'
+        ru: 'Кто у двери, даже ночью.'
+        fr: 'Qui est à la porte, même la nuit.'

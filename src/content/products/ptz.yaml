@@ -1,0 +1,133 @@
+# Caméra motorisée PTZ (speed dome). Modèle 3D : scripts/render/models/ptz.js (forme inspirée des speed domes Dahua,
+# sans logo). Textes écrits par l'agent : à confirmer par RS SYSTEM. Traductions en/ru/fr : relecture humaine recommandée.
+# `scene.inside.parts` : dans l'ordre des ancres du modèle (bras, boîtier moteur, tête, bulle, objectif, LED, carte).
+slugs:
+  he: 'מצלמה-ממונעת'
+  en: 'ptz-camera'
+  ru: 'поворотная-камера'
+  fr: 'camera-motorisee'
+enabled: true
+parent: cameras
+service: cameras
+order: 3
+name:
+  he: 'מצלמה ממונעת'
+  en: 'PTZ camera'
+  ru: 'Поворотная камера'
+  fr: 'Caméra motorisée'
+meta:
+  title:
+    he: 'מצלמה ממונעת · RS SYSTEM'
+    en: 'PTZ camera · RS SYSTEM'
+    ru: 'Поворотная камера · RS SYSTEM'
+    fr: 'Caméra motorisée · RS SYSTEM'
+  description:
+    he: 'מצלמה ממונעת שמסתובבת ומתקרבת מהטלפון. לשטחים גדולים, חניונים ואתרים. מבאר שבע ועד ירושלים.'
+    en: 'A motorised camera you turn and zoom from your phone. For large grounds, car parks and sites. From Beer Sheva to Jerusalem.'
+    ru: 'Поворотная камера с зумом, которой управляют с телефона. Для больших территорий, парковок и объектов. От Беэр-Шевы до Иерусалима.'
+    fr: 'Une caméra motorisée qui tourne et zoome depuis votre téléphone. Pour les grands terrains, parkings et chantiers. De Beer-Sheva à Jérusalem.'
+scene:
+  eyebrow:
+    he: 'מצלמות אבטחה'
+    en: 'Security cameras'
+    ru: 'Камеры видеонаблюдения'
+    fr: 'Caméras de surveillance'
+  title:
+    he: 'מצלמה ממונעת.'
+    en: 'PTZ camera.'
+    ru: 'Поворотная камера.'
+    fr: 'Caméra motorisée.'
+  feature:
+    title:
+      he: 'מסתובבת. מתקרבת. מהטלפון.'
+      en: 'It turns. It zooms. From your phone.'
+      ru: 'Поворачивается. Приближает. С телефона.'
+      fr: 'Elle tourne. Elle zoome. Depuis votre téléphone.'
+    text:
+      he: 'מצלמה אחת שמכסה שטח גדול, ביום ובלילה.'
+      en: 'One camera covering a large area, day and night.'
+      ru: 'Одна камера на большую территорию, днём и ночью.'
+      fr: 'Une seule caméra pour un grand terrain, de jour comme de nuit.'
+  inside:
+    title:
+      he: 'מה יש בפנים'
+      en: 'What’s inside'
+      ru: 'Что внутри'
+      fr: 'Ce qu’il y a dedans'
+    parts:
+      - he: 'זרוע קיר'
+        en: 'Wall bracket'
+        ru: 'Настенный кронштейн'
+        fr: 'Bras mural'
+      - he: 'בית מנוע'
+        en: 'Motor housing'
+        ru: 'Корпус с мотором'
+        fr: 'Boîtier moteur'
+      - he: 'ראש מסתובב'
+        en: 'Rotating head'
+        ru: 'Поворотная головка'
+        fr: 'Tête rotative'
+      - he: 'כיפה כהה'
+        en: 'Smoked dome'
+        ru: 'Тонированный купол'
+        fr: 'Bulle fumée'
+      - he: 'עדשת זום'
+        en: 'Zoom lens'
+        ru: 'Зум-объектив'
+        fr: 'Objectif zoom'
+      - he: 'תאורת לילה'
+        en: 'Night lighting'
+        ru: 'Ночная подсветка'
+        fr: 'Éclairage de nuit'
+      - he: 'כרטיס אלקטרוני'
+        en: 'Circuit board'
+        ru: 'Электронная плата'
+        fr: 'Carte électronique'
+  outro:
+    title:
+      he: 'מותקנת כמו שצריך.'
+      en: 'Installed properly.'
+      ru: 'Установлена как надо.'
+      fr: 'Bien installée.'
+    text:
+      he: 'מתקינים, מכוונים ומלמדים אתכם לשלוט בה מהטלפון.'
+      en: 'We install it, aim it and show you how to control it from your phone.'
+      ru: 'Устанавливаем, настраиваем и показываем, как управлять с телефона.'
+      fr: 'On l’installe, on la règle et on vous montre comment la piloter depuis le téléphone.'
+uses:
+  title:
+    he: 'איפה מתקינים אותה?'
+    en: 'Where does it go?'
+    ru: 'Где её ставят?'
+    fr: 'Où l’installer ?'
+  items:
+    - title:
+        he: 'חניון'
+        en: 'Car park'
+        ru: 'Парковка'
+        fr: 'Parking'
+      text:
+        he: 'כל החניון, ומתקרבים ללוחית רישוי.'
+        en: 'The whole car park, and zoom in on a number plate.'
+        ru: 'Вся парковка, с приближением до номера машины.'
+        fr: 'Tout le parking, avec zoom sur une plaque.'
+    - title:
+        he: 'מגרש או חצר גדולה'
+        en: 'Large yard or grounds'
+        ru: 'Большой двор или участок'
+        fr: 'Grande cour ou terrain'
+      text:
+        he: 'מצלמה אחת במקום כמה.'
+        en: 'One camera instead of several.'
+        ru: 'Одна камера вместо нескольких.'
+        fr: 'Une caméra au lieu de plusieurs.'
+    - title:
+        he: 'אתר בנייה'
+        en: 'Building site'
+        ru: 'Стройплощадка'
+        fr: 'Chantier'
+      text:
+        he: 'רואים את כל האתר מרחוק.'
+        en: 'See the whole site from a distance.'
+        ru: 'Весь объект видно издалека.'
+        fr: 'Tout le chantier, vu à distance.'

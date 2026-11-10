@@ -9,6 +9,8 @@ export interface PageContext {
   lang: Lang;
   service?: string;
   city?: string;
+  /** Pages produits : nom hébreu du produit, mis dans le message WhatsApp à la place du service. */
+  product?: string;
   navSection?: string;
   indexable: boolean;
 }
@@ -18,6 +20,7 @@ export interface PageContextInput {
   lang: string;
   service?: string | undefined;
   city?: string | undefined;
+  product?: string | undefined;
   navSection?: string | undefined;
 }
 
@@ -26,12 +29,13 @@ export function createPageContext(
   input: PageContextInput,
   { indexable = INDEXABLE }: { indexable?: boolean } = {},
 ): PageContext {
-  const { id, lang, service, city, navSection } = input;
+  const { id, lang, service, city, product, navSection } = input;
   if (typeof id !== 'string' || id === '') throw new Error('page-context : id vide');
   if (!isLang(lang)) throw new Error(`page-context : langue inconnue « ${String(lang)} »`);
   const ctx: PageContext = { id, lang, indexable };
   if (service !== undefined) ctx.service = service;
   if (city !== undefined) ctx.city = city;
+  if (product !== undefined) ctx.product = product;
   if (navSection !== undefined) ctx.navSection = navSection;
   return ctx;
 }

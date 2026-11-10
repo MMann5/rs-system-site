@@ -114,5 +114,8 @@
   "blog.pagination.label": "Страницы блога",
   "blog.pagination.next": "Следующая страница",
   "blog.pagination.page": "Страница {n}",
-  "blog.page-title": "Блог, страница {n} · RS SYSTEM"
+  "blog.page-title": "Блог, страница {n} · RS SYSTEM",
+  "product.quote": "Узнать цену в WhatsApp",
+  "products.title": "Что мы устанавливаем",
+  "products.more": "Другие устройства"
 }

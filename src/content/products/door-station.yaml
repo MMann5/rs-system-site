@@ -1,0 +1,133 @@
+# Platine de rue d’interphone vidéo. Modèle 3D : scripts/render/models/door-station.js (forme inspirée des produits Dahua / Hikvision, sans logo).
+# Textes écrits par l'agent : à confirmer par RS SYSTEM. Traductions en/ru/fr : relecture humaine recommandée.
+# `scene.inside.parts` : dans l'ordre des ancres du modèle.
+slugs:
+  he: 'עמדת-כניסה'
+  en: 'door-station'
+  ru: 'вызывная-панель'
+  fr: 'platine-de-rue'
+enabled: true
+parent: intercom
+service: intercom
+order: 1
+name:
+  he: 'עמדת אינטרקום'
+  en: 'Door station'
+  ru: 'Вызывная панель'
+  fr: 'Platine de rue'
+meta:
+  title:
+    he: 'עמדת אינטרקום · RS SYSTEM'
+    en: 'Door station · RS SYSTEM'
+    ru: 'Вызывная панель · RS SYSTEM'
+    fr: 'Platine de rue · RS SYSTEM'
+  description:
+    he: 'עמדת אינטרקום עם מצלמה לכניסה לבית או לבניין. רואים מי בדלת ופותחים מהטלפון. מבאר שבע ועד ירושלים.'
+    en: 'A video intercom door station for a house or building entrance. See who is at the door and open from your phone. From Beer Sheva to Jerusalem.'
+    ru: 'Вызывная панель видеодомофона для дома или подъезда. Видно, кто у двери, открываете с телефона. От Беэр-Шевы до Иерусалима.'
+    fr: 'Une platine d’interphone vidéo pour l’entrée d’une maison ou d’un immeuble. Vous voyez qui sonne et ouvrez depuis le téléphone. De Beer-Sheva à Jérusalem.'
+scene:
+  eyebrow:
+    he: 'אינטרקום'
+    en: 'Intercom'
+    ru: 'Домофон'
+    fr: 'Interphone'
+  title:
+    he: 'עמדת אינטרקום.'
+    en: 'Door station.'
+    ru: 'Вызывная панель.'
+    fr: 'Platine de rue.'
+  feature:
+    title:
+      he: 'מצלצלים. אתם רואים.'
+      en: 'They ring. You see.'
+      ru: 'Звонят. Вы видите.'
+      fr: 'On sonne. Vous voyez.'
+    text:
+      he: 'מצלמה עם ראיית לילה, ותשובה מהטלפון.'
+      en: 'A camera with night vision, and you answer from your phone.'
+      ru: 'Камера с ночным режимом, ответ с телефона.'
+      fr: 'Une caméra qui voit la nuit, et vous répondez depuis le téléphone.'
+  inside:
+    title:
+      he: 'מה יש בפנים'
+      en: 'What’s inside'
+      ru: 'Что внутри'
+      fr: 'Ce qu’il y a dedans'
+    parts:
+      - he: 'סוכך גשם'
+        en: 'Rain hood'
+        ru: 'Козырёк'
+        fr: 'Auvent'
+      - he: 'חזית'
+        en: 'Front panel'
+        ru: 'Лицевая панель'
+        fr: 'Façade'
+      - he: 'מצלמה'
+        en: 'Camera'
+        ru: 'Камера'
+        fr: 'Caméra'
+      - he: 'רמקול'
+        en: 'Speaker'
+        ru: 'Динамик'
+        fr: 'Haut-parleur'
+      - he: 'לחצן חיוג'
+        en: 'Call button'
+        ru: 'Кнопка вызова'
+        fr: 'Bouton d’appel'
+      - he: 'כרטיס אלקטרוני'
+        en: 'Circuit board'
+        ru: 'Электронная плата'
+        fr: 'Carte électronique'
+      - he: 'קופסת התקנה'
+        en: 'Wall box'
+        ru: 'Монтажная коробка'
+        fr: 'Boîtier mural'
+  outro:
+    title:
+      he: 'מותקנת כמו שצריך.'
+      en: 'Installed properly.'
+      ru: 'Установлена как надо.'
+      fr: 'Bien installée.'
+    text:
+      he: 'מתקינים, מחברים למסך ולטלפון, ובודקים שהכול עובד.'
+      en: 'We install it, connect it to the screen and your phone, and check everything works.'
+      ru: 'Устанавливаем, подключаем к монитору и телефону, проверяем работу.'
+      fr: 'On l’installe, on la relie à l’écran et au téléphone, et on vérifie que tout marche.'
+uses:
+  title:
+    he: 'איפה מתקינים אותה?'
+    en: 'Where does it go?'
+    ru: 'Где её ставят?'
+    fr: 'Où l’installer ?'
+  items:
+    - title:
+        he: 'בית פרטי'
+        en: 'Private house'
+        ru: 'Частный дом'
+        fr: 'Maison'
+      text:
+        he: 'בשער או בדלת הכניסה.'
+        en: 'At the gate or the front door.'
+        ru: 'У калитки или входной двери.'
+        fr: 'Au portail ou à la porte d’entrée.'
+    - title:
+        he: 'בניין'
+        en: 'Building'
+        ru: 'Многоквартирный дом'
+        fr: 'Immeuble'
+      text:
+        he: 'בכניסה, עם חיוג לכל דירה.'
+        en: 'At the entrance, calling each flat.'
+        ru: 'У входа, с вызовом каждой квартиры.'
+        fr: 'À l’entrée, avec appel de chaque appartement.'
+    - title:
+        he: 'משרד'
+        en: 'Office'
+        ru: 'Офис'
+        fr: 'Bureau'
+      text:
+        he: 'רואים מי מגיע לפני שפותחים.'
+        en: 'See who is coming before you open.'
+        ru: 'Видно, кто пришёл, до того как открыть.'
+        fr: 'Vous voyez qui arrive avant d’ouvrir.'

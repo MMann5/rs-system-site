@@ -1,0 +1,52 @@
+---
+// Pages produits (décision de Mike du 2026-11-10) : scène 3D qui s'éclate au défilement, puis « où l'installer »
+// (trio), les autres produits de la même page service, les étapes et le bloc contact. Contexte de page : service du
+// produit (lien Contact `?service=`) et nom hébreu du produit (message WhatsApp « …הצעת מחיר ל{produit}. »).
+import ContactBand from '../components/ContactBand.astro';
+import ProductCards from '../components/ProductCards.astro';
+import ProductScene from '../components/ProductScene.astro';
+import Steps from '../components/Steps.astro';
+import Trio from '../components/Trio.astro';
+import Base from '../layouts/Base.astro';
+import { waHref } from '../lib/contact/core';
+import { cityLabels, serviceLabels } from '../lib/contact/labels';
+import { pageWaInput } from '../lib/contact/table';
+import { t } from '../lib/i18n';
+import type { Lang } from '../lib/langs';
+import { createPageContext } from '../lib/page-context';
+import { product, PRODUCT_ID_PREFIX, sceneOf } from '../lib/products';
+import { cardsFor } from '../lib/products/cards';
+
+interface Props {
+  id: string;
+  lang: Lang;
+}
+
+const { id, lang } = Astro.props;
+const { id: productId, data } = product(id.slice(PRODUCT_ID_PREFIX.length));
+const { scene, frames } = sceneOf(productId);
+const ctx = createPageContext({ id, lang, service: data.service, product: data.name.he, navSection: data.parent });
+const quote = { href: waHref(pageWaInput(ctx, serviceLabels('he'), cityLabels('he'))), label: t(lang, 'product.quote') };
+const others = data.parent === undefined ? [] : cardsFor(data.parent, lang).filter((card) => card.id !== productId);
+const s = data.scene;
+---
+<Base ctx={ctx} title={data.meta.title[lang]} description={data.meta.description[lang]}>
+  <ProductScene
+    eyebrow={s.eyebrow[lang]}
+    title={s.title[lang]}
+    feature={{ title: s.feature.title[lang], text: s.feature.text[lang] }}
+    inside={{ title: s.inside.title[lang], parts: s.inside.parts.map((part) => part[lang]) }}
+    outro={{ title: s.outro.title[lang], text: s.outro.text[lang] }}
+    scene={scene}
+    frames={frames}
+    quote={quote}
+  />
+  <Trio
+    id="uses-title"
+    title={data.uses.title[lang]}
+    items={data.uses.items.map((item) => ({ title: item.title[lang], text: item.text[lang] }))}
+  />
+  {others.length > 0 && <ProductCards id="products-title" title={t(lang, 'products.more')} items={others} />}
+  <Steps lang={lang} />
+  <ContactBand ctx={ctx} />
+</Base>

@@ -10,6 +10,9 @@ import { join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const COMPONENT = 'src/components/ResponsivePhoto.astro';
+// Pages produits : les images de scène (src/assets/frames/, rendus 3D de scripts/render/render.mjs, pas des photos)
+// sont affichées telles quelles par ces deux composants, qui n'ont droit qu'à elles (aucun import de assets/photos/).
+const FRAME_COMPONENTS = new Set(['src/components/ProductScene.astro', 'src/components/ProductCards.astro']);
 const RASTER = /\.(?:jpe?g|png|webp|avif|gif|heic|heif|tiff?|bmp)$/i;
 const PHOTO = /\.(?:jpe?g|png|gif|webp|avif|heic|heif)$/i;
 const ICON = /^(?:rs-icon-\d+|favicon[\w-]*|apple-touch-icon[\w-]*)\.png$/i;
@@ -47,6 +50,10 @@ export function findPhotoViolations(root) {
       if (PHOTO.test(file) && !file.startsWith('src/assets/')) found.push({ file, reason: 'photo hors de src/assets/' });
       if (!TEXT.test(file) || file === COMPONENT) continue;
       const text = readFileSync(path, 'utf8');
+      if (FRAME_COMPONENTS.has(file)) {
+        if (/assets\/photos\//.test(text)) found.push({ file, reason: 'composant de scène produit : rendus 3D seulement, pas de photo' });
+        continue;
+      }
       if (IMG_TAG.test(text)) found.push({ file, reason: `<img> brut (passer par ${COMPONENT})` });
       if (PHOTO_IMPORT.test(text) && IMAGE_API.test(text)) found.push({ file, reason: `photo rendue par <Image>, <Picture> ou getImage() (passer par ${COMPONENT})` });
     }

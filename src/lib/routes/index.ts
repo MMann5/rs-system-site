@@ -1,4 +1,4 @@
-// AD-2 : registre de routes unique, construit une fois au chargement du module.
+// AD-2 : registre de routes unique (pages produits : `product:{id}` sous leur page service, après les pages fixes), construit une fois au chargement du module.
 // Sources : pages fixes (story 1.3), puis pages légales (story 5.2 : src/content/legal/{id}/meta.yaml), puis villes
 // (story 4.1 : `city:{id}` sous `areas`, actives même tant que `areas` est désactivée — `inheritActive: false`), puis
 // articles (story 6.1 : `post:{id}` sous `blog`, du plus récent au plus ancien, actifs même tant que `blog` est
@@ -11,6 +11,8 @@ import { activePosts, BLOG_ID, BLOG_PAGE_SOURCES, blogActive, POST_SOURCES } fro
 import { IS_MAIN_BRANCH } from '../env.ts';
 import { LEGAL_SOURCES } from '../legal/index.ts';
 import { PAGES } from '../pages.ts';
+import { productSources } from '../products/core.ts';
+import { PRODUCTS } from '../products/index.ts';
 import { buildRegistry, type RouteSource } from './core.ts';
 
 export type { RouteEntry, UrlParams } from './core.ts';
@@ -23,6 +25,7 @@ const sources: RouteSource[] = [
     enabled: id === BLOG_ID ? blogActive(data.enabled, activePosts.length) : data.enabled,
     previewOnly: data.previewOnly,
   })),
+  ...productSources(PRODUCTS),
   ...LEGAL_SOURCES,
   ...citySources(CITIES),
   ...POST_SOURCES,

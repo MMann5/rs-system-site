@@ -68,10 +68,12 @@ export function buildCityTable(cities: readonly { id: string; name: Record<Lang,
  * pour `unsure` ou une page sans service ; ville de la page (story 4.1) en hébreu, lue dans `cities`.
  * Lève sur un code de service ou de ville inconnu : mieux vaut un build en échec qu'un message faux.
  */
-export function pageWaInput(ctx: Pick<PageContext, 'service' | 'city'>, table: ServiceTable, cities: LabelTable): WaInput {
+export function pageWaInput(ctx: Pick<PageContext, 'service' | 'city' | 'product'>, table: ServiceTable, cities: LabelTable): WaInput {
   const input: WaInput = {};
-  const { service, city } = ctx;
-  if (service !== undefined && service !== 'unsure') {
+  const { service, city, product } = ctx;
+  // Pages produits : le nom hébreu du produit remplace le libellé du service (« …הצעת מחיר למצלמה חיצונית. »).
+  if (product !== undefined) input.serviceHe = product;
+  else if (service !== undefined && service !== 'unsure') {
     if (!Object.hasOwn(table, service)) throw new Error(`contact : service inconnu « ${service} »`);
     input.serviceHe = table[service as ServiceCode].he;
   }
