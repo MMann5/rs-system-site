@@ -608,4 +608,18 @@
   /* EXPERIENCE.md › Mouvement › Survol de carte : « Image scale(1.04), transition 0,6 s » */
   --card-zoom: 1.04;
   --card-zoom-duration: 0.6s;
+  /* — Story 6.2 : index du blog et carte vedette (canvas Blog.dc.html, DESIGN.md › Carte de blog) — */
+  /* Canvas Blog.dc.html › main : « gap: 48px » entre h1, vedette et grille */
+  --blog-index-gap: 48px;
+  /* DESIGN.md › Carte vedette : « image 440px » ; canvas : texte « padding: 48px; gap: 14px » */
+  --featured-media-height: 440px;
+  --featured-text-pad: 48px;
+  --featured-text-gap: 14px;
+  /* Story 6.2 : padding du texte de la vedette empilée sous 700px (= --article-box-pad-mobile), aucun débordement à 320px */
+  --featured-text-pad-mobile: 32px;
+  /* Canvas Blog.dc.html › chapeau de la vedette : « font-size: 17px; line-height: 1.6 » */
+  --type-featured-lede-size: 17px;
+  --type-featured-lede-leading: 1.6;
+  /* Story 6.2 : espace entre les numéros de page de la pagination (= --space-2) */
+  --pagination-gap: 8px;
 }

@@ -39,3 +39,9 @@ export const ARTICLE_PHOTO_SIZES = FRAMED_PHOTO_SIZES;
  */
 export const BLOG_CARD_PHOTO_SIZES =
   '(width >= 992px) min(377px, calc((100vw - 92px) / 3)), (width >= 668px) calc((100vw - 68px) / 2), calc(100vw - 44px)';
+/**
+ * Story 6.2 : carte vedette de l'index. Dès 960px, image et texte côte à côte en deux colonnes égales du conteneur
+ * (1180px au plus, entre les --page-gutter) ; en dessous, empilée sur toute la largeur du conteneur (l'écran moins les
+ * deux --page-gutter).
+ */
+export const FEATURED_PHOTO_SIZES = '(width >= 960px) min(590px, calc((100vw - 44px) / 2)), calc(100vw - 44px)';

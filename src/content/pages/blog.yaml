@@ -1,6 +1,7 @@
-# Blog, index des articles (story 6.1, AD-2, AD-14) : entrée créée désactivée. Elle donne aux articles (`post:{id}`) le
-# premier segment de leur chemin, mais n'est ni générée, ni liée, ni au sitemap ; « בלוג » reste absent du header, du
-# menu et du footer, et le fil d'Ariane des articles affiche « blog » sans lien. La story 6.2 l'active (modèle Blog).
+# Blog, index des articles (stories 6.1, 6.2, AD-2, AD-14). `enabled` est un interrupteur : l'activité réelle de l'entrée
+# dépend aussi des articles (FR11) — `blog` n'est actif, généré, lié (« בלוג » du header, du menu et du footer, fil
+# d'Ariane des articles) et au sitemap que si `enabled: true` ET au moins 1 article actif (src/lib/blog/core.ts › blogActive,
+# même calcul au build et au lint). Modèle Blog ; pages 2, 3… en `blog-page:{n}`.
 # Slugs : décisions de l'epic 6 (un segment NFC). Titre « Blog · RS SYSTEM » traduit (EXPERIENCE.md › Référencement) ;
 # description = une phrase. Traductions en/ru/fr rédigées par l'agent : relecture humaine recommandée.
 slugs:
@@ -8,7 +9,7 @@ slugs:
   en: 'blog'
   ru: 'блог'
   fr: 'blog'
-enabled: false
+enabled: true
 meta:
   title:
     he: 'בלוג · RS SYSTEM'

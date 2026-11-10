@@ -110,5 +110,9 @@
   "post.breadcrumb-label": "Навигационная цепочка",
   "post.reading-time": "{n} мин чтения",
   "post.contact.title": "Хотите, чтобы техник проверил ваш дом?",
-  "post.related.title": "Ещё из блога"
+  "post.related.title": "Ещё из блога",
+  "blog.pagination.label": "Страницы блога",
+  "blog.pagination.next": "Следующая страница",
+  "blog.pagination.page": "Страница {n}",
+  "blog.page-title": "Блог, страница {n} · RS SYSTEM"
 }

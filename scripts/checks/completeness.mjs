@@ -15,13 +15,15 @@
 //   (article actif avec ses 4 .md, .md rangé sous un meta.yaml, `alt` ⇔ image, image de src/assets/blog/ présente, règle
 //   image / catégorie D1, corps non vide) et entrent au registre après les villes (`post:{id}` sous `blog`,
 //   `inheritActive: false`), comme src/lib/routes/index.ts. Dossier absent = aucun article.
+// - story 6.2 : `blog` n'est actif que si blog.yaml l'autorise ET qu'au moins 1 article est actif (blogActive), et les pages
+//   `blog-page:{n}` (n ≥ 2, blogPageSources des actifs) entrent au registre après les articles, comme src/lib/routes/index.ts.
 // Les messages de buildDictionary, buildRegistry, buildAreas, buildReviews, buildLegal et buildPosts sont repris tels quels.
 // Usage : node scripts/checks/completeness.mjs [racine]  (défaut : racine du dépôt).
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse } from 'yaml';
 import { buildAreas, buildReviews, citySources } from '../../src/lib/areas/core.ts';
-import { BLOG_IMAGES_DIR, buildPosts, POSTS_DIR, postSources } from '../../src/lib/blog/core.ts';
+import { BLOG_ID, BLOG_IMAGES_DIR, blogActive, blogPageSources, buildPosts, POSTS_DIR, postSources } from '../../src/lib/blog/core.ts';
 import { buildDictionary } from '../../src/lib/i18n/core.ts';
 import { buildLegal, LEGAL_DIR } from '../../src/lib/legal/core.ts';
 import { LANGS } from '../../src/lib/langs.ts';
@@ -143,7 +145,7 @@ function checkLegal(root, failures) {
 /** Articles pour le registre ; schémas des meta.yaml et frontmatters, puis complétude (buildPosts) vérifiés au passage. */
 function checkPosts(root, failures) {
   const abs = join(root, POSTS_DIR);
-  if (!existsSync(abs)) return [];
+  if (!existsSync(abs)) return { sources: [], activeCount: 0 };
   const imagesDir = join(root, BLOG_IMAGES_DIR);
   const images = existsSync(imagesDir) ? readdirSync(imagesDir) : [];
   const metas = [];
@@ -179,22 +181,24 @@ function checkPosts(root, failures) {
   } catch (error) {
     for (const line of messages(error)) failures.push(line);
   }
-  return postSources(metas.map(({ id, data }) => ({ id, meta: data })));
+  const posts = metas.map(({ id, data }) => ({ id, meta: data }));
+  const active = posts.filter((p) => p.meta.enabled);
+  return { sources: [...postSources(posts), ...blogPageSources(active)], activeCount: active.length };
 }
 
-function checkRoutes(root, failures, cities, legal, posts) {
+function checkRoutes(root, failures, cities, legal, { sources: posts, activeCount }) {
   const dir = join(root, PAGES);
   if (!existsSync(dir)) return failures.push(`${PAGES}/ : dossier absent`);
   const sources = readYamlDir(root, PAGES, failures).map(({ id, data }) => ({
     id,
     slugs: data.slugs,
-    enabled: data.enabled,
+    enabled: id === BLOG_ID ? blogActive(data.enabled === true, activeCount) : data.enabled,
     previewOnly: data.previewOnly,
   }));
   sources.push(...legal, ...citySources(cities), ...posts);
   const legalIds = legal.map(({ id }) => `« ${id} »`);
   const dirOf = (line) =>
-    line.includes('« city:') ? CITIES : line.includes('« post:') ? POSTS_DIR : legalIds.some((id) => line.includes(id)) ? LEGAL_DIR : PAGES;
+    line.includes('« city:') ? CITIES : line.includes('« post:') || line.includes('« blog-page:') ? POSTS_DIR : legalIds.some((id) => line.includes(id)) ? LEGAL_DIR : PAGES;
   const seen = new Set();
   for (const isMainBranch of [false, true]) {
     try {

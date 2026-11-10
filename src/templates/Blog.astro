@@ -1,0 +1,146 @@
+---
+// FR11, FR23, NFR1, NFR4, UX-DR25, AD-2, AD-3, AD-9, AD-13, AD-14, décision D1 de l'epic 6 (story 6.2) : index du blog
+// (canvas Blog.dc.html), piloté par l'id `blog` (page 1) ou `blog-page:{n}` (pages 2, 3…). Ordre de <main> : h1
+// contact-title (« בלוג »), carte vedette (page 1 seulement : `featured`, sinon le plus récent), grille des autres
+// articles du plus récent au plus ancien (12 par page, titres en h2), puis la pagination (numéros, page courante sans
+// lien, « page suivante › » sauf sur la dernière) s'il y a au moins 2 pages. Pas de bloc contact, pas de pages
+// catégorie. Conteneur 1180px. Contexte de page (AD-13) : `navSection: 'blog'` (« בלוג » courant dans le header).
+// Titre d'onglet : page 1 = meta.title de blog.yaml ; page n = `blog.page-title` ; description = celle de blog.yaml.
+import BlogCard from '../components/BlogCard.astro';
+import FeaturedPost from '../components/FeaturedPost.astro';
+import TextLink from '../components/TextLink.astro';
+import Base from '../layouts/Base.astro';
+import { BLOG_ID, BLOG_PAGE_ID_PREFIX, blogLayout, blogPageId } from '../lib/blog';
+import { t } from '../lib/i18n';
+import type { Lang } from '../lib/langs';
+import { createPageContext } from '../lib/page-context';
+import { page } from '../lib/pages';
+import { url } from '../lib/routes';
+
+interface Props {
+  id: string;
+  lang: Lang;
+}
+
+const { id, lang } = Astro.props;
+const n = id === BLOG_ID ? 1 : id.startsWith(BLOG_PAGE_ID_PREFIX) ? Number(id.slice(BLOG_PAGE_ID_PREFIX.length)) : NaN;
+const { featured, pages } = blogLayout();
+if (!Number.isInteger(n) || n < 1 || n > pages.length) throw new Error(`Blog : id « ${id} » hors des ${pages.length} pages de l'index`);
+const cards = pages[n - 1] ?? [];
+const ctx = createPageContext({ id, lang, navSection: 'blog' });
+const { meta } = page(BLOG_ID);
+const title = n === 1 ? meta.title[lang] : t(lang, 'blog.page-title').replace('{n}', String(n));
+const numbers = pages.map((_, i) => ({ n: i + 1, href: url(blogPageId(i + 1), lang), label: t(lang, 'blog.pagination.page').replace('{n}', String(i + 1)) }));
+const next = n < pages.length ? url(blogPageId(n + 1), lang) : undefined;
+---
+<Base ctx={ctx} title={title} description={meta.description[lang]}>
+  <div class="index">
+    <h1 class="title">{t(lang, 'nav.blog')}</h1>
+
+    {n === 1 && featured && <FeaturedPost post={featured} lang={lang} />}
+
+    {cards.length > 0 && (
+      <div class="grid">
+        {cards.map((item) => <BlogCard post={item} lang={lang} headingLevel={2} />)}
+      </div>
+    )}
+
+    {pages.length > 1 && (
+      <nav class="pagination" aria-label={t(lang, 'blog.pagination.label')}>
+        <ol role="list" class="numbers">
+          {numbers.map((item) => (
+            <li>
+              {item.n === n ? (
+                <span class="number current" aria-current="page">{item.n}</span>
+              ) : (
+                <a href={item.href} class="number" aria-label={item.label}>{item.n}</a>
+              )}
+            </li>
+          ))}
+        </ol>
+        {next && <TextLink href={next} label={t(lang, 'blog.pagination.next')} tone="light" />}
+      </nav>
+    )}
+  </div>
+</Base>
+
+<style>
+  /* Seuils (les @media ne lisent pas les tokens) : --bp-menu 960px, --bp-mobile-bar 700px. */
+  /* Canvas Blog.dc.html › main : conteneur 1180px, « padding: 72px 22px 104px », « gap: 48px ». */
+  .index {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: var(--blog-index-gap);
+    max-inline-size: calc(var(--container) + 2 * var(--page-gutter));
+    margin-inline: auto;
+    padding-block: var(--hero-pad-top) var(--section-y-lg);
+    padding-inline: var(--page-gutter);
+    background-color: var(--color-surface);
+    color: var(--color-ink);
+  }
+
+  @media (width < 960px) {
+    .index {
+      padding-block: var(--hero-pad-top-tablet) var(--section-y-tablet);
+    }
+  }
+
+  @media (width < 700px) {
+    .index {
+      padding-block: var(--hero-pad-top-mobile) var(--section-y-mobile);
+    }
+  }
+
+  .title {
+    margin: 0;
+    font-size: var(--type-contact-title-size);
+    font-weight: var(--type-contact-title-weight);
+    line-height: var(--type-contact-title-leading);
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--card-col-min)), 1fr));
+    gap: var(--card-grid-gap-block) var(--card-grid-gap-inline);
+  }
+
+  /* — Pagination : numéros (cibles de 44px au moins), puis « page suivante › » — */
+  .pagination {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--pagination-gap) var(--card-grid-gap-inline);
+  }
+
+  .numbers {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--pagination-gap);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--space-12);
+    min-block-size: var(--space-12);
+    font-size: var(--type-text-link-size);
+    font-weight: var(--type-text-link-weight);
+    line-height: var(--type-text-link-leading);
+    color: var(--color-link);
+    text-decoration: none;
+  }
+
+  a.number:hover,
+  a.number:focus-visible {
+    text-decoration: underline;
+  }
+
+  .current {
+    color: var(--color-ink);
+  }
+</style>

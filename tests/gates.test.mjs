@@ -478,7 +478,8 @@ test('astro check : enabled: \'oui\' dans home.yaml (Zod) fait échouer', () => 
 });
 
 // Story 6.1 (FR25, AD-4, AD-11) : articles au lint (meta.yaml + 4 .md par article actif), sous l'entrée `blog`.
-const BLOG_PAGE = "slugs: { he: 'בלוג', en: 'blog', ru: 'блог', fr: 'blog' }\nenabled: false\n";
+// Story 6.2 : blog.yaml `enabled: true` (interrupteur) ; l'entrée n'est active qu'avec au moins 1 article actif.
+const BLOG_PAGE = "slugs: { he: 'בלוג', en: 'blog', ru: 'блог', fr: 'blog' }\nenabled: true\n";
 const POST_META =
   "date: '2026-11-10'\ncategory: smoke-detectors\nslugs: { he: 'כמה-גלאים', en: 'how-many', ru: 'сколько', fr: 'combien' }\nenabled: true\n";
 const postDocs = (id, langs = LANGS) =>
@@ -525,4 +526,27 @@ test('completeness : article à photo (image présente ou absente), image interd
     }),
   );
   assert.ok(dup.some((line) => line.startsWith('src/content/posts/ : ') && line.includes('/fr/blog/combien/')), dup.join('\n'));
+});
+
+// Story 6.2 (FR11, AD-2, AD-3) : même activité de `blog` et mêmes pages `blog-page:{n}` au lint qu'au build.
+const numberedPost = (i, slug = `p${i}`) => ({
+  [`src/content/posts/p${i}/meta.yaml`]: `date: '2026-10-${String(i).padStart(2, '0')}'\ncategory: smoke-detectors\nslugs: { he: '${slug}', en: '${slug}', ru: '${slug}', fr: '${slug}' }\nenabled: true\n`,
+  ...postDocs(`p${i}`),
+});
+
+test('completeness (6.2) : blog.yaml enabled: true sans article → OK ; avec 1 article → OK ; 14 articles → OK', () => {
+  assert.deepEqual(findCompletenessErrors(completeRoot({ 'src/content/pages/blog.yaml': BLOG_PAGE })), []);
+  assert.deepEqual(findCompletenessErrors(completeRoot({ 'src/content/pages/blog.yaml': BLOG_PAGE, 'src/content/posts/how-many/meta.yaml': POST_META, ...postDocs('how-many') })), []);
+  const fourteen = Object.assign({}, ...Array.from({ length: 14 }, (_, i) => numberedPost(i + 1)));
+  assert.deepEqual(findCompletenessErrors(completeRoot({ 'src/content/pages/blog.yaml': BLOG_PAGE, ...fourteen })), []);
+});
+
+test('completeness (6.2) : un article au slug « 2 » heurte blog-page:2 (14 articles) → erreur rangée sous src/content/posts/', () => {
+  const fourteen = Object.assign({}, ...Array.from({ length: 13 }, (_, i) => numberedPost(i + 1)), numberedPost(14, '2'));
+  const errors = findCompletenessErrors(completeRoot({ 'src/content/pages/blog.yaml': BLOG_PAGE, ...fourteen }));
+  assert.ok(errors.length > 0 && errors.every((line) => line.startsWith('src/content/posts/ : ')), errors.join('\n'));
+  assert.ok(errors.some((line) => line.includes('« blog-page:2 »') && line.includes('/fr/blog/2/')), errors.join('\n'));
+  // 13 articles : pas de page 2, le slug « 2 » est libre.
+  const thirteen = Object.assign({}, ...Array.from({ length: 12 }, (_, i) => numberedPost(i + 1)), numberedPost(13, '2'));
+  assert.deepEqual(findCompletenessErrors(completeRoot({ 'src/content/pages/blog.yaml': BLOG_PAGE, ...thirteen })), []);
 });

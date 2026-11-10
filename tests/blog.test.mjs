@@ -1,11 +1,12 @@
 // Story 6.1 (FR12, FR23, FR25, AD-2, AD-4, AD-11, décisions D1 et D3 de l'epic 6) : schémas des articles, complétude
 // (buildPosts), temps de lecture, dates, « autres articles », registre et contenu du premier article.
+// Story 6.2 (FR11, AD-2, AD-3) : vedette, pages de l'index, sources `blog-page:{n}`, activité de `blog`.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
-import { buildPosts, countWords, formatPostDate, postSources, readingMinutes, relatedPosts } from '../src/lib/blog/core.ts';
+import { BLOG_PAGE_SIZE, blogActive, blogPageId, blogPages, blogPageSources, buildPosts, countWords, featuredPost, formatPostDate, postSources, readingMinutes, relatedPosts } from '../src/lib/blog/core.ts';
 import { postDocSchema, postMetaSchema, POST_CATEGORIES } from '../src/lib/page-schema.ts';
 import { buildRegistry } from '../src/lib/routes/core.ts';
 
@@ -147,14 +148,13 @@ test('relatedPosts : courant et désactivés exclus ; aucun autre article → []
 
 // — Registre —
 
-test('registre : post: actif sous blog désactivé, chemins /{lang}/{slug-blog}/{slug}/ × 4, blog non généré', () => {
+test('registre : post: actif même sous blog désactivé, chemins /{lang}/{slug-blog}/{slug}/ × 4', () => {
   const blog = parse(read('src/content/pages/blog.yaml'));
-  assert.equal(blog.enabled, false);
   assert.deepEqual(blog.slugs, BLOG_SLUGS);
   assert.deepEqual(blog.meta.title, { he: 'בלוג · RS SYSTEM', en: 'Blog · RS SYSTEM', ru: 'Блог · RS SYSTEM', fr: 'Blog · RS SYSTEM' });
   const sources = [
     { id: 'home', slugs: { he: '', en: '', ru: '', fr: '' }, enabled: true },
-    { id: 'blog', slugs: blog.slugs, enabled: blog.enabled },
+    { id: 'blog', slugs: blog.slugs, enabled: false },
     ...postSources([{ id: 'how-many-smoke-detectors', meta: meta() }, { id: 'off', meta: meta({ enabled: false, slugs: { he: 'x', en: 'x', ru: 'x', fr: 'x' } }) }]),
   ];
   assert.deepEqual(sources[2], { id: 'post:how-many-smoke-detectors', slugs: SLUGS, enabled: true, parent: 'blog', inheritActive: false });
@@ -165,6 +165,114 @@ test('registre : post: actif sous blog désactivé, chemins /{lang}/{slug-blog}/
     assert.equal(registry.url('post:how-many-smoke-detectors', lang), `/${lang}/${encodeURIComponent(BLOG_SLUGS[lang])}/${encodeURIComponent(SLUGS[lang])}/`);
   }
   assert.deepEqual(registry.entries().map((e) => e.id), ['home', 'home', 'home', 'home', ...LANGS.map(() => 'post:how-many-smoke-detectors')]);
+});
+
+// — Story 6.2 : vedette, pages, sources blog-page:, activité de blog —
+
+/** `n` articles actifs `a01`… du plus récent (`a01`) au plus ancien, slugs propres. */
+const many = (n) =>
+  Array.from({ length: n }, (_, i) => {
+    const id = `a${String(i + 1).padStart(2, '0')}`;
+    const date = new Date(Date.UTC(2026, 10, 30) - i * 86_400_000).toISOString().slice(0, 10);
+    return { id, meta: meta({ date, slugs: { he: id, en: id, ru: id, fr: id } }) };
+  });
+const ids = (list) => list.map((x) => x.id);
+
+test('blog.yaml : interrupteur enabled: true', () => {
+  assert.equal(parse(read('src/content/pages/blog.yaml')).enabled, true);
+});
+
+test('blogActive : interrupteur ET au moins 1 article actif', () => {
+  assert.equal(blogActive(true, 0), false);
+  assert.equal(blogActive(true, 1), true);
+  assert.equal(blogActive(true, 26), true);
+  assert.equal(blogActive(false, 1), false, 'interrupteur coupé');
+  assert.equal(blogActive(false, 0), false);
+});
+
+test('featuredPost : plus récent actif, sinon le plus récent des featured ; désactivés ignorés ; aucun → undefined', () => {
+  assert.equal(featuredPost([]), undefined);
+  assert.equal(featuredPost([{ id: 'off', meta: meta({ enabled: false }) }]), undefined);
+  const list = many(5);
+  assert.equal(featuredPost(list).id, 'a01', 'le plus récent');
+  const old = list.map((x) => (x.id === 'a04' ? { ...x, meta: { ...x.meta, featured: true } } : x));
+  assert.equal(featuredPost(old).id, 'a04', 'un ancien featured');
+  const two = old.map((x) => (x.id === 'a03' ? { ...x, meta: { ...x.meta, featured: true } } : x));
+  assert.equal(featuredPost(two).id, 'a03', 'deux featured : le plus récent des deux');
+  const offFeatured = list.map((x) => (x.id === 'a02' ? { ...x, meta: { ...x.meta, featured: true, enabled: false } } : x));
+  assert.equal(featuredPost(offFeatured).id, 'a01', 'featured désactivé ignoré');
+});
+
+test('blogPages : 0, 1, 13, 14, 26 articles → vedette + pages de 12', () => {
+  assert.equal(BLOG_PAGE_SIZE, 12);
+  const zero = blogPages([]);
+  assert.equal(zero.featured, undefined);
+  assert.deepEqual(zero.pages, [[]]);
+  const one = blogPages(many(1));
+  assert.equal(one.featured.id, 'a01');
+  assert.deepEqual(one.pages, [[]], '1 article : vedette seule');
+  const thirteen = blogPages(many(13));
+  assert.deepEqual(thirteen.pages.map((pg) => pg.length), [12], '13 : 1 page');
+  assert.deepEqual(ids(thirteen.pages[0]), ids(many(13).slice(1)), 'grille du plus récent au plus ancien, sans la vedette');
+  assert.deepEqual(blogPages(many(14)).pages.map((pg) => pg.length), [12, 1], '14 : 2 pages');
+  const all = many(26);
+  const twentySix = blogPages([...all].reverse());
+  assert.equal(twentySix.featured.id, 'a01');
+  assert.deepEqual(twentySix.pages.map((pg) => pg.length), [12, 12, 1], '26 : 3 pages');
+  assert.deepEqual(twentySix.pages.flat().map((x) => x.id), ids(all.slice(1)), 'ordre de la grille');
+});
+
+test('blogPages : un ancien featured est la vedette, le plus récent passe dans la grille ; désactivés exclus', () => {
+  const list = many(4).map((x) => (x.id === 'a04' ? { ...x, meta: { ...x.meta, featured: true } } : x.id === 'a02' ? { ...x, meta: { ...x.meta, enabled: false } } : x));
+  const { featured, pages } = blogPages(list);
+  assert.equal(featured.id, 'a04');
+  assert.deepEqual(ids(pages[0]), ['a01', 'a03']);
+});
+
+test('blogPageSources : blog-page:2..n sous blog, slug « n » × 4, activité héritée ; aucune sous 14 articles', () => {
+  assert.deepEqual(blogPageSources([]), []);
+  assert.deepEqual(blogPageSources(many(1)), []);
+  assert.deepEqual(blogPageSources(many(13)), []);
+  assert.deepEqual(blogPageSources(many(14)).map((x) => x.id), ['blog-page:2']);
+  const sources = blogPageSources(many(26));
+  assert.deepEqual(sources, [2, 3].map((n) => ({ id: `blog-page:${n}`, slugs: { he: `${n}`, en: `${n}`, ru: `${n}`, fr: `${n}` }, enabled: true, parent: 'blog' })));
+  assert.equal(blogPageId(1), 'blog');
+  assert.equal(blogPageId(3), 'blog-page:3');
+});
+
+/** Registre comme src/lib/routes/index.ts : home, blog (interrupteur ET ≥ 1 actif), articles, puis pages de l'index. */
+function blogRegistry(posts, yamlEnabled = true) {
+  const active = posts.filter((x) => x.meta.enabled);
+  return buildRegistry(
+    [
+      { id: 'home', slugs: { he: '', en: '', ru: '', fr: '' }, enabled: true },
+      { id: 'blog', slugs: BLOG_SLUGS, enabled: blogActive(yamlEnabled, active.length) },
+      ...postSources(posts),
+      ...blogPageSources(active),
+    ],
+    { isMainBranch: true },
+  );
+}
+
+test('registre : 0 article → blog inactif ; 1 → actif sans blog-page: ; 26 → blog-page:2 et 3 ; interrupteur coupé → inactif', () => {
+  assert.equal(blogRegistry([]).isEnabled('blog'), false);
+  assert.equal(blogRegistry([{ id: 'off', meta: meta({ enabled: false }) }]).isEnabled('blog'), false, 'tous désactivés');
+  const one = blogRegistry(many(1));
+  assert.equal(one.isEnabled('blog'), true);
+  assert.equal(one.url('blog', 'fr'), '/fr/blog/');
+  assert.ok(!one.entries().some((e) => e.id.startsWith('blog-page:')));
+  const reg = blogRegistry(many(26));
+  assert.equal(reg.url('blog-page:2', 'fr'), '/fr/blog/2/');
+  assert.equal(reg.url('blog-page:3', 'he'), `/he/${encodeURIComponent('בלוג')}/3/`);
+  assert.equal(reg.url('blog-page:3', 'ru'), `/ru/${encodeURIComponent('блог')}/3/`);
+  assert.equal(reg.isEnabled('blog-page:4'), false);
+  assert.throws(() => reg.url('blog-page:4', 'fr'), /id inconnu « blog-page:4 »/);
+  const ordered = [...new Set(reg.entries().map((e) => e.id))];
+  assert.deepEqual(ordered.slice(-2), ['blog-page:2', 'blog-page:3'], 'pages de l\'index après les articles');
+  const off = blogRegistry(many(26), false);
+  assert.equal(off.isEnabled('blog'), false, 'interrupteur coupé');
+  assert.equal(off.isEnabled('blog-page:2'), false, 'activité héritée de blog');
+  assert.equal(off.isEnabled('post:a01'), true, 'articles actifs même sous blog inactif');
 });
 
 // — Premier article (D3) —

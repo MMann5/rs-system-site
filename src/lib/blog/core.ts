@@ -160,6 +160,58 @@ export function postSources(posts: readonly Post[]): RouteSource[] {
   }));
 }
 
+// — Story 6.2 (FR11, AD-2, AD-3) : index du blog et pagination —
+
+/** Articles par page de la grille de l'index (AD-3). */
+export const BLOG_PAGE_SIZE = 12;
+
+/** Préfixe des ids de route des pages 2, 3… de l'index (`blog-page:2`). */
+export const BLOG_PAGE_ID_PREFIX = 'blog-page:';
+
+/** Id de route de la page `n` de l'index : `blog` pour 1, `blog-page:{n}` au-delà. */
+export const blogPageId = (n: number): string => (n <= 1 ? BLOG_ID : `${BLOG_PAGE_ID_PREFIX}${n}`);
+
+/**
+ * Article vedette : le plus récent des articles actifs `featured: true`, sinon le plus récent des actifs ; `undefined`
+ * sans article actif. Les désactivés sont ignorés (filtrés ici aussi, pour une liste quelconque).
+ */
+export function featuredPost(posts: readonly Post[]): Post | undefined {
+  const active = posts.filter((p) => p.meta.enabled).sort(byRecency);
+  return active.find((p) => p.meta.featured === true) ?? active[0];
+}
+
+export interface BlogLayout {
+  featured: Post | undefined;
+  /** Grille (les actifs hors vedette, plus récents d'abord) découpée en pages de BLOG_PAGE_SIZE ; au moins 1 page. */
+  pages: Post[][];
+}
+
+/** Vedette, puis la grille paginée : `max(1, ceil(grille / 12))` pages, la première éventuellement vide. */
+export function blogPages(posts: readonly Post[]): BlogLayout {
+  const featured = featuredPost(posts);
+  const grid = posts.filter((p) => p.meta.enabled && p.id !== featured?.id).sort(byRecency);
+  const count = Math.max(1, Math.ceil(grid.length / BLOG_PAGE_SIZE));
+  const pages = Array.from({ length: count }, (_, i) => grid.slice(i * BLOG_PAGE_SIZE, (i + 1) * BLOG_PAGE_SIZE));
+  return { featured, pages };
+}
+
+/** Sources du registre (AD-2) : `blog-page:{n}` (n ≥ 2, slug `"{n}"`) sous `blog`, activité héritée de `blog`. */
+export function blogPageSources(posts: readonly Post[]): RouteSource[] {
+  const { pages } = blogPages(posts);
+  return pages.slice(1).map((_, i) => {
+    const n = String(i + 2);
+    return {
+      id: `${BLOG_PAGE_ID_PREFIX}${n}`,
+      slugs: Object.fromEntries(LANGS.map((lang) => [lang, n])) as Record<Lang, string>,
+      enabled: true,
+      parent: BLOG_ID,
+    };
+  });
+}
+
+/** FR11 : `blog` est actif si l'interrupteur `enabled` de blog.yaml est vrai et qu'au moins 1 article est actif. */
+export const blogActive = (yamlEnabled: boolean, activeCount: number): boolean => yamlEnabled && activeCount > 0;
+
 /** Un mot : lettres ou chiffres (toutes écritures), apostrophes et tirets internes compris. */
 const WORD_RE = /[\p{L}\p{N}]+(?:['’\-־][\p{L}\p{N}]+)*/gu;
 

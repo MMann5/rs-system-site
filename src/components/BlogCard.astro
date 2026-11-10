@@ -5,6 +5,8 @@
 // le cadre l'exige) centré sur surface-alt. Puis la catégorie (small 600 link), le titre (h3 card-title) et la date
 // (small ink-muted), en texte. Sans cadre ni fond, coins droits. Survol : image scale(1.04) en 0,6 s, seulement avec un
 // pointeur fin qui survole et sans mouvement réduit.
+// Story 6.2 (NFR1) : `headingLevel` (défaut 3) : l'index du blog rend les titres en h2 (sous son h1, sans saut de niveau),
+// l'article garde h3 (sous le h2 « autres articles »).
 import { formatPostDate, postDoc, postImage, POST_ID_PREFIX, type Post } from '../lib/blog';
 import { serviceLabels } from '../lib/contact/labels';
 import type { ServiceCode } from '../lib/contact/table';
@@ -17,9 +19,11 @@ import SmokeDetector from './SmokeDetector.astro';
 interface Props {
   post: Post;
   lang: Lang;
+  headingLevel?: 2 | 3;
 }
 
-const { post, lang } = Astro.props;
+const { post, lang, headingLevel = 3 } = Astro.props;
+const Heading = headingLevel === 2 ? 'h2' : 'h3';
 const doc = postDoc(post.id, lang);
 const image = postImage(post);
 const category = serviceLabels(lang)[post.meta.category as ServiceCode].label;
@@ -29,7 +33,7 @@ const category = serviceLabels(lang)[post.meta.category as ServiceCode].label;
     {image ? <ResponsivePhoto src={image} alt="" sizes={BLOG_CARD_PHOTO_SIZES} class="card-img" /> : <SmokeDetector size="sm" fit />}
   </div>
   <span class="category">{category}</span>
-  <h3 class="title">{doc.title}</h3>
+  <Heading class="title">{doc.title}</Heading>
   <time class="date" datetime={post.meta.date}>{formatPostDate(post.meta.date, lang)}</time>
 </a>
 

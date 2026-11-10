@@ -110,5 +110,9 @@
   "post.breadcrumb-label": "Breadcrumb",
   "post.reading-time": "{n} min read",
   "post.contact.title": "Want a technician to check your home?",
-  "post.related.title": "More from the blog"
+  "post.related.title": "More from the blog",
+  "blog.pagination.label": "Blog pages",
+  "blog.pagination.next": "Next page",
+  "blog.pagination.page": "Page {n}",
+  "blog.page-title": "Blog, page {n} · RS SYSTEM"
 }

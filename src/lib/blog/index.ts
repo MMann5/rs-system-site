@@ -7,10 +7,10 @@ import type { ImageMetadata } from 'astro';
 import { getCollection } from 'astro:content';
 import type { Lang } from '../langs.ts';
 import type { RouteSource } from '../routes/core.ts';
-import { buildPosts, postSources, relatedPosts, type Post, type PostDoc } from './core.ts';
+import { blogPages, blogPageSources, buildPosts, postSources, relatedPosts, type BlogLayout, type Post, type PostDoc } from './core.ts';
 
-export { BLOG_ID, POST_ID_PREFIX, formatPostDate, postDocFile } from './core.ts';
-export type { Post, PostDoc } from './core.ts';
+export { BLOG_ID, BLOG_PAGE_ID_PREFIX, BLOG_PAGE_SIZE, blogActive, blogPageId, POST_ID_PREFIX, formatPostDate, postDocFile } from './core.ts';
+export type { BlogLayout, Post, PostDoc } from './core.ts';
 
 const metas = await getCollection('postsMeta');
 const docs = await getCollection('posts');
@@ -27,6 +27,19 @@ const blog = buildPosts(
 
 /** Sources du registre de routes : `post:{id}` sous `blog`, du plus récent au plus ancien. */
 export const POST_SOURCES: RouteSource[] = postSources(blog.posts);
+
+/** Story 6.2 : articles actifs, du plus récent au plus ancien. */
+export const activePosts: readonly Post[] = blog.active;
+
+/** Story 6.2 (AD-3) : sources `blog-page:{n}` (n ≥ 2) sous `blog`, à placer après les articles. */
+export const BLOG_PAGE_SOURCES: RouteSource[] = blogPageSources(blog.active);
+
+const layout = blogPages(blog.active);
+
+/** Story 6.2 : vedette et grille paginée de l'index (page 1 = `pages[0]`). */
+export function blogLayout(): BlogLayout {
+  return layout;
+}
 
 /** Article `id` (sans préfixe `post:`) ; lève s'il n'existe pas. */
 export function post(id: string): Post {
