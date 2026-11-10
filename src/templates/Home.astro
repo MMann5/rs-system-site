@@ -126,6 +126,7 @@ const jsonLd = [localBusiness({ ...business(lang), areaServed: servedCities(lang
     background="tile-night"
     scrim="crane"
     motion="parallax"
+    arcs
   />
   <section class="services" aria-labelledby="services-title">
     <h2 id="services-title" class="visually-hidden">{services.title[lang]}</h2>
@@ -212,5 +213,66 @@ const jsonLd = [localBusiness({ ...business(lang), areaServed: servedCities(lang
     display: flex;
     justify-content: center;
     margin-block-start: var(--space-12);
+  }
+
+  /* — Cinéma (décision de Mike, 2026-11-10). Uniquement si le navigateur lie l'animation au défilement ; coupé par
+   * prefers-reduced-motion (base.css). — */
+  @supports (animation-timeline: view()) {
+    /* Le détecteur arrive en tournant. */
+    .smoke-figure {
+      animation: detector-scroll var(--ease) both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 45%;
+    }
+
+    /* La LED pulse deux fois pendant que le détecteur arrive (au défilement, jamais en boucle). */
+    .smoke-figure :global(.led) {
+      animation: led-scroll var(--ease-scroll) both;
+      animation-timeline: view();
+      animation-range: entry 40% cover 60%;
+    }
+
+    @keyframes led-scroll {
+      25%,
+      75% {
+        opacity: var(--led-pulse-min);
+      }
+    }
+
+    @keyframes detector-scroll {
+      from {
+        opacity: 0;
+        transform: translateY(var(--detector-scroll-distance)) scale(var(--detector-scroll-scale)) rotate(var(--detector-scroll-rotate));
+      }
+
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+
+    /* Téléphone : les services s'empilent comme des cartes, chacune collée un cran plus bas que la précédente. */
+    @media (width < 700px) {
+      .services-grid > :global(.tile) {
+        position: sticky;
+        inset-block-start: calc(var(--header-height) + var(--stack-step) * var(--stack-index, 0));
+      }
+
+      .services-grid > :global(.tile:nth-child(2)) {
+        --stack-index: 1;
+      }
+
+      .services-grid > :global(.tile:nth-child(3)) {
+        --stack-index: 2;
+      }
+
+      .services-grid > :global(.tile:nth-child(4)) {
+        --stack-index: 3;
+      }
+
+      .services-grid {
+        gap: var(--space-6);
+      }
+    }
   }
 </style>
