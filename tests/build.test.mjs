@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os';
 import { join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
+import { checkPlaceholders, countArticlePlaceholders } from '../scripts/checks/placeholders.mjs';
 import { buildAreas } from '../src/lib/areas/core.ts';
 import { citySchema, regionSchema } from '../src/lib/areas/schema.ts';
 import { waHref } from '../src/lib/contact/core.ts';
@@ -2004,7 +2005,15 @@ test('build de branche : 4 accueils complets (tuiles de services) + 4 Contact + 
     const html = readFileSync(join(out, file), 'utf8');
     assertLayout(html, POST_ID, LANGS[i], out);
     assertPost(html, LANGS[i]);
+    // Story 6.3 (D2) : un seul <article>, qui porte le titre et le corps, sans placeholder.
+    assert.equal(html.match(/<article\b/g)?.length, 1, `${file} : un seul <article>`);
+    const article = html.match(/<article\b[^>]*>[\s\S]*?<\/article>/)[0];
+    assert.match(article, /<h1\b/, `${file} : h1 dans l'article`);
+    assert.match(article, /<h2\b/, `${file} : sections du corps dans l'article`);
+    assert.equal(countArticlePlaceholders(html), 0, `${file} : placeholder dans l'article`);
   }
+  // Story 6.3 (D2) : le dist réel passe la porte placeholders d'une PR blog-auto (placeholders hors article seulement).
+  assert.deepEqual(checkPlaceholders(out, { indexable: false, blogAuto: true }).failures, []);
   // Story 6.2 : index du blog dans les 4 langues.
   for (const [i, file] of BLOG_FILES.entries()) {
     const html = readFileSync(join(out, file), 'utf8');

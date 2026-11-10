@@ -15,7 +15,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      # FR40 : les placeholders bloquent une PR étiquetée blog-auto, et ne font qu'avertir ailleurs.
+      # FR40, D2 (epic 6) : sur une PR étiquetée blog-auto, un placeholder dans l'<article> d'une page de dist/
+      # bloque ; ailleurs (footer, À propos…) il ne fait qu'avertir. Build INDEXABLE : tout placeholder bloque.
       BLOG_AUTO: ${{ contains(github.event.pull_request.labels.*.name, 'blog-auto') }}
     steps:
       - uses: actions/checkout@v4
@@ -26,7 +27,8 @@ jobs:
       - run: npm ci
       # astro check et schémas Zod.
       - run: npm run check
-      # Sources : tel:/wa.me, photos, href internes, couleurs, propriétés physiques, complétude 4 langues.
+      # Sources : tel:/wa.me, photos, href internes, couleurs, propriétés physiques, complétude 4 langues,
+      # lint éditorial des articles (emoji, !, IDS/Maagal, lien littéral, placeholder ; AD-12, story 6.3).
       - run: npm run lint
       - run: npm test
       - run: npm run build

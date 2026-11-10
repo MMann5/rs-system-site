@@ -16,7 +16,7 @@ import { findJsBudgetViolations, JS_BUDGET } from '../scripts/checks/js-budget.m
 import { checkLinks, collectLinks } from '../scripts/checks/links.mjs';
 import { checkNotFound, findMissingNotFound } from '../scripts/checks/not-found.mjs';
 import { findPhysicalProperties } from '../scripts/checks/physical-css.mjs';
-import { checkPlaceholders, countPlaceholders, placeholderVerdict } from '../scripts/checks/placeholders.mjs';
+import { checkPlaceholders, countArticlePlaceholders, countPlaceholders, placeholderVerdict } from '../scripts/checks/placeholders.mjs';
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
 const LANGS = ['he', 'en', 'ru', 'fr'];
@@ -419,27 +419,64 @@ test('js-budget : JSON, ld+json et importmap exclus ; scripts externes, modulepr
 
 // — placeholders (FR40) —
 
-test('placeholderVerdict : ok sans placeholder, warn par défaut, block si indexable ou blog-auto', () => {
+test('placeholderVerdict : ok sans placeholder, warn par défaut, block si indexable ou blog-auto avec placeholder dans l’article (D2)', () => {
   assert.equal(placeholderVerdict({ count: 0, indexable: true, blogAuto: true }), 'ok');
   assert.equal(placeholderVerdict({ count: 2, indexable: false, blogAuto: false }), 'warn');
-  assert.equal(placeholderVerdict({ count: 1, indexable: false, blogAuto: true }), 'block');
-  assert.equal(placeholderVerdict({ count: 1, indexable: true, blogAuto: false }), 'block');
+  assert.equal(placeholderVerdict({ count: 2, articleCount: 1, indexable: false, blogAuto: false }), 'warn');
+  assert.equal(placeholderVerdict({ count: 1, articleCount: 1, indexable: false, blogAuto: true }), 'block');
+  assert.equal(placeholderVerdict({ count: 1, articleCount: 0, indexable: false, blogAuto: true }), 'warn');
+  assert.equal(placeholderVerdict({ count: 1, indexable: false, blogAuto: true }), 'warn');
+  assert.equal(placeholderVerdict({ count: 1, articleCount: 0, indexable: true, blogAuto: false }), 'block');
+  assert.equal(placeholderVerdict({ count: 1, articleCount: 0, indexable: true, blogAuto: true }), 'block');
 });
 
-test('placeholders : avertit (code 0, ::warning::) hors blog-auto, bloque (code 1) en blog-auto', () => {
+test('countArticlePlaceholders : seuls les placeholders dans un élément <article> comptent', () => {
+  const html = page(
+    'he',
+    '<main><article class="post"><h1>x</h1><span data-placeholder>[x]</span></article><article data-placeholder="y"></article></main><footer><span data-placeholder>[e]</span></footer>',
+  );
+  assert.equal(countPlaceholders(html), 3);
+  assert.equal(countArticlePlaceholders(html), 2);
+  assert.equal(countArticlePlaceholders(page('he', '<footer><span data-placeholder>[e]</span></footer><p>article</p>')), 0);
+});
+
+const FOOTER_ONLY = '<main><article><h1>x</h1><p>texte</p></article></main><footer><span data-placeholder>[אימייל]</span><span data-placeholder="x">[x]</span></footer>';
+const IN_ARTICLE = '<main><article><h1>x</h1><p><span data-placeholder>[ציון]</span></p></article></main><footer><span data-placeholder>[אימייל]</span></footer>';
+
+test('placeholders : footer seul → avertit (code 0, ::warning::) hors blog-auto comme en blog-auto (D2)', () => {
   const dist = fixture({
-    'he/index.html': page('he', '<span data-placeholder>[אימייל]</span><span data-placeholder="x">[x]</span>'),
+    'he/index.html': page('he', FOOTER_ONLY),
     'en/index.html': page('en', '<p>data-placeholder dans le texte ne compte pas</p>'),
   });
   assert.equal(countPlaceholders(readFileSync(join(dist, 'he/index.html'), 'utf8')), 2);
-  assert.deepEqual(checkPlaceholders(dist, { indexable: false, blogAuto: false }), { failures: [], warnings: ['he/index.html : 2 placeholder(s)'] });
-  assert.equal(checkPlaceholders(dist, { indexable: true, blogAuto: false }).failures.length, 1);
-  const warn = cli('placeholders', dist, { BLOG_AUTO: 'false' });
-  assert.equal(warn.status, 0);
-  assert.match(warn.output, /::warning::placeholders : he\/index\.html : 2 placeholder\(s\)\nplaceholders : OK/);
+  const expected = { failures: [], warnings: ['he/index.html : 2 placeholder(s)'] };
+  assert.deepEqual(checkPlaceholders(dist, { indexable: false, blogAuto: false }), expected);
+  assert.deepEqual(checkPlaceholders(dist, { indexable: false, blogAuto: true }), expected);
+  for (const BLOG_AUTO of ['false', 'true']) {
+    const res = cli('placeholders', dist, { BLOG_AUTO });
+    assert.equal(res.status, 0, `BLOG_AUTO=${BLOG_AUTO}`);
+    assert.match(res.output, /::warning::placeholders : he\/index\.html : 2 placeholder\(s\)\nplaceholders : OK/);
+  }
+});
+
+test('placeholders : placeholder dans l’<article> + blog-auto → bloque (code 1) ; hors blog-auto → avertit', () => {
+  const dist = fixture({ 'he/blog/x/index.html': page('he', IN_ARTICLE) });
+  assert.deepEqual(checkPlaceholders(dist, { indexable: false, blogAuto: false }), {
+    failures: [],
+    warnings: ['he/blog/x/index.html : 2 placeholder(s)'],
+  });
   const block = cli('placeholders', dist, { BLOG_AUTO: 'true' });
   assert.equal(block.status, 1);
-  assert.match(block.output, /placeholders : 1 échec\(s\)\n {2}- he\/index\.html : 2 placeholder\(s\) \(PR blog-auto\)/);
+  assert.match(block.output, /placeholders : 1 échec\(s\)\n {2}- he\/blog\/x\/index\.html : 1 placeholder\(s\) \(PR blog-auto, dans l'article\)/);
+});
+
+test('placeholders : build indexable → tout placeholder bloque, même dans le footer seul', () => {
+  const dist = fixture({ 'he/index.html': page('he', FOOTER_ONLY) });
+  assert.deepEqual(checkPlaceholders(dist, { indexable: true, blogAuto: false }), {
+    failures: ['he/index.html : 2 placeholder(s) (build indexable)'],
+    warnings: [],
+  });
+  assert.equal(checkPlaceholders(dist, { indexable: true, blogAuto: true }).failures.length, 1);
 });
 
 // — astro check et Zod, sur une copie du projet —

@@ -5,8 +5,10 @@
 export type ResolvePage = (id: string, params?: { hash?: string }) => string;
 
 const HREF_RE = /(\shref=)(["'])(.*?)\2/g;
-const PAGE_RE = /^page:([^#]+)(?:#(.+))?$/;
-const ALLOWED_RE = /^(?:https:\/\/|http:\/\/|mailto:|#)/;
+/** Lien interne `page:<id>` ou `page:<id>#<ancre>` (aussi utilisé par le lint éditorial, story 6.3). */
+export const PAGE_RE = /^page:([^#]+)(?:#(.+))?$/;
+/** Cibles externes ou ancres admises telles quelles. */
+export const ALLOWED_RE = /^(?:https:\/\/|http:\/\/|mailto:|#)/;
 
 /**
  * `href="page:<id>"` / `href="page:<id>#<ancre>"` → `resolve(id, { hash })` ; `https://`, `http://`, `mailto:` et

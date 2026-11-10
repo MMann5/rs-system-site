@@ -8,7 +8,7 @@
     "check": "astro check",
     "check:dist": "node scripts/checks/noindex.mjs && node scripts/checks/not-found.mjs && node scripts/checks/links.mjs && node scripts/checks/js-budget.mjs && node scripts/checks/placeholders.mjs",
     "test": "node --test",
-    "lint": "node scripts/checks/contact-literals.mjs && node scripts/checks/photos.mjs && node scripts/checks/internal-hrefs.mjs && node scripts/checks/colors.mjs && node scripts/checks/physical-css.mjs && node scripts/checks/completeness.mjs",
+    "lint": "node scripts/checks/contact-literals.mjs && node scripts/checks/photos.mjs && node scripts/checks/internal-hrefs.mjs && node scripts/checks/colors.mjs && node scripts/checks/physical-css.mjs && node scripts/checks/completeness.mjs && node scripts/checks/editorial.mjs",
     "preview": "npm run build && wrangler dev"
   },
   "dependencies": {
