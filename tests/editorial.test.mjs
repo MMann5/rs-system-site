@@ -13,7 +13,9 @@ import {
   fileErrors,
   findEditorialErrors,
   forbiddenNameErrors,
+  htmlErrors,
   linkErrors,
+  maskCode,
   placeholderErrors,
 } from '../scripts/checks/editorial.mjs';
 
@@ -57,6 +59,16 @@ function assertOne(files, file, lines, reason) {
   });
 }
 
+/** Échecs d'une seule ligne `line` de `file`, une raison par motif de `reasons` (dans l'ordre). */
+function assertLine(files, file, line, reasons) {
+  const errors = errorsOf(files);
+  assert.equal(errors.length, reasons.length, errors.join('\n'));
+  reasons.forEach((reason, i) => {
+    assert.ok(errors[i].startsWith(`${DIR}/${file}:${line} : `), errors[i]);
+    assert.match(errors[i], reason);
+  });
+}
+
 test('fixture saine : aucun échec', () => {
   assert.deepEqual(errorsOf(), []);
 });
@@ -71,6 +83,16 @@ test('règle emoji : titre, chapeau, alt, meta.yaml et corps échouent avec fich
   assert.equal(emojiErrors('drapeau \u{1F1EE}\u{1F1F1}').length, 1);
   assert.match(emojiErrors('coeur \u2764\uFE0F')[0], /U\+2764 U\+FE0F/);
   assert.deepEqual(emojiErrors('Texte sans emoji, 050-956-5669 · RS SYSTEM'), []);
+});
+
+test('règle emoji (D7-E) : ©, ® et ™ (U+00A9, U+00AE, U+2122) ne sont pas des emoji ; suivis de U+FE0F, si', () => {
+  for (const sign of ['\u00A9', '\u00AE', '\u2122']) {
+    assert.deepEqual(emojiErrors(`RS SYSTEM ${sign}`), [], sign);
+    assert.deepEqual(emojiErrors(`RS SYSTEM ${sign}`.normalize('NFKC')), [], sign);
+  }
+  assert.deepEqual(errorsOf({ 'fr.md': doc({ title: 'Marque © ® ™', body: '© RS SYSTEM, ® et ™ dans le texte.' }) }), []);
+  assert.equal(emojiErrors('\u00A9\uFE0F').length, 1);
+  assert.equal(emojiErrors('© et 🔥').length, 1);
 });
 
 // — (2) point d'exclamation —
@@ -111,7 +133,7 @@ test('règle lien : cible Markdown, définition, autolien ou href= littéral éc
     assert.deepEqual(linkErrors(ok), [], ok);
   }
   assertOne({ 'fr.md': doc({ body: 'Voir [la page](/fr/cameras/).' }) }, 'fr.md', 11, /lien « \/fr\/cameras\/ »/);
-  assertOne({ 'en.md': doc({ body: 'See <a href="/en/">home</a>.' }) }, 'en.md', 11, /lien « \/en\/ »/);
+  assertLine({ 'en.md': doc({ body: 'See <a href="/en/">home</a>.' }) }, 'en.md', 11, [/lien « \/en\/ »/, /balise HTML « <a »/]);
 });
 
 // — (5) placeholder —
@@ -119,13 +141,56 @@ test('règle lien : cible Markdown, définition, autolien ou href= littéral éc
 test('règle placeholder : crochet hors lien, data-placeholder et <Placeholder> échouent ; liens Markdown permis', () => {
   assertOne({ 'fr.md': doc({ body: 'Écrivez à [e-mail].' }) }, 'fr.md', 11, /crochet « \[e-mail\] »/);
   assertOne({ 'he.md': doc({ title: '[ציון] לקוחות' }) }, 'he.md', [3, 6], /crochet/);
-  assertOne({ 'en.md': doc({ body: '<span data-placeholder>x</span>' }) }, 'en.md', 11, /data-placeholder/);
-  assertOne({ 'ru.md': doc({ body: '<Placeholder text="x" />' }) }, 'ru.md', 11, /<Placeholder>/);
+  assertLine({ 'en.md': doc({ body: '<span data-placeholder>x</span>' }) }, 'en.md', 11, [/data-placeholder/, /balise HTML « <span »/]);
+  assertLine({ 'ru.md': doc({ body: '<Placeholder text="x" />' }) }, 'ru.md', 11, [/<Placeholder>/, /balise HTML « <Placeholder »/]);
   assert.equal(placeholderErrors('liste [ ] à cocher').length, 1);
   assert.equal(placeholderErrors('crochet seul ]').length, 1);
   assert.deepEqual(placeholderErrors('[a](page:cameras), [b][r], [c][]'), []);
   assert.deepEqual(placeholderErrors('[r]', new Set(['r'])), []);
   assert.deepEqual(errorsOf({ 'fr.md': doc({ body: 'Voir [la page][p].\n\n[p]: page:cameras' }) }), []);
+});
+
+// — (6) HTML brut (D7-A) —
+
+test('règle HTML (D7-A) : <script>, <img onerror>, <iframe>, <style> échouent volontairement avec fichier:ligne', () => {
+  const cases = [
+    ['fr.md', 'Texte.\n\n<script>alert(1)</script>', 13, /balise HTML « <script »/],
+    ['en.md', '<img src="x" onerror="alert(1)">', 11, /balise HTML « <img »/],
+    ['he.md', 'שלום <iframe src="https://a.example/"></iframe>', 11, /balise HTML « <iframe »/],
+    ['ru.md', '<style>\nbody { display: none }\n</style>', 11, /balise HTML « <style »/],
+  ];
+  for (const [file, body, line, reason] of cases) {
+    const errors = errorsOf({ [file]: doc({ body }) });
+    assert.ok(errors.length >= 1, body);
+    assert.ok(errors[0].startsWith(`${DIR}/${file}:${line} : `), errors[0]);
+    assert.match(errors[0], reason);
+  }
+  for (const bad of ['</div>', '<br/>', '<B>', '<!DOCTYPE html>', '<![CDATA[x]]>', '<?php ?>', '<details open>', '<svg onload=x>']) {
+    assert.equal(htmlErrors(bad).length, 1, bad);
+  }
+});
+
+test('règle HTML : balise dans un commentaire, après un faux span ou un bloc non fermé échoue', () => {
+  assertLine({ 'fr.md': doc({ body: 'Note <!-- <b>x</b> -->.' }) }, 'fr.md', 11, [/balise HTML « <b »/]);
+  assertLine({ 'fr.md': doc({ body: 'a `b\nc` <b>x</b> `d`' }) }, 'fr.md', 12, [/balise HTML « <b »/]);
+  assertLine({ 'fr.md': doc({ body: '<https://a.example/`x> <script>x</script> `c`' }) }, 'fr.md', 11, [/balise HTML « <script »/]);
+  assertLine({ 'fr.md': doc({ body: '\\`<b>x</b>`' }) }, 'fr.md', 11, [/balise HTML « <b »/]);
+  assertLine({ 'fr.md': doc({ body: '```\n<script>\nsans fin' }) }, 'fr.md', 12, [/balise HTML « <script »/]);
+});
+
+test('règle HTML : code (spans, blocs ``` et ~~~), autolien, « a < b » et entités passent', () => {
+  const ok = [
+    'La balise `<script>` est du code.',
+    'Double : `` a ` <b> ``.',
+    '```html\n<script>alert(1)</script>\n```',
+    '~~~~\n<iframe></iframe>\n~~~~',
+    'Voir <https://a.example/> et <mailto:a@b.c>.',
+    'Si a < b, alors 2 < 3.',
+    '&lt;script&gt; est écrit en entités.',
+  ];
+  for (const body of ok) assert.deepEqual(errorsOf({ 'fr.md': doc({ body }) }), [], body);
+  assert.equal(maskCode('a `<b>` c\n\nd').length, 'a `<b>` c\n\nd'.length);
+  assert.deepEqual(htmlErrors('<https://a.example/>'), []);
 });
 
 // — Agrégat, dépôt réel, CLI —

@@ -34,9 +34,9 @@ Dans un article, concrètement :
 
 ## 3. Interdits
 
-Le lint éditorial (section 9) bloque la PR sur les cinq premiers points. Les autres sont des consignes : personne ne les vérifie automatiquement, la routine en est seule responsable.
+Le lint éditorial (section 9) bloque la PR sur les cinq premiers points et sur le HTML (point 9). Les autres sont des consignes : personne ne les vérifie automatiquement, la routine en est seule responsable.
 
-1. **Aucun emoji**, nulle part (titre, chapeau, `alt`, corps, `meta.yaml`), drapeaux compris.
+1. **Aucun emoji**, nulle part (titre, chapeau, `alt`, corps, `meta.yaml`), drapeaux compris. Les signes ©, ® et ™ ne sont pas des emoji : ils passent.
 2. **Aucun point d'exclamation**, sous aucune forme (`!`, `！`, `‼`, `¡`). Une phrase forte se termine par un point.
 3. **Ne jamais citer IDS ni Maagal**, dans aucune langue ni graphie : `IDS`, `I.D.S`, `איי די אס`, `ИДС`, `Maagal`, `Ma'agal`, `Магал`, `Маагал`… En hébreu, le mot **« מעגל » est bloqué comme mot entier**, même au sens de « cercle » ou « circuit » (avec ou sans préfixe : ומעגל, במעגל, למעגל…) : écrire autrement, par exemple « קו חשמל », « חיבור », « טבעת ». Les formes plus longues (מעגלים) passent, mais mieux vaut les éviter aussi. Le blocage ignore la casse : l'acronyme anglais « IDS » (système de détection d'intrusion) et le pluriel « IDs » (identifiants) sont bloqués aussi ; écrire « intrusion detection » / « détection d'intrusion » / « обнаружение вторжений » / « זיהוי חדירות », et « identifiers » / « identifiants » / « идентификаторы » / « מזהים ».
 4. **Aucun lien littéral** : un lien interne s'écrit `page:<id>` (section 5) ; la routine écrit un lien externe en `https://` uniquement. Le lint tolère aussi `http://`, `mailto:` et `#ancre`, et refuse tout le reste (`/he/…`, `cameras`, `./…`, `tel:`, `wa.me`).
@@ -44,7 +44,7 @@ Le lint éditorial (section 9) bloque la PR sur les cinq premiers points. Les au
 6. **Aucun superlatif non prouvé** : « le meilleur », « le plus fiable », « n°1 », « unique », « parfait », « garanti »… et leurs équivalents dans les 4 langues.
 7. **Rien d'inventé ni de non fourni** (D3) : aucun chiffre, prix, durée, pourcentage, statistique, note, avis, nom de client, témoignage, loi, norme, numéro de règlement ou d'article de loi, décision d'une autorité, sauf si RS SYSTEM l'a fourni avec sa source (aujourd'hui : rien). Une règle générale de bon sens (« un détecteur par chambre ») s'écrit en mots, sans chiffre et sans « la loi impose ». En cas de doute, renvoyer à la notice du fabricant ou au technicien.
 8. Pas de nom de marque, de modèle, de prix ni de promotion. Pas de comparaison avec un concurrent.
-9. Pas de titre numéroté (`## 1. …`) : la numérotation des sections est ajoutée par le site. Pas de `#` (h1) dans le corps : le titre de la page vient du frontmatter. Pas de tableau (remplacer par une liste). Pas d'image dans le corps. Pas de HTML.
+9. Pas de titre numéroté (`## 1. …`) : la numérotation des sections est ajoutée par le site. Pas de `#` (h1) dans le corps : le titre de la page vient du frontmatter. Pas de tableau (remplacer par une liste). Pas d'image dans le corps. **Aucune balise HTML** (`<script>`, `<img>`, `<iframe>`, `<style>`, `<br>`, `<span>`, `<a>`…), même dans un commentaire `<!-- -->` : le corps s'écrit en Markdown seulement. Le lint la bloque partout dans le `.md`, sauf dans un span de code `` `…` `` ou un bloc de code clôturé (```` ``` ````), dont l'article n'a pas besoin. Pour écrire « a < b », laisser une espace après `<`.
 
 ## 4. Catégories
 
@@ -222,7 +222,7 @@ Les `...` de l'exemple sont à remplacer par du vrai texte : ils ne doivent jama
 
 La PR passe par `ci.yml` (contrôle `ci`, exigé pour fusionner). Elle est **rouge**, donc jamais publiée, si :
 
-- **Lint éditorial** (`scripts/checks/editorial.mjs`, dans `npm run lint`) sur `src/content/posts/**` (`meta.yaml` et les 4 `.md`, texte publié, commentaires ignorés) : emoji ; point d'exclamation ; IDS ou Maagal dans toute langue ou graphie (dont « מעגל ») ; lien qui n'est ni `page:<id>`, ni `https://`, `http://`, `mailto:`, `#ancre` ; placeholder (`data-placeholder`, `<Placeholder`, crochet hors lien Markdown). Le message donne `fichier:ligne` et la règle.
+- **Lint éditorial** (`scripts/checks/editorial.mjs`, dans `npm run lint`) sur `src/content/posts/**` (`meta.yaml` et les 4 `.md`, texte publié, commentaires ignorés) : emoji ; point d'exclamation ; IDS ou Maagal dans toute langue ou graphie (dont « מעגל ») ; lien qui n'est ni `page:<id>`, ni `https://`, `http://`, `mailto:`, `#ancre` ; placeholder (`data-placeholder`, `<Placeholder`, crochet hors lien Markdown) ; balise HTML brute dans un `.md` (`<script`, `<img`, `</div`, `<!DOCTYPE`…, hors spans et blocs de code clôturés). Le message donne `fichier:ligne` et la règle.
 - **Schéma** (`npm run check`, `npm run lint` › `completeness`) : champ manquant ou inconnu, `date` invalide, `category` hors liste, `image` présente pour `smoke-detectors` ou absente ailleurs, photo absente de `src/assets/blog/`, `alt` manquant ou en trop, un des 4 `.md` manquant, corps vide, slug invalide ou déjà pris.
 - **Build** (`npm run build`) : lien `page:<id>` vers un id inconnu, lien refusé.
 - **Tests** (`npm test`) et **portes de `dist/`** (`npm run check:dist`) : liens internes, budget JS, et sur une PR `blog-auto`, un placeholder dans l'`<article>` d'une page (D2).

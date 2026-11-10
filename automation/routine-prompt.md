@@ -86,7 +86,7 @@ git switch -c "blog/{runDate}" origin/main
 
 - `meta.yaml` : `date: '{publishDate}'`, `category` = la catégorie du sujet, `image: '{id}.jpg'` (absent pour `smoke-detectors`), les 4 `slugs`, `enabled: true`, pas de `featured`. Ajoute en commentaire la page Pexels de la photo (`# Photo : https://www.pexels.com/photo/…`) une fois la photo choisie (étape 5).
 - `he.md` d'abord, puis `en.md`, `ru.md`, `fr.md` **réécrits** (pas traduits mot à mot) : `title`, `lede`, `meta.title` = « {title} · RS SYSTEM », `meta.description` = `lede`, `alt` (sauf `smoke-detectors`), puis un paragraphe d'introduction et 4 à 5 sections `## ` sans numéro, avec au moins un lien `page:<id>` vers la page du service.
-- Respecte tous les interdits de §3 : aucun emoji, aucun point d'exclamation, jamais IDS ni Maagal (ni « מעגל »), aucun lien littéral, aucun placeholder, aucun superlatif, aucun chiffre, loi, norme, statistique, nom ou client inventé, aucune marque ni prix.
+- Respecte tous les interdits de §3 : aucun emoji, aucun point d'exclamation, jamais IDS ni Maagal (ni « מעגל »), aucun lien littéral, aucun placeholder, aucune balise HTML, aucun superlatif, aucun chiffre, loi, norme, statistique, nom ou client inventé, aucune marque ni prix.
 
 ### Étape 5. Photo Pexels (seulement si `photo` est `true`)
 

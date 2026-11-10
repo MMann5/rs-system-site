@@ -3,7 +3,8 @@
 // frontmatter) et corps Markdown, sans les commentaires YAML (`# …`) ni HTML (`<!-- … -->`), normalisé NFKC.
 // Règles bloquantes : (1) emoji ; (2) point d'exclamation et variantes ; (3) IDS / Maagal (latin, hébreu, cyrillique) ;
 // (4) cible de lien littérale (ni `page:<id>`, ni https://, http://, mailto:, #ancre : même liste blanche que
-// src/lib/prose-links.ts) ; (5) placeholder dans un article (`data-placeholder`, `<Placeholder`, crochet hors lien).
+// src/lib/prose-links.ts) ; (5) placeholder dans un article (`data-placeholder`, `<Placeholder`, crochet hors lien) ;
+// (6) balise HTML brute dans un `.md` (recette D7-A), hors blocs et spans de code.
 // Consignes de rédaction correspondantes : automation/blog-routine.md.
 // Usage : node scripts/checks/editorial.mjs [racine]  (défaut : racine du dépôt).
 import { existsSync, readFileSync } from 'node:fs';
@@ -15,9 +16,13 @@ export const POSTS_DIR = 'src/content/posts';
 
 // — Règles : chacune prend une ligne de texte publié (déjà normalisée) et rend les raisons d'échec. —
 
-const EMOJI_RE = /[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}\uFE0F\u20E3]/gu;
+// ©, ® et ™ (U+00A9, U+00AE, U+2122) sont des signes typographiques, pas des emoji (recette D7-E).
+const EMOJI_RE = /(?![\u00A9\u00AE\u2122])[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}\uFE0F\u20E3]/gu;
 
-/** (1) Emoji : pictogrammes, indicateurs régionaux (drapeaux), sélecteur de variation emoji, touche « keycap ». */
+/**
+ * (1) Emoji : pictogrammes, indicateurs régionaux (drapeaux), sélecteur de variation emoji, touche « keycap ».
+ * ©, ® et ™ seuls passent ; suivis de U+FE0F (présentation emoji), le sélecteur bloque.
+ */
 export function emojiErrors(text) {
   const found = [...new Set(text.match(EMOJI_RE) ?? [])];
   if (found.length === 0) return [];
@@ -102,6 +107,16 @@ export function placeholderErrors(text, refLabels = new Set()) {
   return out;
 }
 
+// Balise ouvrante ou fermante (`<script`, `</div`, `<img`…), déclaration ou CDATA (`<!DOCTYPE`, `<![CDATA[`),
+// instruction (`<?`). Un autolien `<https://…>` n'en est pas une (le nom est suivi de `:`).
+const HTML_TAG_RE = /<\/?[A-Za-z][A-Za-z0-9-]*(?=[\s/>]|$)|<![A-Za-z[]|<\?/;
+
+/** (6) Balise HTML brute (D7-A) : le corps d'un article s'écrit en Markdown seulement. */
+export function htmlErrors(text) {
+  const m = text.match(HTML_TAG_RE);
+  return m ? [`balise HTML « ${m[0]} » interdite dans un article : Markdown seulement (D7)`] : [];
+}
+
 /** Toutes les raisons d'échec d'une ligne de texte publié (normalisée NFKC ici). */
 export function lineErrors(text, refLabels) {
   const t = text.normalize('NFKC');
@@ -182,6 +197,78 @@ export function markdownLines(source) {
   return blankComments(source).split('\n').map(decodeEntities);
 }
 
+const blank = (s) => s.replace(/[^\n]/g, ' ');
+
+/**
+ * Corps Markdown avec le code blanchi (même nombre de lignes et de colonnes) : blocs clôturés ``` / ~~~ fermés
+ * (un bloc non fermé reste visible), puis spans de code `…` par paragraphe (CommonMark : une suite de n accents graves
+ * se ferme sur la suivante d'exactement n ; un accent échappé par `\` n'ouvre pas). Les autoliens `<scheme:…>` sont
+ * blanchis avant les spans (ils priment sur eux). Côté prudent : ce qui n'est pas sûrement du code reste visible.
+ */
+export function maskCode(body) {
+  const lines = body.split('\n');
+  for (let i = 0; i < lines.length; i += 1) {
+    const open = lines[i].match(/^ {0,3}(`{3,}|~{3,})/);
+    if (!open || (open[1][0] === '`' && lines[i].slice(open[0].length).includes('`'))) continue;
+    const fence = open[1];
+    const close = new RegExp(`^ {0,3}${fence[0] === '`' ? '`' : '~'}{${fence.length},}\\s*$`);
+    const end = lines.findIndex((l, j) => j > i && close.test(l));
+    if (end < 0) break;
+    for (let j = i; j <= end; j += 1) lines[j] = blank(lines[j]);
+    i = end;
+  }
+  return lines
+    .join('\n')
+    .split(/(\n[ \t]*\n)/)
+    .map((para) => {
+      const s = para.replace(/<[A-Za-z][A-Za-z0-9+.-]{1,31}:[^\s<>]*>/g, blank);
+      let out = '';
+      let i = 0;
+      while (i < s.length) {
+        if (s[i] === '\\' && s[i + 1] === '`') {
+          out += s.slice(i, i + 2);
+          i += 2;
+          continue;
+        }
+        if (s[i] !== '`') {
+          out += s[i];
+          i += 1;
+          continue;
+        }
+        const run = s.slice(i).match(/^`+/)[0];
+        const re = new RegExp(`(?<!\`)${run}(?!\`)`, 'g');
+        re.lastIndex = i + run.length;
+        const closing = re.exec(s);
+        if (!closing) {
+          out += run;
+          i += run.length;
+          continue;
+        }
+        const endAt = closing.index + run.length;
+        out += blank(s.slice(i, endAt));
+        i = endAt;
+      }
+      return out;
+    })
+    .join('');
+}
+
+/**
+ * Lignes d'un `.md` pour la règle HTML (alignées sur `markdownLines`) : valeurs du frontmatter, puis corps brut
+ * (entités non décodées, commentaires HTML gardés : une balise dans un commentaire bloque aussi) au code blanchi.
+ */
+export function htmlLines(source) {
+  const lines = source.split('\n');
+  if (lines[0]?.trimEnd() === '---') {
+    const end = lines.findIndex((l, i) => i > 0 && l.trimEnd() === '---');
+    if (end > 0) {
+      const front = yamlValueLines(lines.slice(1, end).join('\n'));
+      return ['', ...front, '', ...maskCode(lines.slice(end + 1).join('\n')).split('\n')];
+    }
+  }
+  return maskCode(source).split('\n');
+}
+
 /** Étiquettes des définitions de référence `[label]: …` (pour admettre le lien raccourci `[label]`). */
 const refLabelsOf = (lines) =>
   new Set(lines.map((l) => l.match(/^\s{0,3}\[([^\]]+)\]:/)?.[1].trim().toLowerCase()).filter(Boolean));
@@ -191,7 +278,10 @@ export function fileErrors(file, source) {
   const text = source.replace(/\r\n?/g, '\n');
   const lines = /\.ya?ml$/.test(file) ? yamlValueLines(text) : markdownLines(text);
   const labels = refLabelsOf(lines);
-  return lines.flatMap((line, i) => [...new Set(lineErrors(line, labels))].map((reason) => `${file}:${i + 1} : ${reason}`));
+  const html = /\.md$/.test(file) ? htmlLines(text) : [];
+  return lines.flatMap((line, i) =>
+    [...new Set([...lineErrors(line, labels), ...htmlErrors(html[i] ?? '')])].map((reason) => `${file}:${i + 1} : ${reason}`),
+  );
 }
 
 /** Échecs du lint éditorial sur `{root}/src/content/posts/**` (chemins relatifs à `root`). */
