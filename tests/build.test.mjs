@@ -501,7 +501,10 @@ function assertHomeTiles(html, main, pictures, lang, out, where) {
     // Texte : sur-titre (grue seulement), titre de niveau attendu, texte ; tous lus dans home.yaml.
     const block = tile.match(/<div class="content reveal"[^>]*>([\s\S]*?)<div class="links"/)?.[1] ?? '';
     assert.equal(block.match(/^<p class="eyebrow"[^>]*>([^<]*)<\/p>/)?.[1], content.eyebrow ? escaped(content.eyebrow[lang]) : undefined, `${at} : sur-titre`);
-    assert.equal(block.match(new RegExp(`<${def.level} id="${def.id}" class="title"[^>]*>([^<]*)</${def.level}>`))?.[1], escaped(content.title[lang]), `${at} : titre`);
+    // Cinéma : le titre est découpé en <span class="word"> (montée mot à mot) ; le texte lu, balises ôtées, reste le titre.
+    const heading = block.match(new RegExp(`<${def.level} id="${def.id}" class="title"[^>]*>([\\s\\S]*?)</${def.level}>`))?.[1];
+    assert.equal(heading?.replace(/<[^>]+>/g, ''), escaped(content.title[lang]), `${at} : titre`);
+    assert.ok(!heading || /^(<span class="word"[^>]*>[^<]+<\/span> ?)+$/.test(heading), `${at} : mots du titre`);
     assert.equal(block.match(/<p class="text"[^>]*>([^<]*)<\/p>/)?.[1], escaped(content.text[lang]), `${at} : texte`);
     // Liens « › » (2 au plus), dans l'ordre du canvas, sans data-track, ton photo sur sombre, clair sinon, tous avant la photo.
     const expected = def.links(lang);
@@ -1085,7 +1088,7 @@ function assertCameras(html, lang, out) {
   assert.match(attr(tileTag, 'style') ?? '', /--tile-scrim: var\(--scrim-crane\)/, `${where} : scrim-crane`);
   const content = tile.match(/<div class="content reveal"[^>]*>([\s\S]*?)<\/div>/)?.[1] ?? '';
   assert.equal(content.match(/^<p class="eyebrow"[^>]*>([^<]*)<\/p>/)?.[1], escaped(CAMERAS_PAGE.tile.eyebrow[lang]), `${where} : sur-titre`);
-  assert.equal(content.match(/<h2 id="tile-title"[^>]*>([^<]*)<\/h2>/)?.[1], escaped(CAMERAS_PAGE.tile.title[lang]), `${where} : h2 de la tuile`);
+  assert.equal(content.match(/<h2 id="tile-title"[^>]*>([\s\S]*?)<\/h2>/)?.[1]?.replace(/<[^>]+>/g, ''), escaped(CAMERAS_PAGE.tile.title[lang]), `${where} : h2 de la tuile`);
   assert.equal(content.match(/<p class="text"[^>]*>([^<]*)<\/p>/)?.[1], escaped(CAMERAS_PAGE.tile.text[lang]), `${where} : texte de la tuile`);
   // Story 3.4 (FR23) : `contractors` actif, donc un lien « לפרטים › » (ton photo) vers Entrepreneurs, avant la photo.
   const tileLinks = [...tile.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)];
@@ -1118,7 +1121,7 @@ function assertCameras(html, lang, out) {
   assert.ok(!/animation-timeline: ?view\(\)/.test(all.replace(/@supports \(animation-timeline: ?view\(\)\)\s*\{(?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})*\}/g, '')), `${where} : animation-timeline hors @supports`);
   const supported = supports.map((m) => all.slice(m.index, m.index + 2000)).join('\n');
   // Le minifieur abrège les plages (`entry 0% entry 45%` → `entry entry 45%`, `cover 0% cover 100%` → `cover`).
-  assert.match(supported, /\.reveal\s*\{[^}]*animation-timeline: ?view\(\);[^}]*animation-range: ?entry(?: 0%)? entry 45%/, `${where} : .reveal`);
+  assert.match(supported, /\.reveal\s*\{[^}]*animation-timeline: ?view\(\);[^}]*animation-range: ?entry 5% cover 35%/, `${where} : .reveal`);
   assert.match(supported, /\.parallax[^{]*\{[^}]*animation:[^;}]*tile-drift[^}]*animation-range: ?cover(?: 0% cover 100%)?[;}]/, `${where} : parallaxe`);
   assert.match(supported, /img\.parallax[^{]*\{\s*animation-timeline: ?view\(\)/, `${where} : timeline de la parallaxe`);
   // Cadre de la photo de tuile en overflow: clip (hidden en ferait la source de view() : parallaxe figée).
@@ -1335,7 +1338,7 @@ function assertPhotoService(html, lang, out, { id, content, focus, tile: withTil
     assert.match(style, /--tile-scrim: var\(--scrim-tile\)/, `${where} : scrim-tile`);
     const tileContent = tile.match(/<div class="content reveal"[^>]*>([\s\S]*?)<\/div>/)?.[1] ?? '';
     assert.equal(tileContent.match(/^<p class="eyebrow"[^>]*>([^<]*)<\/p>/)?.[1], escaped(content.tile.eyebrow[lang]), `${where} : sur-titre`);
-    assert.equal(tileContent.match(/<h2 id="tile-title"[^>]*>([^<]*)<\/h2>/)?.[1], escaped(content.tile.title[lang]), `${where} : h2 de la tuile`);
+    assert.equal(tileContent.match(/<h2 id="tile-title"[^>]*>([\s\S]*?)<\/h2>/)?.[1]?.replace(/<[^>]+>/g, ''), escaped(content.tile.title[lang]), `${where} : h2 de la tuile`);
     assert.equal(tileContent.match(/<p class="text"[^>]*>([^<]*)<\/p>/)?.[1], escaped(content.tile.text[lang]), `${where} : texte de la tuile`);
     const tileLinks = [...tile.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)];
     assert.equal(tileLinks.length, 1, `${where} : liens de la tuile`);
@@ -1475,7 +1478,7 @@ function assertCoverService(html, lang, out, { id, service, content, focus, scri
     assert.equal(attr(tileTag, 'style'), '--photo-position: var(--photo-focus-building); --tile-bg: var(--color-navy-deep); --tile-scrim: var(--scrim-tile)', `${where} : style de la tuile`);
     const tileContent = tile.match(/<div class="content reveal"[^>]*>([\s\S]*?)<\/div>/)?.[1] ?? '';
     assert.ok(!tile.includes('class="eyebrow"'), `${where} : sur-titre de la tuile`);
-    assert.equal(tileContent.match(/^<h2 id="tile-title"[^>]*>([^<]*)<\/h2>/)?.[1], escaped(content.tile.title[lang]), `${where} : h2 de la tuile`);
+    assert.equal(tileContent.match(/^<h2 id="tile-title"[^>]*>([\s\S]*?)<\/h2>/)?.[1]?.replace(/<[^>]+>/g, ''), escaped(content.tile.title[lang]), `${where} : h2 de la tuile`);
     assert.equal(tileContent.match(/<p class="text"[^>]*>([^<]*)<\/p>/)?.[1], escaped(content.tile.text[lang]), `${where} : texte de la tuile`);
     const tileLinks = [...tile.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)];
     assert.equal(tileLinks.length, 1, `${where} : liens de la tuile`);

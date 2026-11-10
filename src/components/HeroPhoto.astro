@@ -71,6 +71,9 @@ const style = variant
     padding-block-end: var(--scrim-hold-extend);
     background-color: var(--color-navy-deep);
     color: var(--color-white);
+    /* Cinéma : la photo glisse vers le bas au défilement ; `clip` (pas un conteneur de défilement) la garde dans le héros. */
+    overflow: clip;
+    view-timeline-name: --hero;
   }
 
   /* Seuils (les @media ne lisent pas les tokens) : --bp-menu 960px, --bp-mobile-bar 700px.
@@ -160,7 +163,7 @@ const style = variant
     font-weight: var(--type-hero-title-weight);
     line-height: var(--type-hero-title-leading);
     color: var(--color-white);
-    animation: hero-rise-title var(--rise-duration) var(--ease) var(--rise-delay-1) both;
+    animation: hero-rise-title var(--hero-title-duration) var(--ease) var(--rise-delay-1) both;
   }
 
   /* h1 des pages services et Entrepreneurs (DESIGN.md › Typo). */
@@ -198,6 +201,40 @@ const style = variant
     animation: hero-rise var(--rise-duration) var(--ease) var(--rise-delay-3) both;
   }
 
+  /* — Cinéma (décision de Mike, 2026-11-10) : au défilement, la photo reste derrière et s'assombrit, le texte
+   * monte et s'efface. Uniquement si le navigateur lie l'animation au défilement ; coupé par prefers-reduced-motion. — */
+  @supports (animation-timeline: view()) {
+    .media {
+      animation: hero-stay var(--ease-scroll) both;
+      animation-range: exit 0% exit 100%;
+    }
+
+    .content {
+      animation: hero-out var(--ease-scroll) both;
+      animation-range: exit 0% exit 70%;
+    }
+
+    /* Timeline dans une règle à part, plus spécifique, après le raccourci `animation` qui la remet à zéro. */
+    .hero .media,
+    .hero .content {
+      animation-timeline: --hero;
+    }
+
+    @keyframes hero-stay {
+      to {
+        transform: translateY(var(--hero-stay-shift)) scale(var(--hero-stay-scale));
+        filter: brightness(var(--hero-stay-brightness));
+      }
+    }
+
+    @keyframes hero-out {
+      to {
+        opacity: 0;
+        transform: translateY(calc(-1 * var(--hero-out-distance)));
+      }
+    }
+  }
+
   @keyframes hero-zoom {
     from {
       transform: scale(var(--hero-zoom-from));
@@ -208,10 +245,11 @@ const style = variant
     }
   }
 
-  /* h1 : translation seule, visible dès la première image. */
+  /* h1 : translation et flou (Cinéma), jamais d'opacité : visible dès la première image. */
   @keyframes hero-rise-title {
     from {
       transform: translateY(var(--rise-distance));
+      filter: blur(var(--hero-title-blur));
     }
 
     to {
