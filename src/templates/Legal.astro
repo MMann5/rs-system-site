@@ -1,0 +1,90 @@
+---
+// FR14, FR40, UX-DR26, UX-DR32, AD-2, AD-4, AD-7, AD-8, AD-11, AD-13, décision D4 de l'epic 5 (story 5.2) : page texte
+// légale (DESIGN.md › Layout › Page texte). <main> = une seule section : h1 contact-title aligné au début, puis la prose
+// dans une colonne de 680px ; pas de bloc contact, aucun lien du header actif (contexte sans navSection).
+// Corps : texte de l'avocat (src/content/legal/{id}/{lang}.md, liens `page:<id>` résolus par le registre) ou, tant qu'il
+// manque (`pending: true`), le placeholder juridique. Déclaration d'accessibilité : bloc référent (`coordinator` de
+// meta.yaml) après le corps, h2 puis nom, téléphone et e-mail, chacun en <Placeholder> tant que non fourni.
+import Placeholder from '../components/Placeholder.astro';
+import Prose from '../components/Prose.astro';
+import Base from '../layouts/Base.astro';
+import { fill } from '../lib/about';
+import { t } from '../lib/i18n';
+import type { Lang } from '../lib/langs';
+import { legalDocFile, resolveProseLinks } from '../lib/legal/core';
+import { legalDoc, legalPage } from '../lib/legal';
+import { createPageContext } from '../lib/page-context';
+import { url } from '../lib/routes';
+
+interface Props {
+  id: string;
+  lang: Lang;
+}
+
+const { id, lang } = Astro.props;
+const ctx = createPageContext({ id, lang });
+const { title, meta, coordinator } = legalPage(id);
+const doc = legalDoc(id, lang);
+const html = doc.pending ? '' : resolveProseLinks(doc.html, (target, params) => url(target, lang, params), legalDocFile(id, lang));
+const contact = coordinator && {
+  title: coordinator.title[lang],
+  rows: [coordinator.name, coordinator.phone, coordinator.email].map((value) => fill(value, lang)),
+};
+---
+<Base ctx={ctx} title={meta.title[lang]} description={meta.description[lang]}>
+  <section class="legal" aria-labelledby="legal-title">
+    <div class="column">
+      <h1 id="legal-title" class="title">{title[lang]}</h1>
+      <Prose html={html}>
+        {doc.pending && <p><Placeholder text={t(lang, 'legal.placeholder')} /></p>}
+        {contact && (
+          <>
+            <h2>{contact.title}</h2>
+            <ul class="coordinator">
+              {contact.rows.map((row) => (
+                <li>{row.placeholder ? <Placeholder text={row.text} /> : row.text}</li>
+              ))}
+            </ul>
+          </>
+        )}
+      </Prose>
+    </div>
+  </section>
+</Base>
+
+<style>
+  /* Seuils (les @media ne lisent pas les tokens) : --bp-mobile-bar 700px. */
+  .legal {
+    padding-block: var(--contact-pad-start) var(--section-y-lg);
+    padding-inline: var(--page-gutter);
+    background-color: var(--color-surface);
+    color: var(--color-ink);
+  }
+
+  @media (width < 700px) {
+    .legal {
+      padding-block: var(--hero-pad-top-mobile) var(--section-y-mobile);
+    }
+  }
+
+  .column {
+    box-sizing: border-box;
+    inline-size: 100%;
+    max-inline-size: var(--container-article);
+    margin-inline: auto;
+  }
+
+  .title {
+    margin-block: 0 var(--prose-section-gap);
+    font-size: var(--type-contact-title-size);
+    font-weight: var(--type-contact-title-weight);
+    line-height: var(--type-contact-title-leading);
+    text-align: start;
+  }
+
+  /* Référent : trois lignes sans puces (nom, téléphone, e-mail) */
+  .column .coordinator {
+    list-style: none;
+    padding-inline-start: 0;
+  }
+</style>

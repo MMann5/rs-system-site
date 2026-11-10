@@ -1,0 +1,152 @@
+---
+// FR10, FR40, FR41, UX-DR15, AD-2, AD-4, AD-7, AD-8, AD-9, AD-11, AD-13, AD-14, décisions D1 à D3 de l'epic 5
+// (story 5.1) : page À propos (canvas About.dc.html, sauf les arcs). Ordre de <main> : héros typographique navy sans
+// arcs (logo complet blanc, h1 page-title masqué visuellement en hébreu seulement, histoire), chiffres (année ·
+// installations · zone, chacun facultatif, sans titre visible), trio « comment on travaille », bloc contact.
+// Tout ce que RS SYSTEM n'a pas fourni (histoire, année, installations, corps du trio) est un <Placeholder> déclaré
+// dans src/content/pages/about.yaml. « אודות » actif dans le header (navSection `about`).
+import { Image } from 'astro:assets';
+import ContactBand from '../components/ContactBand.astro';
+import HeroTypographic from '../components/HeroTypographic.astro';
+import Placeholder from '../components/Placeholder.astro';
+import Trio from '../components/Trio.astro';
+import Base from '../layouts/Base.astro';
+// Copie réduite (440px de haut) de brand/logo-final/rs-logo-full-transparent-white.png : nette en 2x.
+import logo from '../assets/brand/rs-logo-full-white.png';
+import { aboutStats, fill } from '../lib/about';
+import type { Lang } from '../lib/langs';
+import { createPageContext } from '../lib/page-context';
+import { requireAbout } from '../lib/page-schema';
+import { page } from '../lib/pages';
+
+interface Props {
+  id: string;
+  lang: Lang;
+}
+
+const { id, lang } = Astro.props;
+const ctx = createPageContext({ id, lang, navSection: 'about' });
+const { meta, about: data } = page(id);
+const about = requireAbout(id, data);
+const story = fill(about.story, lang);
+const stats = aboutStats(about, lang);
+const how = about.how.items.map((item) => {
+  const { text, placeholder } = fill(item.text, lang);
+  return { title: item.title[lang], text, placeholder };
+});
+---
+<Base ctx={ctx} title={meta.title[lang]} description={meta.description[lang]}>
+  <HeroTypographic title={about.hero.title[lang]} arcs={false} titleHidden={lang === 'he'}>
+    <Fragment slot="eyebrow">
+      <Image src={logo} height={220} densities={[1, 2]} alt="RS SYSTEM" loading="eager" fetchpriority="high" class="logo" />
+    </Fragment>
+    <p class="story">{story.placeholder ? <Placeholder text={story.text} /> : story.text}</p>
+  </HeroTypographic>
+
+  {stats.length > 0 && (
+    <section class="stats reveal" aria-label={about.stats.label[lang]}>
+      <div class="stats-grid">
+        {stats.map((stat) => (
+          <div class="stat">
+            <span class:list={['stat-value', stat.key === 'zone' ? 'stat-text' : 'stat-number']}>
+              {stat.placeholder ? <Placeholder text={stat.value} /> : stat.value}
+            </span>
+            <span class="stat-label">{stat.label}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  )}
+
+  <Trio id="about-how-title" title={about.how.title[lang]} items={how} />
+  <ContactBand ctx={ctx} />
+</Base>
+
+<style>
+  /* Seuils (les @media ne lisent pas les tokens) : --bp-menu 960px, --bp-mobile-bar 700px. */
+
+  /* — Héros : logo complet blanc (D1), jamais retourné ni recoloré ; hauteur par jetons, largeur proportionnelle,
+     bornée à la colonne (aucun débordement à 320 et 390px) — */
+  .logo {
+    display: block;
+    block-size: var(--about-logo-height);
+    inline-size: auto;
+    max-inline-size: 100%;
+    object-fit: contain;
+    margin-block-end: var(--space-4);
+  }
+
+  @media (width < 700px) {
+    .logo {
+      block-size: var(--about-logo-height-mobile);
+    }
+  }
+
+  .story {
+    max-inline-size: var(--hero-typo-subtitle-max);
+    margin: 0;
+    font-size: var(--type-section-subhead-size);
+    font-weight: var(--type-section-subhead-weight);
+    line-height: var(--type-section-subhead-leading);
+    color: var(--color-nav-idle);
+  }
+
+  /* — Chiffres : section blanche sans titre visible, filet bas ; colonnes auto-fit (un chiffre absent = pas de
+     colonne), centrées ; chiffre en stat-number (family-sans), zone en texte 40px/700 — */
+  .stats {
+    padding-block: var(--section-y-lg);
+    padding-inline: var(--page-gutter);
+    border-block-end: var(--row-rule-width) solid var(--color-line);
+    background-color: var(--color-surface);
+    color: var(--color-ink);
+  }
+
+  @media (width < 960px) {
+    .stats {
+      padding-block: var(--section-y-tablet);
+    }
+  }
+
+  @media (width < 700px) {
+    .stats {
+      padding-block: var(--section-y-mobile);
+    }
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--stat-col-min)), 1fr));
+    gap: var(--stat-grid-gap);
+    box-sizing: border-box;
+    inline-size: 100%;
+    max-inline-size: var(--container);
+    margin-inline: auto;
+    text-align: center;
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    gap: var(--stat-gap);
+    min-inline-size: 0;
+  }
+
+  .stat-number {
+    font-family: var(--type-stat-number-family);
+    font-size: var(--type-stat-number-size);
+    font-weight: var(--type-stat-number-weight);
+    line-height: var(--type-stat-number-leading);
+  }
+
+  .stat-text {
+    font-size: var(--type-stat-text-size);
+    font-weight: var(--type-stat-text-weight);
+    line-height: var(--type-stat-text-leading);
+  }
+
+  .stat-label {
+    font-size: var(--type-stat-label-size);
+    line-height: var(--type-body-leading);
+    color: var(--color-ink-muted);
+  }
+</style>

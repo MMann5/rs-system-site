@@ -1,0 +1,51 @@
+# Déclaration d'accessibilité (story 5.2, FR14, FR40, AD-2) : slugs A1 et titres A4 des décisions de l'epic 5 ; h1 =
+# textes de `nav.accessibility` ; description = une phrase, sans affirmation juridique. Texte juridique : avocat de Mike
+# ({he,en,ru,fr}.md, `pending: true` tant qu'il n'est pas fourni). Bloc référent (D4) : titre traduit, nom, téléphone et
+# e-mail en `placeholder` tant que RS SYSTEM ne les a pas fournis, rendus par <Placeholder>.
+# Traductions en/ru/fr rédigées par l'agent : relecture humaine recommandée.
+slugs:
+  he: 'הצהרת-נגישות'
+  en: 'accessibility'
+  ru: 'доступность'
+  fr: 'accessibilite'
+enabled: true
+title:
+  he: 'הצהרת נגישות'
+  en: 'Accessibility statement'
+  ru: 'Заявление о доступности'
+  fr: "Déclaration d'accessibilité"
+meta:
+  title:
+    he: 'הצהרת נגישות · RS SYSTEM'
+    en: 'Accessibility statement · RS SYSTEM'
+    ru: 'Заявление о доступности · RS SYSTEM'
+    fr: "Déclaration d'accessibilité · RS SYSTEM"
+  description:
+    he: 'הצהרת הנגישות של אתר RS SYSTEM ופרטי הקשר של רכז/ת הנגישות.'
+    en: 'Accessibility statement of the RS SYSTEM website, with the contact details of the accessibility coordinator.'
+    ru: 'Заявление о доступности сайта RS SYSTEM и контакты координатора по доступности.'
+    fr: "Déclaration d'accessibilité du site RS SYSTEM et coordonnées du référent accessibilité."
+coordinator:
+  title:
+    he: 'רכז/ת נגישות'
+    en: 'Accessibility coordinator'
+    ru: 'Координатор по доступности'
+    fr: 'Référent accessibilité'
+  name:
+    placeholder:
+      he: 'שם'
+      en: 'name'
+      ru: 'имя'
+      fr: 'nom'
+  phone:
+    placeholder:
+      he: 'טלפון'
+      en: 'phone'
+      ru: 'телефон'
+      fr: 'téléphone'
+  email:
+    placeholder:
+      he: 'דוא"ל'
+      en: 'email'
+      ru: 'эл. почта'
+      fr: 'e-mail'

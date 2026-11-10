@@ -105,5 +105,6 @@
   "areas.subtitle": "מבאר שבע ועד ירושלים, כולל היישובים.",
   "areas.tiles-label": "אזורים",
   "areas.missing": "לא מצאתם את היישוב שלכם?",
-  "placeholder.other-settlements": "יישובים נוספים"
+  "placeholder.other-settlements": "יישובים נוספים",
+  "legal.placeholder": "טקסט משפטי — יסופק על ידי עורך הדין"
 }

@@ -1,0 +1,27 @@
+# Conditions d'utilisation (story 5.2, FR14, AD-2) : slugs A1 des décisions de l'epic 5. Désactivée (`enabled: false`)
+# jusqu'à l'avis de l'avocat : ni générée, ni liée, ni au sitemap. Ses 4 .md existent quand même (`pending: true`).
+# Passer `enabled: true` demande aussi d'ajouter { id: 'terms', label: 'nav.terms' } à LEGAL_NAV (src/lib/nav/core.ts) et
+# la clé `nav.terms` aux 4 fichiers src/i18n/{he,en,ru,fr}.json, sinon la page serait publiée sans aucun lien.
+# Traductions en/ru/fr rédigées par l'agent : relecture humaine recommandée.
+slugs:
+  he: 'תנאי-שימוש'
+  en: 'terms'
+  ru: 'условия'
+  fr: 'conditions'
+enabled: false
+title:
+  he: 'תנאי שימוש'
+  en: 'Terms of use'
+  ru: 'Условия использования'
+  fr: "Conditions d'utilisation"
+meta:
+  title:
+    he: 'תנאי שימוש · RS SYSTEM'
+    en: 'Terms of use · RS SYSTEM'
+    ru: 'Условия использования · RS SYSTEM'
+    fr: "Conditions d'utilisation · RS SYSTEM"
+  description:
+    he: 'תנאי השימוש באתר RS SYSTEM.'
+    en: 'Terms of use of the RS SYSTEM website.'
+    ru: 'Условия использования сайта RS SYSTEM.'
+    fr: "Conditions d'utilisation du site RS SYSTEM."

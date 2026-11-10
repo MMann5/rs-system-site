@@ -1,0 +1,130 @@
+---
+// UX-DR26, AD-7, AD-8 (story 5.2) : prose d'article (DESIGN.md › Components › Prose d'article), pages légales puis
+// articles du blog (epic 6). Rend `html` (Markdown déjà rendu, liens `page:` déjà résolus), puis le slot. La largeur de
+// colonne (680px) est celle du modèle qui l'emploie. `numbered` : h2 numérotés « 1. », « 2. »… par compteur CSS
+// (désactivé sur les pages légales). Styles globaux sous `.prose` : ils s'appliquent au HTML injecté et au slot.
+interface Props {
+  html?: string;
+  numbered?: boolean;
+}
+
+const { html = '', numbered = false } = Astro.props;
+---
+<div class:list={['prose', { numbered }]}>
+  {html !== '' && <Fragment set:html={html} />}
+  <slot />
+</div>
+
+<style>
+  .prose {
+    font-size: var(--type-article-body-size);
+    font-weight: var(--type-article-body-weight);
+    line-height: var(--type-article-body-leading);
+    color: var(--color-ink);
+  }
+
+  .prose > :global(:first-child) {
+    margin-block-start: 0;
+  }
+
+  .prose > :global(:last-child) {
+    margin-block-end: 0;
+  }
+
+  .prose :global(p),
+  .prose :global(li) {
+    font-size: var(--type-article-body-size);
+    font-weight: var(--type-article-body-weight);
+    line-height: var(--type-article-body-leading);
+  }
+
+  .prose :global(p),
+  .prose :global(ul),
+  .prose :global(ol),
+  .prose :global(figure),
+  .prose :global(blockquote) {
+    margin-block: 0 var(--prose-block-gap);
+  }
+
+  .prose :global(h2) {
+    margin-block: var(--prose-section-gap) var(--prose-heading-gap);
+    font-size: var(--type-h2-size);
+    font-weight: var(--type-h2-weight);
+    line-height: var(--type-h2-leading);
+  }
+
+  .prose :global(h3) {
+    margin-block: var(--prose-subsection-gap) var(--prose-heading-gap);
+    font-size: var(--type-h3-size);
+    font-weight: var(--type-h3-weight);
+    line-height: var(--type-h3-leading);
+  }
+
+  .prose :global(ul),
+  .prose :global(ol) {
+    margin-inline: 0;
+    padding-inline-start: var(--prose-list-indent);
+  }
+
+  .prose :global(li + li) {
+    margin-block-start: var(--prose-item-gap);
+  }
+
+  .prose :global(strong) {
+    font-weight: 700;
+  }
+
+  .prose :global(a) {
+    color: var(--color-link);
+    text-decoration: underline;
+    overflow-wrap: anywhere;
+  }
+
+  /* Image pleine colonne, légende small ink-muted */
+  .prose :global(figure) {
+    margin-inline: 0;
+  }
+
+  .prose :global(figure img) {
+    display: block;
+    max-inline-size: 100%;
+    block-size: auto;
+  }
+
+  .prose :global(figcaption) {
+    margin-block-start: var(--prose-caption-gap);
+    font-size: var(--type-small-size);
+    font-weight: var(--type-small-weight);
+    line-height: var(--type-small-leading);
+    color: var(--color-ink-muted);
+  }
+
+  /* Citation : filet signal-blue à l'extrémité de début (à droite en hébreu), texte body-lg */
+  .prose :global(blockquote) {
+    margin-inline: 0;
+    padding-inline-start: var(--prose-quote-pad);
+    border-inline-start: var(--prose-quote-rule) solid var(--color-signal-blue);
+    font-size: var(--type-body-lg-size);
+    font-weight: var(--type-body-lg-weight);
+    line-height: var(--type-body-lg-leading);
+  }
+
+  .prose :global(blockquote p) {
+    font-size: inherit;
+    line-height: inherit;
+  }
+
+  .prose :global(blockquote > :last-child) {
+    margin-block-end: 0;
+  }
+
+  /* Option `numbered` : « 1. », « 2. »… devant chaque h2 */
+  .prose.numbered {
+    counter-reset: prose-section;
+  }
+
+  .prose.numbered :global(h2)::before {
+    counter-increment: prose-section;
+    content: counter(prose-section) ". ";
+  }
+</style>

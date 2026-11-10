@@ -235,6 +235,73 @@ test('completeness : avis hors zone → message nommant le fichier de l\'avis', 
   assert.deepEqual(errors, ['areas : src/content/reviews/m-1.yaml : localité « חיפה » ni modiin ni une de ses voisines (he)']);
 });
 
+// Story 5.2 (FR14, AD-2, AD-11) : pages légales au lint (meta.yaml + 4 .md par page active).
+const LEGAL_PENDING = '---\npending: true\n---\n';
+const legalMetaYaml = (enabled, slugs) =>
+  `slugs: { he: '${slugs.he}', en: '${slugs.en}', ru: '${slugs.ru}', fr: '${slugs.fr}' }\nenabled: ${enabled}\n` +
+  "title: { he: 'כותרת', en: 'Title', ru: 'Заголовок', fr: 'Titre' }\n" +
+  "meta:\n  title: { he: 'כותרת · RS SYSTEM', en: 'Title · RS SYSTEM', ru: 'Заголовок · RS SYSTEM', fr: 'Titre · RS SYSTEM' }\n" +
+  "  description: { he: 'תיאור.', en: 'Description.', ru: 'Описание.', fr: 'Description.' }\n";
+const PRIVACY_SLUGS = { he: 'מדיניות-פרטיות', en: 'privacy', ru: 'конфиденциальность', fr: 'confidentialite' };
+const TERMS_SLUGS = { he: 'תנאי-שימוש', en: 'terms', ru: 'условия', fr: 'conditions' };
+const legalDocs = (id, langs = LANGS, text = LEGAL_PENDING) => Object.fromEntries(langs.map((l) => [`src/content/legal/${id}/${l}.md`, text]));
+
+test('completeness : page légale active avec ses 4 .md et page désactivée sans .md acceptées', () => {
+  const errors = findCompletenessErrors(
+    completeRoot({
+      'src/content/legal/privacy/meta.yaml': legalMetaYaml(true, PRIVACY_SLUGS),
+      ...legalDocs('privacy'),
+      'src/content/legal/terms/meta.yaml': legalMetaYaml(false, TERMS_SLUGS),
+    }),
+  );
+  assert.deepEqual(errors, []);
+});
+
+test('completeness : page légale active sans ru.md → message nommant le fichier ; le CLI sort en 1', () => {
+  const root = completeRoot({
+    'src/content/legal/privacy/meta.yaml': legalMetaYaml(true, PRIVACY_SLUGS),
+    ...legalDocs('privacy', ['he', 'en', 'fr']),
+  });
+  assert.deepEqual(findCompletenessErrors(root), ['legal : src/content/legal/privacy/ru.md : fichier manquant (page légale active)']);
+  const res = cli('completeness', root);
+  assert.equal(res.status, 1);
+  assert.match(res.output, /src\/content\/legal\/privacy\/ru\.md : fichier manquant/);
+});
+
+test('completeness : pending incohérent, .md sans meta.yaml, slug légal en double → messages', () => {
+  const errors = findCompletenessErrors(
+    completeRoot({
+      'src/content/legal/privacy/meta.yaml': legalMetaYaml(true, PRIVACY_SLUGS),
+      ...legalDocs('privacy', ['he', 'en', 'ru']),
+      'src/content/legal/privacy/fr.md': '---\npending: false\n---\n\n',
+      ...legalDocs('cookies', ['he']),
+      'src/content/legal/terms/meta.yaml': legalMetaYaml(true, { ...TERMS_SLUGS, fr: 'contact' }),
+      ...legalDocs('terms'),
+    }),
+  );
+  assert.deepEqual(errors, [
+    'legal : src/content/legal/cookies/he.md : aucun src/content/legal/cookies/meta.yaml pour ce texte',
+    'legal : src/content/legal/privacy/fr.md : corps vide sans « pending: true »',
+    'src/content/legal/ : routes : « contact » et « terms » (fr) : même chemin /fr/contact/',
+  ]);
+});
+
+test('completeness : frontmatter invalide, meta.yaml hors schéma ou illisible → messages nommant chaque fichier', () => {
+  const errors = findCompletenessErrors(
+    completeRoot({
+      'src/content/legal/terms/meta.yaml': legalMetaYaml(false, TERMS_SLUGS),
+      'src/content/legal/terms/fr.md': '---\npendng: true\n---\n',
+      'src/content/legal/privacy/meta.yaml': `${legalMetaYaml(true, PRIVACY_SLUGS)}extra: 1\n`,
+      ...legalDocs('privacy'),
+      'src/content/legal/cookies/meta.yaml': 'slugs: { he: [\n',
+    }),
+  );
+  const text = errors.join('\n');
+  assert.ok(errors.some((e) => e.startsWith('src/content/legal/terms/fr.md : frontmatter invalide')), text);
+  assert.ok(errors.some((e) => e.startsWith('src/content/legal/privacy/meta.yaml : schéma invalide')), text);
+  assert.ok(errors.some((e) => e.startsWith('src/content/legal/cookies/meta.yaml : YAML invalide')), text);
+});
+
 test('completeness : le CLI sort en 1 en citant le message', () => {
   const res = cli('completeness', completeRoot({ 'src/i18n/ru.json': JSON.stringify({ 'nav.home': 'ru' }) }));
   assert.equal(res.status, 1);

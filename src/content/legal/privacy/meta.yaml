@@ -1,0 +1,26 @@
+# Politique de confidentialité (story 5.2, FR14, AD-2) : slugs A1 et titres A4 des décisions de l'epic 5 ; h1 = textes
+# de `nav.privacy` ; description = une phrase, sans affirmation juridique. Texte juridique : avocat de Mike
+# ({he,en,ru,fr}.md, `pending: true` tant qu'il n'est pas fourni) ; placeholder juridique seul (D4).
+# Traductions en/ru/fr rédigées par l'agent : relecture humaine recommandée.
+slugs:
+  he: 'מדיניות-פרטיות'
+  en: 'privacy'
+  ru: 'конфиденциальность'
+  fr: 'confidentialite'
+enabled: true
+title:
+  he: 'מדיניות פרטיות'
+  en: 'Privacy policy'
+  ru: 'Политика конфиденциальности'
+  fr: 'Politique de confidentialité'
+meta:
+  title:
+    he: 'מדיניות פרטיות · RS SYSTEM'
+    en: 'Privacy policy · RS SYSTEM'
+    ru: 'Политика конфиденциальности · RS SYSTEM'
+    fr: 'Politique de confidentialité · RS SYSTEM'
+  description:
+    he: 'מדיניות הפרטיות של אתר RS SYSTEM.'
+    en: 'Privacy policy of the RS SYSTEM website.'
+    ru: 'Политика конфиденциальности сайта RS SYSTEM.'
+    fr: 'Politique de confidentialité du site RS SYSTEM.'

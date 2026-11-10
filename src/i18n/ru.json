@@ -105,5 +105,6 @@
   "areas.subtitle": "От Беэр-Шевы до Иерусалима, включая поселения.",
   "areas.tiles-label": "Районы",
   "areas.missing": "Не нашли свой населённый пункт?",
-  "placeholder.other-settlements": "другие поселения"
+  "placeholder.other-settlements": "другие поселения",
+  "legal.placeholder": "юридический текст — будет предоставлен юристом"
 }

@@ -2,12 +2,15 @@
 // FR2, UX-DR21, UX-DR37 (story 3.1) : trio « pour qui » des pages services (DESIGN.md › Components › Trio ;
 // canvas Cameras.dc.html). Section blanche, h2 section-title centré, puis 3 colonnes
 // minmax(min(100%, 260px), 1fr) : h3 trio-title, texte 17px ink-muted. Ni picto ni carte, non interactif.
-// Révélée au défilement (.reveal, base.css).
+// Révélée au défilement (.reveal, base.css). Story 5.1 : `placeholder` facultatif par élément (vrai = texte non fourni,
+// rendu par <Placeholder>, trio « comment on travaille » d'À propos) ; pages services inchangées.
+import Placeholder from './Placeholder.astro';
+
 interface Props {
   /** Id du h2 (aria-labelledby de la section). */
   id: string;
   title: string;
-  items: readonly { title: string; text: string }[];
+  items: readonly { title: string; text: string; placeholder?: boolean }[];
 }
 
 const { id, title, items } = Astro.props;
@@ -18,7 +21,7 @@ const { id, title, items } = Astro.props;
     {items.map((item) => (
       <div class="item">
         <h3 class="item-title">{item.title}</h3>
-        <p class="item-text">{item.text}</p>
+        <p class="item-text">{item.placeholder ? <Placeholder text={item.text} /> : item.text}</p>
       </div>
     ))}
   </div>

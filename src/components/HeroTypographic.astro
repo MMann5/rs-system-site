@@ -8,25 +8,34 @@
 // - au-dessus de 960px, le corps (sous le h1) réserve à sa fin d'inline la largeur des arcs (--arcs-ink-inline)
 //   et sa hauteur garantit que le haut du dessin (--arcs-ink-block) reste sous le h1 et le sur-titre ;
 // - sous 960px, le texte occupe toute la largeur : les arcs, réduits (--arcs-scale-mobile), sont réservés sous lui.
+// Story 5.1 (décision D1 de l'epic 5) : deux options, défauts inchangés (villes et 404 rendues à l'identique) :
+// - `arcs={false}` : ni dessin ni réserve d'arcs (padding-block standard, corps sans hauteur ni écart de fin) ;
+// - `titleHidden` : h1 masqué visuellement (.visually-hidden de base.css), lu par Google et les lecteurs d'écran.
 interface Props {
   title: string;
   /** Taille du h1 : `page` (page-title, 404 et À propos) ou `city` (city-title, page ville). */
   titleSize?: 'page' | 'city';
+  /** Arcs de signal au coin de fin (défaut `true`) ; `false` sur À propos (le logo porte déjà les ondes). */
+  arcs?: boolean;
+  /** h1 masqué visuellement (défaut `false`) ; vrai sur À propos en hébreu (le logo affiche déjà la phrase). */
+  titleHidden?: boolean;
 }
 
-const { title, titleSize = 'page' } = Astro.props;
+const { title, titleSize = 'page', arcs = true, titleHidden = false } = Astro.props;
 ---
-<section class="hero-typo" aria-labelledby="page-title" data-surface="navy">
-  <div class="arcs">
-    <svg aria-hidden="true" focusable="false" viewBox="0 0 480 480">
-      <path class="arc arc-1" pathLength="1" d="M100 270 A110 110 0 0 1 208.9 395.3" />
-      <path class="arc arc-2" pathLength="1" d="M100 205 A175 175 0 0 1 270.5 419.4" />
-      <path class="arc arc-3" pathLength="1" d="M100 138 A242 242 0 0 1 330.2 454.8" />
-    </svg>
-  </div>
+<section class:list={['hero-typo', { plain: !arcs }]} aria-labelledby="page-title" data-surface="navy">
+  {arcs && (
+    <div class="arcs">
+      <svg aria-hidden="true" focusable="false" viewBox="0 0 480 480">
+        <path class="arc arc-1" pathLength="1" d="M100 270 A110 110 0 0 1 208.9 395.3" />
+        <path class="arc arc-2" pathLength="1" d="M100 205 A175 175 0 0 1 270.5 419.4" />
+        <path class="arc arc-3" pathLength="1" d="M100 138 A242 242 0 0 1 330.2 454.8" />
+      </svg>
+    </div>
+  )}
   <div class="content">
     <slot name="eyebrow" />
-    <h1 id="page-title" class:list={['title', { city: titleSize === 'city' }]}>{title}</h1>
+    <h1 id="page-title" class:list={['title', { city: titleSize === 'city', 'visually-hidden': titleHidden }]}>{title}</h1>
     <div class="body">
       <slot />
     </div>
@@ -159,6 +168,26 @@ const { title, titleSize = 'page' } = Astro.props;
       padding-inline-end: calc(
         var(--arcs-size) * var(--arcs-ink-inline) + var(--arcs-offset-inline) + var(--arcs-clearance) - var(--page-gutter)
       );
+    }
+  }
+
+  /* Sans arcs (À propos, D1 de l'epic 5) : padding-block standard des sections, aucune réserve. */
+  @media (width < 960px) {
+    .hero-typo.plain {
+      padding-block: var(--section-y-tablet);
+    }
+  }
+
+  @media (width < 700px) {
+    .hero-typo.plain {
+      padding-block: var(--section-y-mobile);
+    }
+  }
+
+  @media (width >= 960px) {
+    .plain .body {
+      min-block-size: 0;
+      padding-inline-end: 0;
     }
   }
 

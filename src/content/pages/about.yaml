@@ -1,0 +1,116 @@
+# À propos (story 5.1, FR10) : slugs A1 et titres A4 des décisions de l'epic 5 ; description = une phrase sans chiffre
+# ni affirmation non fournie (métier + zone). Textes hébreux : canvas About.dc.html, mot pour mot (h1, histoire,
+# chiffres, trio « איך אנחנו עובדים »). Histoire, année, installations et corps du trio : non fournis par RS SYSTEM,
+# donc en `placeholder` (D2, D3), rendus par <Placeholder> ; la zone est un fait connu. Retirer un chiffre de `stats`
+# retire sa colonne. Traductions en/ru/fr rédigées par l'agent : relecture humaine recommandée.
+slugs:
+  he: 'אודות'
+  en: 'about'
+  ru: 'о-нас'
+  fr: 'a-propos'
+enabled: true
+meta:
+  title:
+    he: 'אודות · RS SYSTEM'
+    en: 'About · RS SYSTEM'
+    ru: 'О нас · RS SYSTEM'
+    fr: 'À propos · RS SYSTEM'
+  description:
+    he: 'RS SYSTEM מתקינה מערכות מיגון ואבטחה, מבאר שבע ועד ירושלים.'
+    en: 'RS SYSTEM installs security and protection systems, from Beer Sheva to Jerusalem.'
+    ru: 'RS SYSTEM устанавливает системы защиты и безопасности от Беэр-Шевы до Иерусалима.'
+    fr: 'RS SYSTEM installe des systèmes de protection et de sécurité, de Beer-Sheva à Jérusalem.'
+about:
+  hero:
+    title:
+      he: 'מערכת מיגון ואבטחה.'
+      en: 'Security and protection systems.'
+      ru: 'Системы защиты и безопасности.'
+      fr: 'Systèmes de protection et de sécurité.'
+  story:
+    placeholder:
+      he: 'סיפור החברה: מתי הוקמה, מי מאחוריה, ולמה לקוחות בוחרים בה.'
+      en: 'The company story: when it was founded, who is behind it, and why customers choose it.'
+      ru: 'История компании: когда она основана, кто за ней стоит и почему клиенты её выбирают.'
+      fr: 'L’histoire de l’entreprise : sa création, qui la dirige, et pourquoi les clients la choisissent.'
+  stats:
+    label:
+      he: 'במספרים'
+      en: 'In figures'
+      ru: 'В цифрах'
+      fr: 'En chiffres'
+    founded:
+      value:
+        placeholder:
+          he: 'שנה'
+          en: 'year'
+          ru: 'год'
+          fr: 'année'
+      label:
+        he: 'שנת הקמה'
+        en: 'Founded'
+        ru: 'Год основания'
+        fr: 'Année de création'
+    installations:
+      value:
+        placeholder:
+          he: 'מספר'
+          en: 'number'
+          ru: 'число'
+          fr: 'nombre'
+      label:
+        he: 'התקנות'
+        en: 'Installations'
+        ru: 'Установок'
+        fr: 'Installations'
+    zone:
+      value:
+        he: 'מבאר שבע ועד ירושלים'
+        en: 'From Beer Sheva to Jerusalem'
+        ru: 'От Беэр-Шевы до Иерусалима'
+        fr: 'De Beer-Sheva à Jérusalem'
+      label:
+        he: 'כולל היישובים'
+        en: 'Including the settlements'
+        ru: 'Включая поселения'
+        fr: 'Yishouvim compris'
+  how:
+    title:
+      he: 'איך אנחנו עובדים'
+      en: 'How we work'
+      ru: 'Как мы работаем'
+      fr: 'Notre façon de travailler'
+    items:
+      - title:
+          he: 'טכנאים שלנו'
+          en: 'Our technicians'
+          ru: 'Наши техники'
+          fr: 'Nos techniciens'
+        text:
+          placeholder:
+            he: 'מי מתקין: צוות קבוע, הכשרה, רישיונות'
+            en: 'Who installs: permanent team, training, licences'
+            ru: 'Кто устанавливает: постоянная команда, обучение, лицензии'
+            fr: 'Qui installe : équipe fixe, formation, licences'
+      - title:
+          he: 'הצעה ברורה'
+          en: 'A clear quote'
+          ru: 'Понятное предложение'
+          fr: 'Un devis clair'
+        text:
+          placeholder:
+            he: 'איך נבנית הצעת מחיר, מה כלול'
+            en: 'How a quote is put together, what is included'
+            ru: 'Как составляется предложение, что в него входит'
+            fr: 'Comment le devis est construit, ce qui est inclus'
+      - title:
+          he: 'אחרי ההתקנה'
+          en: 'After installation'
+          ru: 'После установки'
+          fr: 'Après l’installation'
+        text:
+          placeholder:
+            he: 'אחריות, שירות, זמני תגובה'
+            en: 'Warranty, service, response times'
+            ru: 'Гарантия, обслуживание, сроки реагирования'
+            fr: 'Garantie, service, délais d’intervention'
