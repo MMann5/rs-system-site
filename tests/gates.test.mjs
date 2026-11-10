@@ -476,3 +476,53 @@ test('astro check : enabled: \'oui\' dans home.yaml (Zod) fait échouer', () => 
   assert.notEqual(res.status, 0);
   assert.match(res.stdout + res.stderr, /pages\/home\.yaml/);
 });
+
+// Story 6.1 (FR25, AD-4, AD-11) : articles au lint (meta.yaml + 4 .md par article actif), sous l'entrée `blog`.
+const BLOG_PAGE = "slugs: { he: 'בלוג', en: 'blog', ru: 'блог', fr: 'blog' }\nenabled: false\n";
+const POST_META =
+  "date: '2026-11-10'\ncategory: smoke-detectors\nslugs: { he: 'כמה-גלאים', en: 'how-many', ru: 'сколько', fr: 'combien' }\nenabled: true\n";
+const postDocs = (id, langs = LANGS) =>
+  Object.fromEntries(
+    langs.map((l) => [
+      `src/content/posts/${id}/${l}.md`,
+      `---\ntitle: 'Titre ${l}'\nlede: 'Chapeau ${l}'\nmeta:\n  title: 'Titre ${l} · RS SYSTEM'\n  description: 'Chapeau ${l}'\n---\n\n## Section\n\nTexte.\n`,
+    ]),
+  );
+
+test('completeness : article actif avec ses 4 .md accepté ; sans ru.md → message nommant le fichier, CLI en 1', () => {
+  const base = { 'src/content/pages/blog.yaml': BLOG_PAGE, 'src/content/posts/how-many/meta.yaml': POST_META };
+  assert.deepEqual(findCompletenessErrors(completeRoot({ ...base, ...postDocs('how-many') })), []);
+  const root = completeRoot({ ...base, ...postDocs('how-many', ['he', 'en', 'fr']) });
+  assert.deepEqual(findCompletenessErrors(root), ['blog : src/content/posts/how-many/ru.md : fichier manquant (article actif)']);
+  const res = cli('completeness', root);
+  assert.equal(res.status, 1);
+  assert.match(res.output, /src\/content\/posts\/how-many\/ru\.md : fichier manquant/);
+});
+
+test('completeness : article à photo (image présente ou absente), image interdite (D1), slug en double', () => {
+  const camerasMeta = (id, image) =>
+    `date: '2026-11-01'\ncategory: cameras\nimage: ${image}\nslugs: { he: '${id}-he', en: '${id}-en', ru: '${id}-ru', fr: '${id}-fr' }\nenabled: true\n`;
+  const withAlt = (id) =>
+    Object.fromEntries(Object.entries(postDocs(id)).map(([path, text]) => [path, text.replace('\n---\n\n', "\nalt: 'Une caméra'\n---\n\n")]));
+  const cameras = { 'src/content/pages/blog.yaml': BLOG_PAGE, 'src/content/posts/dome/meta.yaml': camerasMeta('dome', 'x.jpg'), ...withAlt('dome') };
+  assert.deepEqual(findCompletenessErrors(completeRoot({ ...cameras, 'src/assets/blog/x.jpg': 'x' })), []);
+  const absent = findCompletenessErrors(completeRoot(cameras));
+  assert.equal(absent.length, 1, absent.join('\n'));
+  assert.match(absent[0], /src\/content\/posts\/dome\/meta\.yaml : image « x\.jpg » absente/);
+  // D1 : image sur un article smoke-detectors → refus du schéma, au nom du meta.yaml.
+  const forbidden = findCompletenessErrors(
+    completeRoot({ 'src/content/pages/blog.yaml': BLOG_PAGE, 'src/content/posts/how-many/meta.yaml': `${POST_META}image: x.jpg\n`, ...postDocs('how-many'), 'src/assets/blog/x.jpg': 'x' }),
+  );
+  assert.ok(forbidden.some((line) => line.startsWith('src/content/posts/how-many/meta.yaml : schéma invalide')), forbidden.join('\n'));
+  // Deux articles au même slug fr → erreur du registre rangée sous src/content/posts/.
+  const dup = findCompletenessErrors(
+    completeRoot({
+      'src/content/pages/blog.yaml': BLOG_PAGE,
+      'src/content/posts/how-many/meta.yaml': POST_META,
+      ...postDocs('how-many'),
+      'src/content/posts/other/meta.yaml': POST_META.replace("he: 'כמה-גלאים', en: 'how-many', ru: 'сколько'", "he: 'אחר', en: 'other', ru: 'другой'"),
+      ...postDocs('other'),
+    }),
+  );
+  assert.ok(dup.some((line) => line.startsWith('src/content/posts/ : ') && line.includes('/fr/blog/combien/')), dup.join('\n'));
+});

@@ -11,16 +11,21 @@
 // - story 5.2 : les pages légales de src/content/legal/{id}/ (meta.yaml + {he,en,ru,fr}.md) passent buildLegal (page active
 //   avec ses 4 .md, `pending` ⇔ corps vide, .md rangé sous un meta.yaml) et entrent au registre après les pages fixes,
 //   comme src/lib/routes/index.ts. Dossier absent = aucune page légale.
-// Les messages de buildDictionary, buildRegistry, buildAreas, buildReviews et buildLegal sont repris tels quels.
+// - story 6.1 : les articles de src/content/posts/{id}/ (meta.yaml + {he,en,ru,fr}.md) passent leurs schémas et buildPosts
+//   (article actif avec ses 4 .md, .md rangé sous un meta.yaml, `alt` ⇔ image, image de src/assets/blog/ présente, règle
+//   image / catégorie D1, corps non vide) et entrent au registre après les villes (`post:{id}` sous `blog`,
+//   `inheritActive: false`), comme src/lib/routes/index.ts. Dossier absent = aucun article.
+// Les messages de buildDictionary, buildRegistry, buildAreas, buildReviews, buildLegal et buildPosts sont repris tels quels.
 // Usage : node scripts/checks/completeness.mjs [racine]  (défaut : racine du dépôt).
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse } from 'yaml';
 import { buildAreas, buildReviews, citySources } from '../../src/lib/areas/core.ts';
+import { BLOG_IMAGES_DIR, buildPosts, POSTS_DIR, postSources } from '../../src/lib/blog/core.ts';
 import { buildDictionary } from '../../src/lib/i18n/core.ts';
 import { buildLegal, LEGAL_DIR } from '../../src/lib/legal/core.ts';
 import { LANGS } from '../../src/lib/langs.ts';
-import { legalDocSchema, legalMetaSchema } from '../../src/lib/page-schema.ts';
+import { legalDocSchema, legalMetaSchema, postDocSchema, postMetaSchema } from '../../src/lib/page-schema.ts';
 import { buildRegistry } from '../../src/lib/routes/core.ts';
 import { isMain, report, REPO_ROOT, rootArg } from './report.mjs';
 
@@ -135,7 +140,49 @@ function checkLegal(root, failures) {
   return metas.map(({ id, data }) => ({ id, slugs: data.slugs, enabled: data.enabled }));
 }
 
-function checkRoutes(root, failures, cities, legal) {
+/** Articles pour le registre ; schémas des meta.yaml et frontmatters, puis complétude (buildPosts) vérifiés au passage. */
+function checkPosts(root, failures) {
+  const abs = join(root, POSTS_DIR);
+  if (!existsSync(abs)) return [];
+  const imagesDir = join(root, BLOG_IMAGES_DIR);
+  const images = existsSync(imagesDir) ? readdirSync(imagesDir) : [];
+  const metas = [];
+  const docs = [];
+  for (const entry of readdirSync(abs, { withFileTypes: true }).filter((e) => e.isDirectory()).sort((a, b) => (a.name < b.name ? -1 : 1))) {
+    const id = entry.name;
+    for (const name of readdirSync(join(abs, id)).sort()) {
+      const file = `${POSTS_DIR}/${id}/${name}`;
+      let text;
+      try {
+        text = readFileSync(join(abs, id, name), 'utf8');
+      } catch {
+        continue;
+      }
+      try {
+        if (name === 'meta.yaml') {
+          const result = postMetaSchema.safeParse(parse(text) ?? {});
+          if (result.success) metas.push({ id, data: result.data });
+          else failures.push(`${file} : schéma invalide (${zodLines(result.error)})`);
+        } else if (name.endsWith('.md')) {
+          const { data, body } = splitFrontmatter(text);
+          const result = postDocSchema.safeParse(data);
+          if (result.success) docs.push({ id: `${id}/${name.replace(/\.md$/, '')}`, data: result.data, body });
+          else failures.push(`${file} : frontmatter invalide (${zodLines(result.error)})`);
+        }
+      } catch (error) {
+        failures.push(`${file} : YAML invalide (${messages(error)[0]})`);
+      }
+    }
+  }
+  try {
+    buildPosts(metas, docs, images);
+  } catch (error) {
+    for (const line of messages(error)) failures.push(line);
+  }
+  return postSources(metas.map(({ id, data }) => ({ id, meta: data })));
+}
+
+function checkRoutes(root, failures, cities, legal, posts) {
   const dir = join(root, PAGES);
   if (!existsSync(dir)) return failures.push(`${PAGES}/ : dossier absent`);
   const sources = readYamlDir(root, PAGES, failures).map(({ id, data }) => ({
@@ -144,9 +191,10 @@ function checkRoutes(root, failures, cities, legal) {
     enabled: data.enabled,
     previewOnly: data.previewOnly,
   }));
-  sources.push(...legal, ...citySources(cities));
+  sources.push(...legal, ...citySources(cities), ...posts);
   const legalIds = legal.map(({ id }) => `« ${id} »`);
-  const dirOf = (line) => (line.includes('« city:') ? CITIES : legalIds.some((id) => line.includes(id)) ? LEGAL_DIR : PAGES);
+  const dirOf = (line) =>
+    line.includes('« city:') ? CITIES : line.includes('« post:') ? POSTS_DIR : legalIds.some((id) => line.includes(id)) ? LEGAL_DIR : PAGES;
   const seen = new Set();
   for (const isMainBranch of [false, true]) {
     try {
@@ -166,7 +214,8 @@ export function findCompletenessErrors(root) {
   const failures = [];
   checkI18n(root, failures);
   const cities = checkAreas(root, failures);
-  checkRoutes(root, failures, cities, checkLegal(root, failures));
+  const legal = checkLegal(root, failures);
+  checkRoutes(root, failures, cities, legal, checkPosts(root, failures));
   return failures;
 }
 

@@ -574,4 +574,38 @@
   --prose-item-gap: 8px;
   --prose-quote-pad: 24px;
   --prose-caption-gap: 8px;
+  /* — Story 6.1 : page article, encart contact d'article, carte de blog (canvas Article.dc.html, DESIGN.md › Components) — */
+  /* Canvas Article.dc.html › en-tête : « padding: 72px 22px 40px; gap: 14px » (haut : --hero-pad-top) */
+  --article-head-gap: 14px;
+  --article-head-pad-end: 40px;
+  /* DESIGN.md › Photographie : photo d'article « 16:9 (560px max) » ; carte de blog « 3:2 » */
+  --photo-ratio-article: 16 / 9;
+  --article-media-max: 560px;
+  --photo-ratio-card: 3 / 2;
+  /* Story 6.1 (D1) : marge entre le détecteur dessiné et le bord de son cadre (= --space-4) */
+  --detector-fit-margin: 16px;
+  /* Canvas Article.dc.html › corps : « padding: 56px 22px 24px » */
+  --article-body-pad-top: 56px;
+  --article-body-pad-end: 24px;
+  /* Canvas Article.dc.html › encart : « margin: 32px auto 0 », « padding: 40px », « gap: 12px » ; DESIGN.md : « 32px mobile » */
+  --article-box-gap-before: 32px;
+  --article-box-pad: 40px;
+  --article-box-pad-mobile: 32px;
+  --article-box-gap: 12px;
+  /* DESIGN.md › Encart contact d'article : « numéro 40px blanc {typography.family-sans} » ; canvas : « clamp(28px, 8vw, 40px) » */
+  --type-phone-box-size: clamp(28px, 8vw, 40px);
+  --type-phone-box-weight: 700;
+  /* DESIGN.md › Carte de blog : catégorie « {typography.small} 600 » */
+  --type-category-weight: 600;
+  /* Canvas Article.dc.html › « עוד מהבלוג » : titre « font-size: 32px », section « gap: 32px » */
+  --type-related-title-size: 32px;
+  --related-gap: 32px;
+  /* DESIGN.md › Layout : cartes de blog « minmax(min(100%, 300px), 1fr) » ; canvas : « gap: 32px 24px », carte « gap: 12px » */
+  --card-col-min: 300px;
+  --card-grid-gap-block: 32px;
+  --card-grid-gap-inline: 24px;
+  --card-gap: 12px;
+  /* EXPERIENCE.md › Mouvement › Survol de carte : « Image scale(1.04), transition 0,6 s » */
+  --card-zoom: 1.04;
+  --card-zoom-duration: 0.6s;
 }

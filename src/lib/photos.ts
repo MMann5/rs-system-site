@@ -30,3 +30,12 @@ export const FEATURE_TILE_PHOTO_SIZES = 'min(1100px, calc(100vw - 68px))';
  * la moitié de l'écran moins 18px ; sinon une colonne, l'écran moins les deux --tile-gutter.
  */
 export const GRID_TILE_PHOTO_SIZES = '(width >= 1076px) calc(50vw - 18px), calc(100vw - 24px)';
+// Story 6.1 : `sizes` des photos du blog.
+/** Photo d'article : cadre 16:9 de la largeur du conteneur (1180px au plus, entre les --page-gutter), comme le héros clair. */
+export const ARTICLE_PHOTO_SIZES = FRAMED_PHOTO_SIZES;
+/**
+ * Carte de blog : grille `minmax(min(100%, 300px), 1fr)` (écart de 24px) dans le conteneur. 3 colonnes dès 992px
+ * (948px de contenu), 2 dès 668px (624px), sinon une : l'écran moins les deux --page-gutter (22px).
+ */
+export const BLOG_CARD_PHOTO_SIZES =
+  '(width >= 992px) min(377px, calc((100vw - 92px) / 3)), (width >= 668px) calc((100vw - 68px) / 2), calc(100vw - 44px)';

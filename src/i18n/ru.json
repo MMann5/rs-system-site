@@ -106,5 +106,9 @@
   "areas.tiles-label": "Районы",
   "areas.missing": "Не нашли свой населённый пункт?",
   "placeholder.other-settlements": "другие поселения",
-  "legal.placeholder": "юридический текст — будет предоставлен юристом"
+  "legal.placeholder": "юридический текст — будет предоставлен юристом",
+  "post.breadcrumb-label": "Навигационная цепочка",
+  "post.reading-time": "{n} мин чтения",
+  "post.contact.title": "Хотите, чтобы техник проверил ваш дом?",
+  "post.related.title": "Ещё из блога"
 }

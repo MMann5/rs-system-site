@@ -1,0 +1,88 @@
+---
+// FR31, UX-DR27, AD-5, AD-6, AD-13 (story 6.1) : encart contact d'article (DESIGN.md › Components › Encart contact
+// d'article ; canvas Article.dc.html). Après le dernier paragraphe, dans la colonne de 680px : aplat navy-deep, coins
+// droits, padding 40px (32px sous 700px). Question `h2` en trio-title, numéro blanc en lien d'appel mesuré, puis
+// Appeler › WhatsApp › en link-on-night. Message WhatsApp = celui de la page (service de la catégorie, FR31).
+import { telHref, waHref } from '../lib/contact/core';
+import { cityLabels, serviceLabels } from '../lib/contact/labels';
+import { pageWaInput } from '../lib/contact/table';
+import { t } from '../lib/i18n';
+import type { PageContext } from '../lib/page-context';
+import PhoneNumber from './PhoneNumber.astro';
+import TextLink from './TextLink.astro';
+
+interface Props {
+  ctx: PageContext;
+}
+
+const { ctx } = Astro.props;
+const { lang } = ctx;
+const wa = waHref(pageWaInput(ctx, serviceLabels('he'), cityLabels('he')));
+---
+<aside class="wrap" aria-labelledby="article-box-title">
+  <div class="box" data-surface="navy">
+    <h2 id="article-box-title" class="title">{t(lang, 'post.contact.title')}</h2>
+    <a href={telHref()} class="phone" data-track="call_click" data-placement="article_box"><PhoneNumber /></a>
+    <div class="actions">
+      <TextLink href={telHref()} label={t(lang, 'action.call')} tone="night" track="call_click" placement="article_box" />
+      <TextLink href={wa} label={t(lang, 'action.whatsapp')} tone="night" track="whatsapp_click" placement="article_box" />
+    </div>
+  </div>
+</aside>
+
+<style>
+  /* Seuils (les @media ne lisent pas les tokens) : --bp-mobile-bar 700px. */
+  .wrap {
+    box-sizing: border-box;
+    max-inline-size: calc(var(--container-article) + 2 * var(--page-gutter));
+    margin-block: var(--article-box-gap-before) 0;
+    margin-inline: auto;
+    padding-inline: var(--page-gutter);
+  }
+
+  .box {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--article-box-gap);
+    padding: var(--article-box-pad);
+    border-radius: var(--radius-none);
+    background-color: var(--color-navy-deep);
+    color: var(--color-white);
+  }
+
+  @media (width < 700px) {
+    .box {
+      padding: var(--article-box-pad-mobile);
+    }
+  }
+
+  .title {
+    margin: 0;
+    font-size: var(--type-trio-title-size);
+    font-weight: var(--type-trio-title-weight);
+    line-height: var(--type-trio-title-leading);
+  }
+
+  /* Numéro : chiffres en family-sans, blanc, une seule ligne (le jeton se réduit à petite largeur). */
+  .phone {
+    font-family: var(--family-sans);
+    font-size: var(--type-phone-box-size);
+    font-weight: var(--type-phone-box-weight);
+    line-height: var(--type-text-link-leading);
+    color: var(--color-white);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .phone:hover,
+  .phone:focus-visible {
+    text-decoration: underline;
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: var(--link-gap);
+  }
+</style>

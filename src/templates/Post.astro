@@ -1,0 +1,253 @@
+---
+// FR12, FR23, FR25, FR31, NFR1, UX-DR25, UX-DR26, UX-DR27, UX-DR31, AD-2, AD-5, AD-9, AD-13, décisions D1 et D3 de
+// l'epic 6 (story 6.1) : modèle d'article (canvas Article.dc.html), piloté par l'id `post:{id}`. Ordre de <main> : fil
+// d'Ariane blog › catégorie (« blog » en texte tant que l'index `blog` est désactivé, lien sinon ; catégorie = libellé du
+// service, non cliquable), h1 article-title, chapeau article-lede (colonne 760px), date locale · temps de lecture, média
+// 16:9 (photo via ResponsivePhoto, ou détecteur dessiné pour `smoke-detectors`, D1) dans le conteneur 1180px, 560px de haut
+// au plus, corps Prose numéroté (colonne 680px, liens `page:<id>` résolus par le registre), encart contact, « autres
+// articles » (absente sans autre article actif). Pas de bloc contact standard.
+// Contexte de page (AD-13) : `service` = catégorie de l'article, `navSection: 'blog'` ; le WhatsApp de l'encart et de la
+// barre mobile nomme ce service (FR31). Données : src/content/posts/{id}/ (src/lib/blog).
+import ArticleContactBox from '../components/ArticleContactBox.astro';
+import BlogCard from '../components/BlogCard.astro';
+import Prose from '../components/Prose.astro';
+import ResponsivePhoto from '../components/ResponsivePhoto.astro';
+import SmokeDetector from '../components/SmokeDetector.astro';
+import Base from '../layouts/Base.astro';
+import { BLOG_ID, formatPostDate, post as findPost, postDoc, postDocFile, postImage, POST_ID_PREFIX, related } from '../lib/blog';
+import { serviceLabels } from '../lib/contact/labels';
+import type { ServiceCode } from '../lib/contact/table';
+import { t } from '../lib/i18n';
+import type { Lang } from '../lib/langs';
+import { createPageContext } from '../lib/page-context';
+import { ARTICLE_PHOTO_SIZES } from '../lib/photos';
+import { resolveProseLinks } from '../lib/prose-links';
+import { isEnabled, url } from '../lib/routes';
+
+interface Props {
+  id: string;
+  lang: Lang;
+}
+
+const { id, lang } = Astro.props;
+if (!id.startsWith(POST_ID_PREFIX)) throw new Error(`Post : id « ${id} » hors du type post:`);
+const postId = id.slice(POST_ID_PREFIX.length);
+const item = findPost(postId);
+const doc = postDoc(postId, lang);
+const ctx = createPageContext({ id, lang, service: item.meta.category, navSection: 'blog' });
+
+// Fil d'Ariane : `url('blog')` n'est jamais appelé tant que l'index est désactivé (story 6.2 l'active).
+const blogHref = isEnabled(BLOG_ID) ? url(BLOG_ID, lang) : undefined;
+const category = serviceLabels(lang)[item.meta.category as ServiceCode].label;
+const reading = t(lang, 'post.reading-time').replace('{n}', String(doc.minutes));
+const image = postImage(item);
+const html = resolveProseLinks(doc.html, (target, params) => url(target, lang, params), postDocFile(postId, lang), 'blog');
+const others = related(item);
+---
+<Base ctx={ctx} title={doc.meta.title} description={doc.meta.description}>
+  <article class="article">
+    <div class="head">
+      {blogHref ? (
+        <nav class="crumb" aria-label={t(lang, 'post.breadcrumb-label')}>
+          <a href={blogHref} class="crumb-link">{t(lang, 'nav.blog')}</a><span aria-hidden="true">{' › '}</span><span>{category}</span>
+        </nav>
+      ) : (
+        <p class="crumb"><span>{t(lang, 'nav.blog')}</span><span aria-hidden="true">{' › '}</span><span>{category}</span></p>
+      )}
+      <h1 class="title">{doc.title}</h1>
+      <p class="lede">{doc.lede}</p>
+      <p class="meta"><time datetime={item.meta.date}>{formatPostDate(item.meta.date, lang)}</time>{' · '}{reading}</p>
+    </div>
+
+    <div class="media-wrap">
+      <div class="media">
+        {image ? (
+          <ResponsivePhoto src={image} alt={doc.alt ?? ''} sizes={ARTICLE_PHOTO_SIZES} priority />
+        ) : (
+          <SmokeDetector size="lg" fit />
+        )}
+      </div>
+    </div>
+
+    <div class="body">
+      <Prose html={html} numbered />
+    </div>
+
+    <ArticleContactBox ctx={ctx} />
+  </article>
+
+  {others.length > 0 && (
+    <section class="related" aria-labelledby="related-title">
+      <h2 id="related-title" class="related-title">{t(lang, 'post.related.title')}</h2>
+      <div class="grid">
+        {others.map((other) => <BlogCard post={other} lang={lang} />)}
+      </div>
+    </section>
+  )}
+</Base>
+
+<style>
+  /* Seuils (les @media ne lisent pas les tokens) : --bp-menu 960px, --bp-mobile-bar 700px. */
+  /* L'espace sous l'encart (avant « autres articles » ou le footer) appartient à l'article. */
+  .article {
+    padding-block-end: var(--section-y);
+    background-color: var(--color-surface);
+    color: var(--color-ink);
+  }
+
+  @media (width < 960px) {
+    .article {
+      padding-block-end: var(--section-y-tablet);
+    }
+  }
+
+  @media (width < 700px) {
+    .article {
+      padding-block-end: var(--section-y-mobile);
+    }
+  }
+
+  /* — En-tête : colonne 760px — */
+  .head {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: var(--article-head-gap);
+    max-inline-size: calc(var(--container-article-header) + 2 * var(--page-gutter));
+    margin-inline: auto;
+    padding-block: var(--hero-pad-top) var(--article-head-pad-end);
+    padding-inline: var(--page-gutter);
+  }
+
+  @media (width < 960px) {
+    .head {
+      padding-block-start: var(--hero-pad-top-tablet);
+    }
+  }
+
+  @media (width < 700px) {
+    .head {
+      padding-block-start: var(--hero-pad-top-mobile);
+    }
+  }
+
+  .crumb {
+    margin: 0;
+    font-size: var(--type-small-size);
+    font-weight: var(--type-category-weight);
+    line-height: var(--type-small-leading);
+    color: var(--color-link);
+  }
+
+  .crumb-link {
+    color: var(--color-link);
+    text-decoration: none;
+  }
+
+  .crumb-link:hover,
+  .crumb-link:focus-visible {
+    text-decoration: underline;
+  }
+
+  .title {
+    margin: 0;
+    font-size: var(--type-article-title-size);
+    font-weight: var(--type-article-title-weight);
+    line-height: var(--type-article-title-leading);
+  }
+
+  .lede {
+    margin: 0;
+    font-size: var(--type-article-lede-size);
+    font-weight: var(--type-article-lede-weight);
+    line-height: var(--type-article-lede-leading);
+    color: var(--color-ink-muted);
+  }
+
+  .meta {
+    margin: 0;
+    font-size: var(--type-small-size);
+    font-weight: var(--type-small-weight);
+    line-height: var(--type-small-leading);
+    color: var(--color-ink-muted);
+  }
+
+  /* — Média : cadre 16:9 de la largeur du conteneur 1180px, 560px de haut au plus — */
+  .media-wrap {
+    box-sizing: border-box;
+    max-inline-size: calc(var(--container) + 2 * var(--page-gutter));
+    margin-inline: auto;
+    padding-inline: var(--page-gutter);
+  }
+
+  /* Conteneur de taille : le détecteur dessiné (D1) s'y ajuste ; la photo le couvre. */
+  .media {
+    container-type: size;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 100%;
+    aspect-ratio: var(--photo-ratio-article);
+    max-block-size: var(--article-media-max);
+    overflow: hidden;
+    border-radius: var(--radius-none);
+    background-color: var(--color-surface-alt);
+  }
+
+  .media :global(picture) {
+    display: contents;
+  }
+
+  .media :global(img) {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  /* — Corps : colonne 680px — */
+  .body {
+    box-sizing: border-box;
+    max-inline-size: calc(var(--container-article) + 2 * var(--page-gutter));
+    margin-inline: auto;
+    padding-block: var(--article-body-pad-top) var(--article-body-pad-end);
+    padding-inline: var(--page-gutter);
+  }
+
+  /* — Autres articles : conteneur 1180px, grille de cartes — */
+  .related {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: var(--related-gap);
+    max-inline-size: calc(var(--container) + 2 * var(--page-gutter));
+    margin-inline: auto;
+    padding-block: 0 var(--section-y-lg);
+    padding-inline: var(--page-gutter);
+  }
+
+  @media (width < 960px) {
+    .related {
+      padding-block-end: var(--section-y-tablet);
+    }
+  }
+
+  @media (width < 700px) {
+    .related {
+      padding-block-end: var(--section-y-mobile);
+    }
+  }
+
+  .related-title {
+    margin: 0;
+    font-size: var(--type-related-title-size);
+    font-weight: var(--type-h2-weight);
+    line-height: var(--type-h2-leading);
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--card-col-min)), 1fr));
+    gap: var(--card-grid-gap-block) var(--card-grid-gap-inline);
+  }
+</style>

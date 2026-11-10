@@ -1,6 +1,7 @@
 // AD-4 : schéma Zod d'une page fixe (src/content/pages/{id}.yaml), lu par src/content.config.ts.
 // Module pur, sans import Astro virtuel, syntaxe TypeScript effaçable uniquement : Node l'importe directement (tests).
 import { z } from 'astro/zod';
+import { SERVICE_CODES } from './contact/table.ts';
 
 /** Texte non vide après suppression des espaces. */
 export const text = z.string().trim().min(1);
@@ -105,3 +106,64 @@ export const legalMetaSchema = z.strictObject({
 // Story 5.2 : frontmatter d'un texte légal, src/content/legal/{id}/{lang}.md. `pending: true` ⇔ corps vide (texte de
 // l'avocat pas encore fourni, placeholder juridique) ; vérifié entre fichiers par src/lib/legal/core.ts (buildLegal).
 export const legalDocSchema = z.strictObject({ pending: z.boolean().default(false) });
+
+// Story 6.1 (FR12, FR25, AD-4, décision D1 de l'epic 6) : article du blog, src/content/posts/{id}/meta.yaml (id = nom du
+// dossier) + {he,en,ru,fr}.md. Complétude entre fichiers (4 .md par article actif, `alt` ⇔ image, image présente dans
+// src/assets/blog/, corps non vide) : src/lib/blog/core.ts (buildPosts).
+
+/** Catégories d'article : les codes de service du formulaire, sauf `unsure`. */
+export const POST_CATEGORIES = SERVICE_CODES.filter((code) => code !== 'unsure') as Exclude<(typeof SERVICE_CODES)[number], 'unsure'>[];
+
+/** Catégorie dont le média est le détecteur dessiné (D1) : pas de photo. */
+export const DRAWN_CATEGORY = 'smoke-detectors';
+
+/** Nom de fichier d'une photo d'article, rangée dans src/assets/blog/ (un seul segment). */
+export const POST_IMAGE_RE = /^[A-Za-z0-9][\w.-]*\.(?:jpe?g|png|webp|avif)$/;
+
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Date ISO `AAAA-MM-JJ` réelle (le 2026-02-30 est refusé). */
+export function isIsoDate(value: string): boolean {
+  if (!ISO_DATE_RE.test(value)) return false;
+  const date = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+/**
+ * D1 : `smoke-detectors` → aucune image (le détecteur dessiné la remplace) ; toute autre catégorie → image obligatoire.
+ * Message d'erreur, ou `undefined` si la règle est respectée. Partagé par le schéma et par buildPosts.
+ */
+export function postImageRuleError(category: string, image: string | undefined): string | undefined {
+  if (category === DRAWN_CATEGORY && image !== undefined) return `« image » interdite pour la catégorie ${DRAWN_CATEGORY} (détecteur dessiné, décision D1)`;
+  if (category !== DRAWN_CATEGORY && image === undefined) return `« image » obligatoire pour la catégorie ${category} (fichier de src/assets/blog/)`;
+  return undefined;
+}
+
+// Une date YAML non citée (2026-11-10) devient un objet Date pour certains lecteurs YAML : ramenée à sa forme ISO.
+const postDate = z.preprocess(
+  (value) => (value instanceof Date && !Number.isNaN(value.getTime()) ? value.toISOString().slice(0, 10) : value),
+  z.string().refine(isIsoDate, { message: 'date ISO AAAA-MM-JJ attendue' }),
+);
+
+export const postMetaSchema = z
+  .strictObject({
+    date: postDate,
+    category: z.enum(POST_CATEGORIES),
+    image: z.string().regex(POST_IMAGE_RE, { message: 'nom de fichier de src/assets/blog/ attendu (ex. camera-entree.jpg)' }).optional(),
+    slugs: perLang(z.string()),
+    enabled: z.boolean(),
+    featured: z.boolean().optional(),
+  })
+  .superRefine((data, ctx) => {
+    const message = postImageRuleError(data.category, data.image);
+    if (message !== undefined) ctx.addIssue({ code: 'custom', path: ['image'], message });
+  });
+
+// Frontmatter d'un article : titre (h1), chapeau, titre et description de page, `alt` de la photo (obligatoire si et
+// seulement si meta.yaml a une `image`, vérifié par buildPosts).
+export const postDocSchema = z.strictObject({
+  title: text,
+  lede: text,
+  meta: z.strictObject({ title: text, description: text }),
+  alt: text.optional(),
+});

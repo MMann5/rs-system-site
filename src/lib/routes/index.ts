@@ -1,9 +1,11 @@
 // AD-2 : registre de routes unique, construit une fois au chargement du module.
 // Sources : pages fixes (story 1.3), puis pages légales (story 5.2 : src/content/legal/{id}/meta.yaml), puis villes
-// (story 4.1 : `city:{id}` sous `areas`, actives même tant que `areas` est désactivée — `inheritActive: false`) ; les
-// articles (6.x) s'ajoutent ici. L'ordre des sources est celui du sitemap.
+// (story 4.1 : `city:{id}` sous `areas`, actives même tant que `areas` est désactivée — `inheritActive: false`), puis
+// articles (story 6.1 : `post:{id}` sous `blog`, du plus récent au plus ancien, actifs même tant que `blog` est
+// désactivée). L'ordre des sources est celui du sitemap.
 import { CITIES } from '../areas/index.ts';
 import { citySources } from '../areas/core.ts';
+import { POST_SOURCES } from '../blog/index.ts';
 import { IS_MAIN_BRANCH } from '../env.ts';
 import { LEGAL_SOURCES } from '../legal/index.ts';
 import { PAGES } from '../pages.ts';
@@ -21,6 +23,7 @@ const sources: RouteSource[] = [
   })),
   ...LEGAL_SOURCES,
   ...citySources(CITIES),
+  ...POST_SOURCES,
 ];
 
 const registry = buildRegistry(sources, { isMainBranch: IS_MAIN_BRANCH });

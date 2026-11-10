@@ -1,0 +1,22 @@
+# Blog, index des articles (story 6.1, AD-2, AD-14) : entrée créée désactivée. Elle donne aux articles (`post:{id}`) le
+# premier segment de leur chemin, mais n'est ni générée, ni liée, ni au sitemap ; « בלוג » reste absent du header, du
+# menu et du footer, et le fil d'Ariane des articles affiche « blog » sans lien. La story 6.2 l'active (modèle Blog).
+# Slugs : décisions de l'epic 6 (un segment NFC). Titre « Blog · RS SYSTEM » traduit (EXPERIENCE.md › Référencement) ;
+# description = une phrase. Traductions en/ru/fr rédigées par l'agent : relecture humaine recommandée.
+slugs:
+  he: 'בלוג'
+  en: 'blog'
+  ru: 'блог'
+  fr: 'blog'
+enabled: false
+meta:
+  title:
+    he: 'בלוג · RS SYSTEM'
+    en: 'Blog · RS SYSTEM'
+    ru: 'Блог · RS SYSTEM'
+    fr: 'Blog · RS SYSTEM'
+  description:
+    he: 'שאלות אמיתיות על מצלמות, גלאי עשן, אינטרקום ורשתות, עם תשובות של טכנאי.'
+    en: 'Real questions about cameras, smoke detectors, intercoms and networks, answered by a technician.'
+    ru: 'Реальные вопросы о камерах, датчиках дыма, домофонах и сетях с ответами техника.'
+    fr: 'De vraies questions sur les caméras, les détecteurs de fumée, l’interphone et les réseaux, avec les réponses d’un technicien.'

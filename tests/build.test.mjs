@@ -1,4 +1,4 @@
-// Stories 1.3 à 1.9, 2.1 à 2.4, 3.1 à 3.5, 4.1, 4.2, 4.4, 5.1, 5.2 : sortie réelle du build, sur une branche puis sur main (registre, layout Base.astro).
+// Stories 1.3 à 1.9, 2.1 à 2.4, 3.1 à 3.5, 4.1, 4.2, 4.4, 5.1, 5.2, 6.1 : sortie réelle du build, sur une branche puis sur main (registre, layout Base.astro).
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
@@ -65,6 +65,11 @@ const LEGAL_SLUGS = {
 const TERMS_SLUGS = { he: 'תנאי-שימוש', en: 'terms', ru: 'условия', fr: 'conditions' };
 const LEGAL_IDS = Object.keys(LEGAL_SLUGS);
 const LEGAL_FILES = LEGAL_IDS.flatMap((lid) => LANGS.map((lang) => `${lang}/${LEGAL_SLUGS[lid][lang]}/index.html`));
+// Story 6.1 : premier article sous le slug de `blog` (désactivée : index jamais généré), slugs des décisions de l'epic 6.
+const BLOG_SLUGS = { he: 'בלוג', en: 'blog', ru: 'блог', fr: 'blog' };
+const POST_ID = 'post:how-many-smoke-detectors';
+const POST_SLUGS = { he: 'כמה-גלאי-עשן-צריך-בדירה', en: 'how-many-smoke-detectors', ru: 'сколько-датчиков-дыма-нужно', fr: 'combien-de-detecteurs-de-fumee' };
+const POST_FILES = LANGS.map((lang) => `${lang}/${BLOG_SLUGS[lang]}/${POST_SLUGS[lang]}/index.html`);
 const CITY_FILES = CITY_IDS.flatMap((cid) => LANGS.map((lang) => `${lang}/${AREAS_SLUGS[lang]}/${CITY_DATA[cid].slugs[lang]}/index.html`));
 /** Table des villes en hébreu (message WhatsApp), comme src/lib/contact/labels.ts. */
 const HE_CITIES = buildCityTable(CITY_IDS.map((cid) => ({ id: cid, name: CITY_DATA[cid].name })), 'he');
@@ -146,6 +151,7 @@ const PAGE_HREFS = {
   ...Object.fromEntries(
     LEGAL_IDS.map((lid) => [lid, Object.fromEntries(LANGS.map((lang) => [lang, `/${lang}/${encodeURIComponent(LEGAL_SLUGS[lid][lang])}/`]))]),
   ),
+  [POST_ID]: Object.fromEntries(LANGS.map((lang) => [lang, `/${lang}/${encodeURIComponent(BLOG_SLUGS[lang])}/${encodeURIComponent(POST_SLUGS[lang])}/`])),
   ...Object.fromEntries(
     CITY_IDS.map((cid) => [
       `city:${cid}`,
@@ -290,6 +296,9 @@ function assertLayout(html, id, lang, out, site = '', indexable = false) {
   } else if (id === 'areas' || id === 'about') {
     // Story 4.4 (AD-13) : Zones fixe la section de navigation `areas` ; story 5.1 : À propos, `about`.
     assert.deepEqual(JSON.parse(json), { context: { id, lang, navSection: id, indexable } }, where);
+  } else if (id.startsWith('post:')) {
+    // Story 6.1 (AD-13, FR31) : le modèle Post fixe le service (catégorie de l'article) et la section `blog`.
+    assert.deepEqual(JSON.parse(json), { context: { id, lang, service: 'smoke-detectors', navSection: 'blog', indexable } }, where);
   } else if (id.startsWith('city:')) {
     // Story 4.1 (AD-13) : le modèle City fixe la ville (id = code `?city=`) et la section de navigation `areas`.
     assert.deepEqual(JSON.parse(json), { context: { id, lang, city: id.slice(5), navSection: 'areas', indexable } }, where);
@@ -1820,7 +1829,27 @@ for (const cid of CITY_IDS) {
 // Zones (`areas`, première des pages fixes triées par id).
 // Story 5.1 : À propos (`about`, première des pages fixes triées par id).
 // Story 5.2 : puis les pages légales actives (`accessibility`, `privacy` ; `terms` désactivée), avant les villes.
-const SITEMAP_IDS = ['about', 'areas', 'cameras', 'contact', 'contractors', 'home', 'intercom', 'networks', 'smart-home', 'smoke-detectors', ...LEGAL_IDS, ...CITY_IDS.map((cid) => `city:${cid}`)];
+// Story 6.1 : puis le premier article (`post:` après les villes ; `blog` désactivée, absente).
+const SITEMAP_IDS = ['about', 'areas', 'cameras', 'contact', 'contractors', 'home', 'intercom', 'networks', 'smart-home', 'smoke-detectors', ...LEGAL_IDS, ...CITY_IDS.map((cid) => `city:${cid}`), POST_ID];
+// Story 6.1 : <title> = meta.title du .md, description = meta.description, lus dans src/content/posts/.
+const postFrontmatter = (lang) => parse(readFileSync(join(ROOT, 'src/content/posts/how-many-smoke-detectors', `${lang}.md`), 'utf8').split(/^---$/m)[1]);
+META[POST_ID] = {
+  title: Object.fromEntries(LANGS.map((lang) => [lang, escaped(postFrontmatter(lang).meta.title)])),
+  description: Object.fromEntries(LANGS.map((lang) => [lang, postFrontmatter(lang).meta.description])),
+};
+/** Story 6.1 : page article dans la langue `lang` (structure détaillée : tests/blog-render.test.mjs). */
+function assertPost(html, lang) {
+  const where = `${POST_ID} (${lang})`;
+  const main = html.match(/<main id="content"[^>]*>([\s\S]*?)<\/main>/)?.[1] ?? '';
+  assert.equal(html.match(/<h1[\s>]/g)?.length, 1, `${where} : un seul h1`);
+  assert.ok(!main.includes('contact-band-title'), `${where} : pas de bloc contact standard`);
+  assert.ok(!main.includes('data-placeholder'), `${where} : aucun placeholder dans <main>`);
+  assert.ok(!main.includes('class="related"'), `${where} : pas d'autres articles (un seul article)`);
+  assert.match(main, /<p class="crumb"[^>]*>(?:(?!<a\b)[\s\S])*?<\/p>/, `${where} : fil d'Ariane sans lien`);
+  assert.equal(main.match(/data-placement="article_box"/g)?.length, 3, `${where} : encart`);
+  // « בלוג » absent du header, du menu et du footer : aucun lien vers le slug du blog.
+  for (const l of LANGS) assert.ok(!html.includes(`href="/${l}/${encodeURIComponent(BLOG_SLUGS[l])}/"`), `${where} : lien vers l'index du blog`);
+}
 for (const lid of LEGAL_IDS) {
   META[lid] = {
     title: Object.fromEntries(LANGS.map((lang) => [lang, escaped(LEGAL_META[lid].meta.title[lang])])),
@@ -1841,7 +1870,7 @@ function assertSeoFiles(out, site, indexable) {
   const xml = readFileSync(join(out, 'sitemap.xml'), 'utf8');
   const blocks = [...xml.matchAll(/<url>([\s\S]*?)<\/url>/g)].map((m) => m[1]);
   assert.equal(blocks.length, SITEMAP_IDS.length * 4, 'sitemap : <url>');
-  assert.equal(blocks.length, 108, 'sitemap : <url> (10 pages fixes, 2 pages légales et 15 villes × 4 langues)');
+  assert.equal(blocks.length, 112, 'sitemap : <url> (10 pages fixes, 2 pages légales, 15 villes et 1 article × 4 langues)');
   for (const lid of LEGAL_IDS) assert.ok(LANGS.every((l) => xml.includes(`/${encodeURIComponent(LEGAL_SLUGS[lid][l])}/<`)), `sitemap : ${lid}`);
   assert.ok(LANGS.every((l) => xml.includes(`/${encodeURIComponent(AREAS_SLUGS[l])}/<`)), 'sitemap : Zones');
   assert.ok(LANGS.every((l) => xml.includes(`/${encodeURIComponent(ABOUT_SLUGS[l])}/<`)), 'sitemap : À propos');
@@ -1862,9 +1891,9 @@ function assertSeoFiles(out, site, indexable) {
   assert.deepEqual(manifest.icons, [{ src: '/rs-icon-512.png', sizes: '512x512', type: 'image/png' }], 'manifeste : icône 512');
 }
 
-test('build de branche : 4 accueils complets (tuiles de services) + 4 Contact + 4 Caméras + 4 Détecteurs + 4 Maison connectée + 4 Réseaux + 4 Interphone + 4 Entrepreneurs + 4 Zones + 4 À propos + 8 pages légales + 60 pages ville + 4 path-probe, layout Base (lang/dir, #rs-data, évitement, repères, hreflang relatifs), _redirects', { timeout: 120_000 }, () => {
+test('build de branche : 4 accueils complets (tuiles de services) + 4 Contact + 4 Caméras + 4 Détecteurs + 4 Maison connectée + 4 Réseaux + 4 Interphone + 4 Entrepreneurs + 4 Zones + 4 À propos + 8 pages légales + 60 pages ville + 4 articles + 4 path-probe, layout Base (lang/dir, #rs-data, évitement, repères, hreflang relatifs), _redirects', { timeout: 120_000 }, () => {
   const out = build({});
-  assert.deepEqual(indexFiles(out), [...HOMES, ...CONTACTS, ...CAMERAS, ...SMOKES, ...SMARTS, ...NETWORKS, ...INTERCOMS, ...CONTRACTORS, ...AREAS_FILES, ...ABOUT_FILES, ...LEGAL_FILES, ...CITY_FILES, ...PROBES].sort());
+  assert.deepEqual(indexFiles(out), [...HOMES, ...CONTACTS, ...CAMERAS, ...SMOKES, ...SMARTS, ...NETWORKS, ...INTERCOMS, ...CONTRACTORS, ...AREAS_FILES, ...ABOUT_FILES, ...LEGAL_FILES, ...CITY_FILES, ...POST_FILES, ...PROBES].sort());
   assert.ok(existsSync(join(out, '_redirects')), '_redirects absent');
   assert.ok(!existsSync(join(out, 'index.html')), 'index.html racine présent');
   assert.deepEqual(Object.keys(titles), LANGS);
@@ -1942,13 +1971,19 @@ test('build de branche : 4 accueils complets (tuiles de services) + 4 Contact + 
       assertCity(html, cid, lang);
     }
   }
+  // Story 6.1 : premier article dans les 4 langues.
+  for (const [i, file] of POST_FILES.entries()) {
+    const html = readFileSync(join(out, file), 'utf8');
+    assertLayout(html, POST_ID, LANGS[i], out);
+    assertPost(html, LANGS[i]);
+  }
   assertNotFoundPages(out);
   assertSeoFiles(out, '', false);
 });
 
-test('build de main indexable avec SITE_URL : 4 accueils complets (tuiles de services) + 4 Contact + 4 Caméras + 4 Détecteurs + 4 Maison connectée + 4 Réseaux + 4 Interphone + 4 Entrepreneurs + 4 Zones + 4 À propos + 8 pages légales + 60 pages ville, sans noindex, canonique et hreflang absolus', { timeout: 120_000 }, () => {
+test('build de main indexable avec SITE_URL : 4 accueils complets (tuiles de services) + 4 Contact + 4 Caméras + 4 Détecteurs + 4 Maison connectée + 4 Réseaux + 4 Interphone + 4 Entrepreneurs + 4 Zones + 4 À propos + 8 pages légales + 60 pages ville + 4 articles, sans noindex, canonique et hreflang absolus', { timeout: 120_000 }, () => {
   const out = build({ WORKERS_CI_BRANCH: 'main', DOMAIN_LIVE: 'true', SITE_URL: 'https://rs.example' });
-  assert.deepEqual(indexFiles(out), [...HOMES, ...CONTACTS, ...CAMERAS, ...SMOKES, ...SMARTS, ...NETWORKS, ...INTERCOMS, ...CONTRACTORS, ...AREAS_FILES, ...ABOUT_FILES, ...LEGAL_FILES, ...CITY_FILES].sort());
+  assert.deepEqual(indexFiles(out), [...HOMES, ...CONTACTS, ...CAMERAS, ...SMOKES, ...SMARTS, ...NETWORKS, ...INTERCOMS, ...CONTRACTORS, ...AREAS_FILES, ...ABOUT_FILES, ...LEGAL_FILES, ...CITY_FILES, ...POST_FILES].sort());
   assert.ok(!existsSync(join(out, 'index.html')));
   for (const lang of LANGS) {
     const html = readFileSync(join(out, lang, 'index.html'), 'utf8');
@@ -2015,6 +2050,11 @@ test('build de main indexable avec SITE_URL : 4 accueils complets (tuiles de ser
       assertLayout(html, `city:${cid}`, lang, out, 'https://rs.example', true);
       assertCity(html, cid, lang);
     }
+  }
+  for (const [i, file] of POST_FILES.entries()) {
+    const html = readFileSync(join(out, file), 'utf8');
+    assertLayout(html, POST_ID, LANGS[i], out, 'https://rs.example', true);
+    assertPost(html, LANGS[i]);
   }
   // Story 1.9 : les 5 404 restent en noindex sur un build indexable ; sitemap et robots absolus.
   assertNotFoundPages(out);
