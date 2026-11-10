@@ -5,7 +5,7 @@ import { file, glob } from 'astro/loaders';
 import { z } from 'astro/zod';
 import { citySchema, regionSchema, reviewSchema } from './lib/areas/schema.ts';
 import { KEY_RE } from './lib/i18n/core.ts';
-import { legalDocSchema, legalMetaSchema, pageSchema, perLang, text } from './lib/page-schema.ts';
+import { legalDocSchema, legalMetaSchema, pageSchema, perLang, postDocSchema, postMetaSchema, text } from './lib/page-schema.ts';
 
 // Id = nom de fichier brut : l'id par défaut est slugifié et masquerait les ids invalides ou en double.
 const fileId = ({ entry }: { entry: string }) => entry.replace(/\.(yaml|json)$/, '');
@@ -78,4 +78,17 @@ const legal = defineCollection({
   schema: legalDocSchema,
 });
 
-export const collections = { pages, i18n, services, proof, regions, cities, reviews, legalMeta, legal };
+// Story 6.1 (FR12, FR25, AD-4, AD-11, décision D1 de l'epic 6) : articles du blog. Métas : src/content/posts/{id}/meta.yaml,
+// id = nom du dossier ; textes : src/content/posts/{id}/{lang}.md, id `{id}/{lang}`. Complétude (4 .md par article actif,
+// `alt` ⇔ image, image présente dans src/assets/blog/, corps non vide) : src/lib/blog/core.ts (buildPosts).
+const postsMeta = defineCollection({
+  loader: glob({ pattern: '*/meta.yaml', base: './src/content/posts', generateId: ({ entry }) => entry.replace(/\/meta\.yaml$/, '') }),
+  schema: postMetaSchema,
+});
+
+const posts = defineCollection({
+  loader: glob({ pattern: '*/*.md', base: './src/content/posts', generateId: ({ entry }) => entry.replace(/\.md$/, '') }),
+  schema: postDocSchema,
+});
+
+export const collections = { pages, i18n, services, proof, regions, cities, reviews, legalMeta, legal, postsMeta, posts };

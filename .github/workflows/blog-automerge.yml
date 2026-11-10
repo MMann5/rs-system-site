@@ -1,0 +1,41 @@
+name: blog-automerge
+
+# FR37, AD-12, D4 et D7 (epic 6), story 6.5 : chaque jour à 06:00 UTC, fusionne les PR `blog-auto` ouvertes depuis
+# ≥ 48 h dont le dernier commit de la tête a aussi ≥ 48 h, hors brouillon (jamais publié), sans `hold` (étiquettes
+# comparées sans casse), dans le périmètre d'un seul article, à jour avec `main` et dont le contrôle `ci` est vert sur la tête.
+# La CI de la PR mise à jour est relancée par `workflow_dispatch` de ci.yml (seul événement que GITHUB_TOKEN peut
+# déclencher). Le code de la PR n'est jamais exécuté ici : checkout de `main` seulement. Logique :
+# automation/blog-publish.mjs (tests : tests/blog-publish.test.mjs).
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: blog-automerge
+  cancel-in-progress: false
+
+jobs:
+  automerge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+      checks: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      - run: node automation/blog-publish.mjs automerge
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

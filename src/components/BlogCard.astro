@@ -1,0 +1,109 @@
+---
+// FR23, UX-DR25, AD-2, AD-9, décision D1 de l'epic 6 (story 6.1) : carte de blog (DESIGN.md › Components › Carte de blog ;
+// EXPERIENCE.md › Carte de blog). La carte entière est un seul lien vers l'article. Média 3:2 : la photo de l'article
+// (`alt=""`, le titre nomme le lien) ou, pour la catégorie `smoke-detectors`, le détecteur dessiné `sm` (150px, réduit si
+// le cadre l'exige) centré sur surface-alt. Puis la catégorie (small 600 link), le titre (h3 card-title) et la date
+// (small ink-muted), en texte. Sans cadre ni fond, coins droits. Survol : image scale(1.04) en 0,6 s, seulement avec un
+// pointeur fin qui survole et sans mouvement réduit.
+// Story 6.2 (NFR1) : `headingLevel` (défaut 3) : l'index du blog rend les titres en h2 (sous son h1, sans saut de niveau),
+// l'article garde h3 (sous le h2 « autres articles »).
+import { formatPostDate, postDoc, postImage, POST_ID_PREFIX, type Post } from '../lib/blog';
+import { serviceLabels } from '../lib/contact/labels';
+import type { ServiceCode } from '../lib/contact/table';
+import type { Lang } from '../lib/langs';
+import { BLOG_CARD_PHOTO_SIZES } from '../lib/photos';
+import { url } from '../lib/routes';
+import ResponsivePhoto from './ResponsivePhoto.astro';
+import SmokeDetector from './SmokeDetector.astro';
+
+interface Props {
+  post: Post;
+  lang: Lang;
+  headingLevel?: 2 | 3;
+}
+
+const { post, lang, headingLevel = 3 } = Astro.props;
+const Heading = headingLevel === 2 ? 'h2' : 'h3';
+const doc = postDoc(post.id, lang);
+const image = postImage(post);
+const category = serviceLabels(lang)[post.meta.category as ServiceCode].label;
+---
+<a href={url(`${POST_ID_PREFIX}${post.id}`, lang)} class="card">
+  <div class="media">
+    {image ? <ResponsivePhoto src={image} alt="" sizes={BLOG_CARD_PHOTO_SIZES} class="card-img" /> : <SmokeDetector size="sm" fit />}
+  </div>
+  <span class="category">{category}</span>
+  <Heading class="title">{doc.title}</Heading>
+  <time class="date" datetime={post.meta.date}>{formatPostDate(post.meta.date, lang)}</time>
+</a>
+
+<style>
+  .card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--card-gap);
+    min-inline-size: 0;
+    color: var(--color-ink);
+    text-decoration: none;
+  }
+
+  .card:hover .title,
+  .card:focus-visible .title {
+    text-decoration: underline;
+  }
+
+  /* Cadre 3:2, déclaré conteneur pour que le détecteur s'y ajuste ; la photo le couvre. */
+  .media {
+    container-type: size;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: var(--photo-ratio-card);
+    overflow: hidden;
+    border-radius: var(--radius-none);
+    background-color: var(--color-surface-alt);
+  }
+
+  .media :global(picture) {
+    display: contents;
+  }
+
+  .media :global(img) {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  .category {
+    font-size: var(--type-small-size);
+    font-weight: var(--type-category-weight);
+    line-height: var(--type-small-leading);
+    color: var(--color-link);
+  }
+
+  .title {
+    margin: 0;
+    font-size: var(--type-card-title-size);
+    font-weight: var(--type-card-title-weight);
+    line-height: var(--type-card-title-leading);
+  }
+
+  .date {
+    font-size: var(--type-small-size);
+    font-weight: var(--type-small-weight);
+    line-height: var(--type-small-leading);
+    color: var(--color-ink-muted);
+  }
+
+  /* EXPERIENCE.md › Survol de carte : uniquement un pointeur fin qui survole ; jamais avec le mouvement réduit. */
+  @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+    .media :global(img) {
+      transition: transform var(--card-zoom-duration) var(--ease);
+    }
+
+    .card:hover .media :global(img) {
+      transform: scale(var(--card-zoom));
+    }
+  }
+</style>

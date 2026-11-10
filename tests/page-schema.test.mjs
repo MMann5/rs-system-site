@@ -84,7 +84,7 @@ test('smoke-detectors.yaml : héros sans alt, trio de 3 du canvas, sans tuile', 
   assert.deepEqual(
     service.trio.items.map((item) => [item.title.he, item.text.he]),
     [
-      ['לבית', 'גלאי בכל חדר שינה, בסלון ובמטבח.'],
+      ['לבית', 'גלאי בכל חדר שינה, בסלון וליד המטבח.'],
       ['לבניין', 'חדרי מדרגות, חניון ומחסנים.'],
       ['לעסק', 'משרד, חנות או מחסן.'],
     ],

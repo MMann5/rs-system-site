@@ -1,0 +1,71 @@
+{
+  "page": 1,
+  "per_page": 40,
+  "total_results": 7,
+  "photos": [
+    {
+      "id": 1001,
+      "width": 6000,
+      "height": 4000,
+      "url": "https://www.pexels.com/photo/security-camera-on-wall-at-night-1001/",
+      "alt": "Security camera on a wall at night",
+      "src": {
+        "original": "https://images.pexels.com/photos/1001/pexels-photo-1001.jpeg",
+        "large": "https://images.pexels.com/photos/1001/pexels-photo-1001.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+        "medium": "https://images.pexels.com/photos/1001/pexels-photo-1001.jpeg?auto=compress&cs=tinysrgb&h=350"
+      }
+    },
+    {
+      "id": 1002,
+      "width": 1920,
+      "height": 1080,
+      "url": "https://www.pexels.com/photo/camera-above-door-1002/",
+      "alt": "Camera above a front door at dusk",
+      "src": {
+        "original": "https://images.pexels.com/photos/1002/pexels-photo-1002.jpeg",
+        "large": "https://images.pexels.com/photos/1002/pexels-photo-1002.jpeg?auto=compress&cs=tinysrgb&h=650&w=940",
+        "medium": "https://images.pexels.com/photos/1002/pexels-photo-1002.jpeg?auto=compress&cs=tinysrgb&h=350"
+      }
+    },
+    {
+      "id": 1003,
+      "width": 1600,
+      "height": 1067,
+      "url": "https://www.pexels.com/photo/too-small-1003/",
+      "alt": "Too small",
+      "src": { "original": "https://images.pexels.com/photos/1003/pexels-photo-1003.jpeg" }
+    },
+    {
+      "id": 1004,
+      "width": 2160,
+      "height": 3840,
+      "url": "https://www.pexels.com/photo/vertical-1004/",
+      "alt": "Vertical",
+      "src": { "original": "https://images.pexels.com/photos/1004/pexels-photo-1004.jpeg" }
+    },
+    {
+      "id": 1005,
+      "width": 9000,
+      "height": 3000,
+      "url": "https://www.pexels.com/photo/panoramic-1005/",
+      "alt": "Panoramic",
+      "src": { "original": "https://images.pexels.com/photos/1005/pexels-photo-1005.jpeg" }
+    },
+    {
+      "id": 1006,
+      "width": 3000,
+      "height": 2000,
+      "url": "https://www.pexels.com/photo/other-host-1006/",
+      "alt": "Other host",
+      "src": { "original": "https://cdn.example.com/photos/1006.jpeg" }
+    },
+    {
+      "id": 1007,
+      "width": 2400,
+      "height": 2000,
+      "url": "https://www.pexels.com/photo/too-square-1007/",
+      "alt": "Too square",
+      "src": { "original": "https://images.pexels.com/photos/1007/pexels-photo-1007.jpeg" }
+    }
+  ]
+}

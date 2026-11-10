@@ -1,0 +1,148 @@
+---
+// FR11, UX-DR25, NFR1, AD-2, AD-9, décision D1 de l'epic 6 (story 6.2) : carte vedette de l'index du blog (DESIGN.md ›
+// Components › Carte de blog › Carte vedette ; canvas Blog.dc.html). La carte entière est un seul lien vers l'article.
+// Média au début logique : la photo de l'article (`alt=""`, le titre nomme le lien ; `priority`, au-dessus de la ligne de
+// flottaison) ou, pour la catégorie `smoke-detectors`, le détecteur dessiné `sm` (150px, réduit si le cadre l'exige)
+// centré sur surface-alt (D1). Puis le texte sur surface-alt : catégorie (small 600 link), titre h2 featured-title,
+// chapeau (ink-muted), date (small ink-muted). Côte à côte dès 960px (image de 440px de haut), empilée en dessous (image
+// 3:2). Survol : image scale(1.04) en 0,6 s, comme BlogCard, seulement avec un pointeur fin et sans mouvement réduit.
+import { formatPostDate, postDoc, postImage, POST_ID_PREFIX, type Post } from '../lib/blog';
+import { serviceLabels } from '../lib/contact/labels';
+import type { ServiceCode } from '../lib/contact/table';
+import type { Lang } from '../lib/langs';
+import { FEATURED_PHOTO_SIZES } from '../lib/photos';
+import { url } from '../lib/routes';
+import ResponsivePhoto from './ResponsivePhoto.astro';
+import SmokeDetector from './SmokeDetector.astro';
+
+interface Props {
+  post: Post;
+  lang: Lang;
+}
+
+const { post, lang } = Astro.props;
+const doc = postDoc(post.id, lang);
+const image = postImage(post);
+const category = serviceLabels(lang)[post.meta.category as ServiceCode].label;
+---
+<a href={url(`${POST_ID_PREFIX}${post.id}`, lang)} class="featured">
+  <div class="media">
+    {image ? <ResponsivePhoto src={image} alt="" sizes={FEATURED_PHOTO_SIZES} priority /> : <SmokeDetector size="sm" fit />}
+  </div>
+  <div class="text">
+    <span class="category">{category}</span>
+    <h2 class="title">{doc.title}</h2>
+    <p class="lede">{doc.lede}</p>
+    <time class="date" datetime={post.meta.date}>{formatPostDate(post.meta.date, lang)}</time>
+  </div>
+</a>
+
+<style>
+  /* Seuils (les @media ne lisent pas les tokens) : --bp-menu 960px, --bp-mobile-bar 700px. */
+  .featured {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    min-inline-size: 0;
+    overflow: hidden;
+    border-radius: var(--radius-none);
+    background-color: var(--color-surface-alt);
+    color: var(--color-ink);
+    text-decoration: none;
+  }
+
+  .featured:hover .title,
+  .featured:focus-visible .title {
+    text-decoration: underline;
+  }
+
+  /* Cadre 3:2 empilé, déclaré conteneur pour que le détecteur s'y ajuste ; la photo le couvre. */
+  .media {
+    container-type: size;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: var(--photo-ratio-card);
+    overflow: hidden;
+    background-color: var(--color-surface-alt);
+  }
+
+  .media :global(picture) {
+    display: contents;
+  }
+
+  .media :global(img) {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  .text {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--featured-text-gap);
+    min-inline-size: 0;
+    padding: var(--featured-text-pad);
+  }
+
+  @media (width < 700px) {
+    .text {
+      padding: var(--featured-text-pad-mobile);
+    }
+  }
+
+  /* Côte à côte : deux colonnes égales, image de 440px de haut au moins (étirée si le texte est plus haut). */
+  @media (width >= 960px) {
+    .featured {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .media {
+      aspect-ratio: auto;
+      min-block-size: var(--featured-media-height);
+    }
+  }
+
+  .category {
+    font-size: var(--type-small-size);
+    font-weight: var(--type-category-weight);
+    line-height: var(--type-small-leading);
+    color: var(--color-link);
+  }
+
+  .title {
+    margin: 0;
+    font-size: var(--type-featured-title-size);
+    font-weight: var(--type-featured-title-weight);
+    line-height: var(--type-featured-title-leading);
+    overflow-wrap: break-word;
+  }
+
+  .lede {
+    margin: 0;
+    font-size: var(--type-featured-lede-size);
+    font-weight: var(--type-body-weight);
+    line-height: var(--type-featured-lede-leading);
+    color: var(--color-ink-muted);
+    overflow-wrap: break-word;
+  }
+
+  .date {
+    font-size: var(--type-small-size);
+    font-weight: var(--type-small-weight);
+    line-height: var(--type-small-leading);
+    color: var(--color-ink-muted);
+  }
+
+  /* EXPERIENCE.md › Survol de carte : uniquement un pointeur fin qui survole ; jamais avec le mouvement réduit. */
+  @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+    .media :global(img) {
+      transition: transform var(--card-zoom-duration) var(--ease);
+    }
+
+    .featured:hover .media :global(img) {
+      transform: scale(var(--card-zoom));
+    }
+  }
+</style>

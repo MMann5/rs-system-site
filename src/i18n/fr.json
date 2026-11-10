@@ -106,5 +106,13 @@
   "areas.tiles-label": "Zones",
   "areas.missing": "Votre localité n'y est pas ?",
   "placeholder.other-settlements": "autres yishouvim",
-  "legal.placeholder": "texte juridique — fourni par l'avocat"
+  "legal.placeholder": "texte juridique — fourni par l'avocat",
+  "post.breadcrumb-label": "Fil d'Ariane",
+  "post.reading-time": "{n} min de lecture",
+  "post.contact.title": "Vous voulez qu'un technicien vérifie votre logement ?",
+  "post.related.title": "Autres articles du blog",
+  "blog.pagination.label": "Pages du blog",
+  "blog.pagination.next": "Page suivante",
+  "blog.pagination.page": "Page {n}",
+  "blog.page-title": "Blog, page {n} · RS SYSTEM"
 }

@@ -45,10 +45,10 @@ service:
           ru: 'Для квартиры и дома'
           fr: 'Pour la maison'
         text:
-          he: 'גלאי בכל חדר שינה, בסלון ובמטבח.'
-          en: 'A detector in every bedroom, the living room and the kitchen.'
-          ru: 'Датчик в каждой спальне, в гостиной и на кухне.'
-          fr: 'Un détecteur dans chaque chambre, au salon et dans la cuisine.'
+          he: 'גלאי בכל חדר שינה, בסלון וליד המטבח.'
+          en: 'A detector in every bedroom, the living room and near the kitchen.'
+          ru: 'Датчик в каждой спальне, в гостиной и рядом с кухней.'
+          fr: 'Un détecteur dans chaque chambre, au salon et près de la cuisine.'
       - title:
           he: 'לבניין'
           en: 'For your building'

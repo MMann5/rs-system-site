@@ -106,5 +106,13 @@
   "areas.tiles-label": "אזורים",
   "areas.missing": "לא מצאתם את היישוב שלכם?",
   "placeholder.other-settlements": "יישובים נוספים",
-  "legal.placeholder": "טקסט משפטי — יסופק על ידי עורך הדין"
+  "legal.placeholder": "טקסט משפטי — יסופק על ידי עורך הדין",
+  "post.breadcrumb-label": "נתיב ניווט",
+  "post.reading-time": "{n} דקות קריאה",
+  "post.contact.title": "רוצים שטכנאי יבדוק את הבית?",
+  "post.related.title": "עוד מהבלוג",
+  "blog.pagination.label": "עמודי הבלוג",
+  "blog.pagination.next": "לעמוד הבא",
+  "blog.pagination.page": "עמוד {n}",
+  "blog.page-title": "בלוג, עמוד {n} · RS SYSTEM"
 }

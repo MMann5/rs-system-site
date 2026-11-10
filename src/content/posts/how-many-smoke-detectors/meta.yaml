@@ -1,0 +1,11 @@
+# Premier article du blog (story 6.1, FR12, FR25, AD-4) : écrit à la main, décision D3 de l'epic 6 (conseils pratiques
+# seulement : aucune loi, norme, statistique ni chiffre non sûr). Catégorie `smoke-detectors` : pas d'`image`, le détecteur
+# dessiné en tient lieu (D1). Slugs : EXPERIENCE.md › slugs des articles et décisions de l'epic 6 (un segment NFC).
+date: '2026-11-10'
+category: smoke-detectors
+slugs:
+  he: 'כמה-גלאי-עשן-צריך-בדירה'
+  en: 'how-many-smoke-detectors'
+  ru: 'сколько-датчиков-дыма-нужно'
+  fr: 'combien-de-detecteurs-de-fumee'
+enabled: true

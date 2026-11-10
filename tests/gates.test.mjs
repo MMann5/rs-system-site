@@ -16,7 +16,7 @@ import { findJsBudgetViolations, JS_BUDGET } from '../scripts/checks/js-budget.m
 import { checkLinks, collectLinks } from '../scripts/checks/links.mjs';
 import { checkNotFound, findMissingNotFound } from '../scripts/checks/not-found.mjs';
 import { findPhysicalProperties } from '../scripts/checks/physical-css.mjs';
-import { checkPlaceholders, countPlaceholders, placeholderVerdict } from '../scripts/checks/placeholders.mjs';
+import { checkPlaceholders, countArticlePlaceholders, countPlaceholders, placeholderVerdict } from '../scripts/checks/placeholders.mjs';
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
 const LANGS = ['he', 'en', 'ru', 'fr'];
@@ -419,27 +419,64 @@ test('js-budget : JSON, ld+json et importmap exclus ; scripts externes, modulepr
 
 // — placeholders (FR40) —
 
-test('placeholderVerdict : ok sans placeholder, warn par défaut, block si indexable ou blog-auto', () => {
+test('placeholderVerdict : ok sans placeholder, warn par défaut, block si indexable ou blog-auto avec placeholder dans l’article (D2)', () => {
   assert.equal(placeholderVerdict({ count: 0, indexable: true, blogAuto: true }), 'ok');
   assert.equal(placeholderVerdict({ count: 2, indexable: false, blogAuto: false }), 'warn');
-  assert.equal(placeholderVerdict({ count: 1, indexable: false, blogAuto: true }), 'block');
-  assert.equal(placeholderVerdict({ count: 1, indexable: true, blogAuto: false }), 'block');
+  assert.equal(placeholderVerdict({ count: 2, articleCount: 1, indexable: false, blogAuto: false }), 'warn');
+  assert.equal(placeholderVerdict({ count: 1, articleCount: 1, indexable: false, blogAuto: true }), 'block');
+  assert.equal(placeholderVerdict({ count: 1, articleCount: 0, indexable: false, blogAuto: true }), 'warn');
+  assert.equal(placeholderVerdict({ count: 1, indexable: false, blogAuto: true }), 'warn');
+  assert.equal(placeholderVerdict({ count: 1, articleCount: 0, indexable: true, blogAuto: false }), 'block');
+  assert.equal(placeholderVerdict({ count: 1, articleCount: 0, indexable: true, blogAuto: true }), 'block');
 });
 
-test('placeholders : avertit (code 0, ::warning::) hors blog-auto, bloque (code 1) en blog-auto', () => {
+test('countArticlePlaceholders : seuls les placeholders dans un élément <article> comptent', () => {
+  const html = page(
+    'he',
+    '<main><article class="post"><h1>x</h1><span data-placeholder>[x]</span></article><article data-placeholder="y"></article></main><footer><span data-placeholder>[e]</span></footer>',
+  );
+  assert.equal(countPlaceholders(html), 3);
+  assert.equal(countArticlePlaceholders(html), 2);
+  assert.equal(countArticlePlaceholders(page('he', '<footer><span data-placeholder>[e]</span></footer><p>article</p>')), 0);
+});
+
+const FOOTER_ONLY = '<main><article><h1>x</h1><p>texte</p></article></main><footer><span data-placeholder>[אימייל]</span><span data-placeholder="x">[x]</span></footer>';
+const IN_ARTICLE = '<main><article><h1>x</h1><p><span data-placeholder>[ציון]</span></p></article></main><footer><span data-placeholder>[אימייל]</span></footer>';
+
+test('placeholders : footer seul → avertit (code 0, ::warning::) hors blog-auto comme en blog-auto (D2)', () => {
   const dist = fixture({
-    'he/index.html': page('he', '<span data-placeholder>[אימייל]</span><span data-placeholder="x">[x]</span>'),
+    'he/index.html': page('he', FOOTER_ONLY),
     'en/index.html': page('en', '<p>data-placeholder dans le texte ne compte pas</p>'),
   });
   assert.equal(countPlaceholders(readFileSync(join(dist, 'he/index.html'), 'utf8')), 2);
-  assert.deepEqual(checkPlaceholders(dist, { indexable: false, blogAuto: false }), { failures: [], warnings: ['he/index.html : 2 placeholder(s)'] });
-  assert.equal(checkPlaceholders(dist, { indexable: true, blogAuto: false }).failures.length, 1);
-  const warn = cli('placeholders', dist, { BLOG_AUTO: 'false' });
-  assert.equal(warn.status, 0);
-  assert.match(warn.output, /::warning::placeholders : he\/index\.html : 2 placeholder\(s\)\nplaceholders : OK/);
+  const expected = { failures: [], warnings: ['he/index.html : 2 placeholder(s)'] };
+  assert.deepEqual(checkPlaceholders(dist, { indexable: false, blogAuto: false }), expected);
+  assert.deepEqual(checkPlaceholders(dist, { indexable: false, blogAuto: true }), expected);
+  for (const BLOG_AUTO of ['false', 'true']) {
+    const res = cli('placeholders', dist, { BLOG_AUTO });
+    assert.equal(res.status, 0, `BLOG_AUTO=${BLOG_AUTO}`);
+    assert.match(res.output, /::warning::placeholders : he\/index\.html : 2 placeholder\(s\)\nplaceholders : OK/);
+  }
+});
+
+test('placeholders : placeholder dans l’<article> + blog-auto → bloque (code 1) ; hors blog-auto → avertit', () => {
+  const dist = fixture({ 'he/blog/x/index.html': page('he', IN_ARTICLE) });
+  assert.deepEqual(checkPlaceholders(dist, { indexable: false, blogAuto: false }), {
+    failures: [],
+    warnings: ['he/blog/x/index.html : 2 placeholder(s)'],
+  });
   const block = cli('placeholders', dist, { BLOG_AUTO: 'true' });
   assert.equal(block.status, 1);
-  assert.match(block.output, /placeholders : 1 échec\(s\)\n {2}- he\/index\.html : 2 placeholder\(s\) \(PR blog-auto\)/);
+  assert.match(block.output, /placeholders : 1 échec\(s\)\n {2}- he\/blog\/x\/index\.html : 1 placeholder\(s\) \(PR blog-auto, dans l'article\)/);
+});
+
+test('placeholders : build indexable → tout placeholder bloque, même dans le footer seul', () => {
+  const dist = fixture({ 'he/index.html': page('he', FOOTER_ONLY) });
+  assert.deepEqual(checkPlaceholders(dist, { indexable: true, blogAuto: false }), {
+    failures: ['he/index.html : 2 placeholder(s) (build indexable)'],
+    warnings: [],
+  });
+  assert.equal(checkPlaceholders(dist, { indexable: true, blogAuto: true }).failures.length, 1);
 });
 
 // — astro check et Zod, sur une copie du projet —
@@ -475,4 +512,78 @@ test('astro check : enabled: \'oui\' dans home.yaml (Zod) fait échouer', () => 
   const res = astroCheck(dir);
   assert.notEqual(res.status, 0);
   assert.match(res.stdout + res.stderr, /pages\/home\.yaml/);
+});
+
+// Story 6.1 (FR25, AD-4, AD-11) : articles au lint (meta.yaml + 4 .md par article actif), sous l'entrée `blog`.
+// Story 6.2 : blog.yaml `enabled: true` (interrupteur) ; l'entrée n'est active qu'avec au moins 1 article actif.
+const BLOG_PAGE = "slugs: { he: 'בלוג', en: 'blog', ru: 'блог', fr: 'blog' }\nenabled: true\n";
+const POST_META =
+  "date: '2026-11-10'\ncategory: smoke-detectors\nslugs: { he: 'כמה-גלאים', en: 'how-many', ru: 'сколько', fr: 'combien' }\nenabled: true\n";
+const postDocs = (id, langs = LANGS) =>
+  Object.fromEntries(
+    langs.map((l) => [
+      `src/content/posts/${id}/${l}.md`,
+      `---\ntitle: 'Titre ${l}'\nlede: 'Chapeau ${l}'\nmeta:\n  title: 'Titre ${l} · RS SYSTEM'\n  description: 'Chapeau ${l}'\n---\n\n## Section\n\nTexte.\n`,
+    ]),
+  );
+
+test('completeness : article actif avec ses 4 .md accepté ; sans ru.md → message nommant le fichier, CLI en 1', () => {
+  const base = { 'src/content/pages/blog.yaml': BLOG_PAGE, 'src/content/posts/how-many/meta.yaml': POST_META };
+  assert.deepEqual(findCompletenessErrors(completeRoot({ ...base, ...postDocs('how-many') })), []);
+  const root = completeRoot({ ...base, ...postDocs('how-many', ['he', 'en', 'fr']) });
+  assert.deepEqual(findCompletenessErrors(root), ['blog : src/content/posts/how-many/ru.md : fichier manquant (article actif)']);
+  const res = cli('completeness', root);
+  assert.equal(res.status, 1);
+  assert.match(res.output, /src\/content\/posts\/how-many\/ru\.md : fichier manquant/);
+});
+
+test('completeness : article à photo (image présente ou absente), image interdite (D1), slug en double', () => {
+  const camerasMeta = (id, image) =>
+    `date: '2026-11-01'\ncategory: cameras\nimage: ${image}\nslugs: { he: '${id}-he', en: '${id}-en', ru: '${id}-ru', fr: '${id}-fr' }\nenabled: true\n`;
+  const withAlt = (id) =>
+    Object.fromEntries(Object.entries(postDocs(id)).map(([path, text]) => [path, text.replace('\n---\n\n', "\nalt: 'Une caméra'\n---\n\n")]));
+  const cameras = { 'src/content/pages/blog.yaml': BLOG_PAGE, 'src/content/posts/dome/meta.yaml': camerasMeta('dome', 'x.jpg'), ...withAlt('dome') };
+  assert.deepEqual(findCompletenessErrors(completeRoot({ ...cameras, 'src/assets/blog/x.jpg': 'x' })), []);
+  const absent = findCompletenessErrors(completeRoot(cameras));
+  assert.equal(absent.length, 1, absent.join('\n'));
+  assert.match(absent[0], /src\/content\/posts\/dome\/meta\.yaml : image « x\.jpg » absente/);
+  // D1 : image sur un article smoke-detectors → refus du schéma, au nom du meta.yaml.
+  const forbidden = findCompletenessErrors(
+    completeRoot({ 'src/content/pages/blog.yaml': BLOG_PAGE, 'src/content/posts/how-many/meta.yaml': `${POST_META}image: x.jpg\n`, ...postDocs('how-many'), 'src/assets/blog/x.jpg': 'x' }),
+  );
+  assert.ok(forbidden.some((line) => line.startsWith('src/content/posts/how-many/meta.yaml : schéma invalide')), forbidden.join('\n'));
+  // Deux articles au même slug fr → erreur du registre rangée sous src/content/posts/.
+  const dup = findCompletenessErrors(
+    completeRoot({
+      'src/content/pages/blog.yaml': BLOG_PAGE,
+      'src/content/posts/how-many/meta.yaml': POST_META,
+      ...postDocs('how-many'),
+      'src/content/posts/other/meta.yaml': POST_META.replace("he: 'כמה-גלאים', en: 'how-many', ru: 'сколько'", "he: 'אחר', en: 'other', ru: 'другой'"),
+      ...postDocs('other'),
+    }),
+  );
+  assert.ok(dup.some((line) => line.startsWith('src/content/posts/ : ') && line.includes('/fr/blog/combien/')), dup.join('\n'));
+});
+
+// Story 6.2 (FR11, AD-2, AD-3) : même activité de `blog` et mêmes pages `blog-page:{n}` au lint qu'au build.
+const numberedPost = (i, slug = `p${i}`) => ({
+  [`src/content/posts/p${i}/meta.yaml`]: `date: '2026-10-${String(i).padStart(2, '0')}'\ncategory: smoke-detectors\nslugs: { he: '${slug}', en: '${slug}', ru: '${slug}', fr: '${slug}' }\nenabled: true\n`,
+  ...postDocs(`p${i}`),
+});
+
+test('completeness (6.2) : blog.yaml enabled: true sans article → OK ; avec 1 article → OK ; 14 articles → OK', () => {
+  assert.deepEqual(findCompletenessErrors(completeRoot({ 'src/content/pages/blog.yaml': BLOG_PAGE })), []);
+  assert.deepEqual(findCompletenessErrors(completeRoot({ 'src/content/pages/blog.yaml': BLOG_PAGE, 'src/content/posts/how-many/meta.yaml': POST_META, ...postDocs('how-many') })), []);
+  const fourteen = Object.assign({}, ...Array.from({ length: 14 }, (_, i) => numberedPost(i + 1)));
+  assert.deepEqual(findCompletenessErrors(completeRoot({ 'src/content/pages/blog.yaml': BLOG_PAGE, ...fourteen })), []);
+});
+
+test('completeness (6.2) : un article au slug « 2 » heurte blog-page:2 (14 articles) → erreur rangée sous src/content/posts/', () => {
+  const fourteen = Object.assign({}, ...Array.from({ length: 13 }, (_, i) => numberedPost(i + 1)), numberedPost(14, '2'));
+  const errors = findCompletenessErrors(completeRoot({ 'src/content/pages/blog.yaml': BLOG_PAGE, ...fourteen }));
+  assert.ok(errors.length > 0 && errors.every((line) => line.startsWith('src/content/posts/ : ')), errors.join('\n'));
+  assert.ok(errors.some((line) => line.includes('« blog-page:2 »') && line.includes('/fr/blog/2/')), errors.join('\n'));
+  // 13 articles : pas de page 2, le slug « 2 » est libre.
+  const thirteen = Object.assign({}, ...Array.from({ length: 12 }, (_, i) => numberedPost(i + 1)), numberedPost(13, '2'));
+  assert.deepEqual(findCompletenessErrors(completeRoot({ 'src/content/pages/blog.yaml': BLOG_PAGE, ...thirteen })), []);
 });

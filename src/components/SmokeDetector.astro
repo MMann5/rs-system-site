@@ -6,16 +6,20 @@
 // Mouvement au chargement : `rise` = montée unique (1,4 s après 0,5 s) ; la LED pulse 2 fois (2,4 s) puis
 // reste allumée, après la montée si `rise`, sinon dès l'apparition. La règle prefers-reduced-motion de
 // base.css coupe tout : détecteur en place, LED allumée fixe.
+// Story 6.1 (D1 de l'epic 6) : `fit` = dans un cadre de photo (article 16:9, carte de blog 3:2) déclaré
+// `container-type: size`, le disque garde sa taille mais se réduit pour tenir dans le cadre, moins une marge.
 interface Props {
   /** `lg` 380px (max 80vw, page Détecteurs), `md` 260px (accueil), `sm` 150px (carte de blog). */
   size: 'lg' | 'md' | 'sm';
   /** Montée unique à l'apparition. */
   rise?: boolean;
+  /** Plafonné par le cadre parent (`container-type: size`) : jamais de débordement. */
+  fit?: boolean;
 }
 
-const { size, rise = false } = Astro.props;
+const { size, rise = false, fit = false } = Astro.props;
 ---
-<div class:list={['detector', size, { rise }]} aria-hidden="true">
+<div class:list={['detector', size, { rise, fit }]} aria-hidden="true">
   <div class="grille">
     <div class="led"></div>
   </div>
@@ -57,6 +61,15 @@ const { size, rise = false } = Astro.props;
     --grille-pitch: var(--detector-grille-pitch-sm);
     --led-size: var(--detector-led);
     box-shadow: var(--shadow-detector-sm);
+  }
+
+  /* Cadre de photo : la plus petite des tailles entre le jeton et le cadre (largeur et hauteur) moins sa marge. */
+  .fit {
+    inline-size: min(
+      var(--detector-size),
+      calc(100cqi - 2 * var(--detector-fit-margin)),
+      calc(100cqb - 2 * var(--detector-fit-margin))
+    );
   }
 
   .grille {
