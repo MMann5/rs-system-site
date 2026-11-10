@@ -13,10 +13,10 @@ import sharp from 'sharp';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT = join(HERE, '../../src/assets/frames');
 /** Nombre d'images par variante, taille de sortie et suréchantillonnage. */
-export const FRAMES = 96;
-export const VARIANTS = { portrait: [720, 1280], landscape: [1600, 900] };
-const RATIO = 1.5;
-const QUALITY = 74;
+export const FRAMES = 72;
+export const VARIANTS = { portrait: [540, 960], landscape: [1280, 720] };
+const RATIO = 2;
+const QUALITY = 64;
 
 const ids = process.argv.slice(2).length > 0 ? process.argv.slice(2) : readdirSync(join(HERE, 'models')).map((f) => f.replace(/\.js$/, ''));
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript' };
@@ -41,7 +41,7 @@ for (const id of ids) {
     for (let i = 0; i < FRAMES; i++) {
       const url = await page.evaluate(([p, v, w, h, r]) => window.renderFrame(p, v, w, h, r), [i / (FRAMES - 1), variant, w, h, RATIO]);
       const png = Buffer.from(url.split(',')[1], 'base64');
-      const webp = await sharp(png).resize(w, h).webp({ quality: QUALITY, alphaQuality: 80, effort: 6 }).toBuffer();
+      const webp = await sharp(png).resize(w, h).webp({ quality: QUALITY, alphaQuality: 70, effort: 6 }).toBuffer();
       writeFileSync(join(dir, `${String(i).padStart(3, '0')}.webp`), webp);
       bytes += webp.length;
     }

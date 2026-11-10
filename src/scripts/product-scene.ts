@@ -1,5 +1,6 @@
 // Pages produits : la scène 3D pré-rendue avance avec le défilement (src/components/ProductScene.astro).
-// Images chargées par passes (1 sur 16, puis 1 sur 8, 4, 2, 1) : la scène est jouable tout de suite, puis s'affine.
+// Poids (SEO) : à l'ouverture, seule la première image (l'affiche) est téléchargée. Les autres ne partent qu'au
+// premier défilement, par passes (1 sur 16, puis 1 sur 8, 4, 2, 1) : la scène est jouable tout de suite, puis s'affine.
 // Image la plus proche déjà chargée, dessinée en `cover` dans le <canvas> ; textes et étiquettes allumés par plages.
 // Mouvement réduit : rien ne démarre (première image fixe et textes à la suite, comme sans JavaScript).
 // Aucune boucle infinie : une image d'animation n'est demandée que tant que l'image affichée rattrape le défilement.
@@ -40,6 +41,9 @@ function start(root: HTMLElement): void {
   let current = 0;
   let shown = -1;
   let frame = 0;
+  /** Images demandées (premier défilement) ; `started` : première mesure faite. */
+  let wanted = false;
+  let started = false;
 
   function load(v: Variant): void {
     const urls = data.frames[v];
@@ -85,7 +89,8 @@ function start(root: HTMLElement): void {
     canvas!.height = Math.round(height * ratio);
     if (v !== variant) {
       variant = v;
-      load(v);
+      if (wanted) load(v);
+      else images = data.frames[v].map(() => undefined);
     }
     const [fw, fh] = data.size[v];
     const scale = Math.max(width / fw, height / fh);
@@ -146,6 +151,10 @@ function start(root: HTMLElement): void {
   }
 
   function onScroll(): void {
+    if (!wanted && started) {
+      wanted = true;
+      if (variant) load(variant);
+    }
     target = progress();
     for (const { el, a, b } of ranged) el.classList.toggle('on', target >= a && target < b);
     schedule();
@@ -153,7 +162,6 @@ function start(root: HTMLElement): void {
 
   // La taille de la scène collée n'est sûre qu'une fois `is-live` appliqué : ResizeObserver la donne (premier appel
   // à l'observation, puis à chaque changement : rotation, barre d'adresse, polices).
-  let started = false;
   new ResizeObserver(() => {
     layout();
     onScroll();
