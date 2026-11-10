@@ -114,5 +114,7 @@
   "blog.pagination.label": "Страницы блога",
   "blog.pagination.next": "Следующая страница",
   "blog.pagination.page": "Страница {n}",
-  "blog.page-title": "Блог, страница {n} · RS SYSTEM"
+  "blog.page-title": "Блог, страница {n} · RS SYSTEM",
+  "seo.breadcrumb-home": "Главная",
+  "seo.city-neighbors": "Рядом: {list}."
 }

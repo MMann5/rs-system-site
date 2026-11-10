@@ -1,4 +1,4 @@
-// Stories 1.3 à 1.9, 2.1 à 2.4, 3.1 à 3.5, 4.1, 4.2, 4.4, 5.1, 5.2, 6.1, 6.2 : sortie réelle du build, sur une branche puis sur main (registre, layout Base.astro).
+// Stories 1.3 à 1.9, 2.1 à 2.4, 3.1 à 3.5, 4.1, 4.2, 4.4, 5.1, 5.2, 6.1, 6.2, 7.1, 7.2 : sortie réelle du build, sur une branche puis sur main (registre, layout Base.astro).
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
@@ -8,6 +8,7 @@ import { join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
 import { checkPlaceholders, countArticlePlaceholders } from '../scripts/checks/placeholders.mjs';
+import { checkShare, imageInfo } from '../scripts/checks/share.mjs';
 import { checkTrackLinks } from '../scripts/checks/track-links.mjs';
 import { buildAreas } from '../src/lib/areas/core.ts';
 import { citySchema, regionSchema } from '../src/lib/areas/schema.ts';
@@ -2058,6 +2059,8 @@ test('build de branche : 4 accueils complets (tuiles de services) + 4 Contact + 
   // Story 7.1 : non indexable → aucun script Umami (non indexable avec un id : tests umamiScript de tests/env.test.mjs) ;
   // îlot et liens mesurés.
   assertMeasure(out, undefined);
+  // Story 7.2 : aperçus de partage et JSON-LD, chemins depuis la racine sans SITE_URL.
+  assertShare(out, '');
 });
 
 test('build de main indexable avec SITE_URL : 4 accueils complets (tuiles de services) + 4 Contact + 4 Caméras + 4 Détecteurs + 4 Maison connectée + 4 Réseaux + 4 Interphone + 4 Entrepreneurs + 4 Zones + 4 À propos + 8 pages légales + 60 pages ville + 4 index du blog + 4 articles, sans noindex, canonique et hreflang absolus', { timeout: 120_000 }, () => {
@@ -2148,6 +2151,106 @@ test('build de main indexable avec SITE_URL : 4 accueils complets (tuiles de ser
   assertMeasure(out, 'test-site-id');
 });
 
-test('story 7.1 : build de main indexable sans UMAMI_WEBSITE_ID → aucun script Umami, build vert', { timeout: 120_000 }, () => {
-  assertMeasure(build({ WORKERS_CI_BRANCH: 'main', DOMAIN_LIVE: 'true', SITE_URL: 'https://rssystem.co.il' }), undefined);
+test('story 7.1 : build de main indexable sans UMAMI_WEBSITE_ID → aucun script Umami, build vert ; story 7.2 : aperçus et JSON-LD absolus sur https://rssystem.co.il', { timeout: 120_000 }, () => {
+  const out = build({ WORKERS_CI_BRANCH: 'main', DOMAIN_LIVE: 'true', SITE_URL: 'https://rssystem.co.il' });
+  assertMeasure(out, undefined);
+  assertShare(out, 'https://rssystem.co.il');
 });
+
+/** Story 7.2 : balises de partage d'une page (property/name → contenus). */
+function shareTags(html) {
+  const head = html.slice(0, html.indexOf('</head>'));
+  const tags = {};
+  for (const [, key, content] of head.matchAll(/<meta (?:property|name)="((?:og|twitter):[^"]+)" content="([^"]*)">/g)) {
+    (tags[key] ??= []).push(content);
+  }
+  return tags;
+}
+
+/** Story 7.2 : JSON-LD d'une page (graphe), ou undefined. */
+function jsonLdOf(html) {
+  const scripts = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)];
+  assert.ok(scripts.length <= 1, 'ld+json en double');
+  return scripts[0] ? JSON.parse(scripts[0][1]) : undefined;
+}
+
+/** Valeurs `url`, `item`, `logo`, `image` d'un graphe JSON-LD (récursif). */
+function jsonLdUrls(value) {
+  if (Array.isArray(value)) return value.flatMap(jsonLdUrls);
+  if (typeof value !== 'object' || value === null) return [];
+  return Object.entries(value).flatMap(([key, v]) => (['url', 'item', 'logo', 'image'].includes(key) && typeof v === 'string' ? [v] : jsonLdUrls(v)));
+}
+
+/**
+ * Story 7.2 (FR38, FR39, D3, D4) : contrôle scripts/checks/share.mjs sans échec ; URL (og:url, og:image, twitter:image,
+ * JSON-LD) sous `site` ; accueil = LocalBusiness (téléphone, logo, 15 villes, sans adresse, note ni avis) ; article =
+ * carte détecteur ; Caméras = JPEG 1200 × 630 du héros ; Contact = carte logo ; 404 sans JSON-LD.
+ */
+function assertShare(out, site) {
+  assert.deepEqual(checkShare(out, site || undefined), [], 'share');
+  const prefix = `${site}/`;
+  const pages = readdirSync(out, { recursive: true }).filter((f) => String(f).endsWith('.html'));
+  for (const file of pages) {
+    const html = readFileSync(join(out, file), 'utf8');
+    const tags = shareTags(html);
+    for (const key of ['og:url', 'og:image', 'twitter:image']) {
+      for (const value of tags[key] ?? []) assert.ok(value.startsWith(prefix), `${file} : ${key} ${value}`);
+    }
+    const ld = jsonLdOf(html);
+    for (const value of ld ? jsonLdUrls(ld) : []) assert.ok(value.startsWith(prefix), `${file} : URL du JSON-LD ${value}`);
+  }
+  for (const [i, file] of HOMES.entries()) {
+    const html = readFileSync(join(out, file), 'utf8');
+    const [business, ...rest] = jsonLdOf(html)['@graph'];
+    assert.equal(rest.length, 0, `${file} : un seul nœud`);
+    assert.equal(business['@type'], 'LocalBusiness', file);
+    assert.equal(business.name, 'RS SYSTEM', file);
+    assert.equal(business.telephone, '+972509565669', file);
+    assert.equal(business.logo, `${site}/rs-icon-512.png`, file);
+    assert.equal(business.url, `${site}${PAGE_HREFS.home[LANGS[i]]}`, file);
+    assert.deepEqual(business.areaServed, CITY_IDS.map((cid) => ({ '@type': 'City', name: CITY_DATA[cid].name[LANGS[i]] })), `${file} : 15 villes`);
+    assert.equal(business.areaServed.length, 15, file);
+    for (const prop of ['address', 'aggregateRating', 'review']) assert.ok(!Object.hasOwn(business, prop), `${file} : ${prop}`);
+    assert.deepEqual(shareTags(html)['og:locale'], [{ he: 'he_IL', en: 'en_US', ru: 'ru_RU', fr: 'fr_FR' }[LANGS[i]]], file);
+    const [image] = shareTags(html)['og:image'];
+    assert.match(image, new RegExp(`^${site}/_astro/home-hero\\.[\\w-]+\\.jpe?g$`), `${file} : og:image ${image}`);
+    assert.deepEqual(imageInfo(readFileSync(join(out, image.slice(site.length)))), { type: 'image/jpeg', width: 1200, height: 630 }, file);
+  }
+  for (const file of SMOKES) {
+    assert.deepEqual(shareTags(readFileSync(join(out, file), 'utf8'))['og:image'], [`${site}/og/detector.png`], `${file} : og:image`);
+  }
+  for (const [i, file] of POST_FILES.entries()) {
+    const html = readFileSync(join(out, file), 'utf8');
+    const tags = shareTags(html);
+    assert.deepEqual(tags['og:image'], [`${site}/og/detector.png`], `${file} : og:image`);
+    assert.deepEqual(tags['og:type'], ['article'], file);
+    const [art, crumbs] = jsonLdOf(html)['@graph'];
+    assert.equal(art['@type'], 'Article', file);
+    assert.equal(art.image, `${site}/og/detector.png`, `${file} : Article.image`);
+    assert.equal(art.inLanguage, LANGS[i], file);
+    assert.equal(crumbs['@type'], 'BreadcrumbList', file);
+  }
+  for (const file of CAMERAS) {
+    const tags = shareTags(readFileSync(join(out, file), 'utf8'));
+    const [image] = tags['og:image'];
+    assert.match(image, new RegExp(`^${site}/_astro/cameras-dome\\.[\\w-]+\\.jpe?g$`), `${file} : og:image ${image}`);
+    assert.deepEqual(imageInfo(readFileSync(join(out, image.slice(site.length)))), { type: 'image/jpeg', width: 1200, height: 630 }, file);
+  }
+  for (const file of CONTACTS) {
+    const html = readFileSync(join(out, file), 'utf8');
+    assert.deepEqual(shareTags(html)['og:image'], [`${site}/og/logo.png`], `${file} : og:image`);
+    assert.equal(jsonLdOf(html)['@graph'][0].contactPoint['@type'], 'ContactPoint', file);
+  }
+  for (const card of ['logo', 'detector']) {
+    assert.deepEqual(imageInfo(readFileSync(join(out, 'og', `${card}.png`))), { type: 'image/png', width: 1200, height: 630 }, card);
+  }
+  for (const file of NOT_FOUND_FILES) {
+    const html = readFileSync(join(out, file), 'utf8');
+    assert.equal(jsonLdOf(html), undefined, `${file} : JSON-LD`);
+    assert.ok(html.includes('<meta name="robots" content="noindex">'), `${file} : noindex`);
+    const tags = shareTags(html);
+    assert.equal(tags['og:url'], undefined, `${file} : og:url`);
+    assert.equal(tags['og:description'], undefined, `${file} : og:description`);
+    assert.deepEqual(tags['og:image'], [`${site}/og/logo.png`], `${file} : og:image`);
+  }
+}

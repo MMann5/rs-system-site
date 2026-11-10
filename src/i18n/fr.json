@@ -114,5 +114,7 @@
   "blog.pagination.label": "Pages du blog",
   "blog.pagination.next": "Page suivante",
   "blog.pagination.page": "Page {n}",
-  "blog.page-title": "Blog, page {n} · RS SYSTEM"
+  "blog.page-title": "Blog, page {n} · RS SYSTEM",
+  "seo.breadcrumb-home": "Accueil",
+  "seo.city-neighbors": "Localités voisines : {list}."
 }

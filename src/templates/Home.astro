@@ -35,6 +35,9 @@ import { page } from '../lib/pages';
 import { requireHome } from '../lib/page-schema';
 import { isEnabled, url } from '../lib/routes';
 import { tileLinks, type TileLinkDef } from '../lib/service-hero';
+import { photoShareImage } from '../lib/share-image';
+import { localBusiness } from '../lib/structured-data';
+import { business, servedCities } from '../lib/structured-data-site';
 
 interface Props {
   id: string;
@@ -89,8 +92,11 @@ const grid = [
   },
 ] as const;
 const smokeLinks = links({ kind: 'details', page: 'smoke-detectors' });
+// Story 7.2 (FR38, FR39, D3, D4) : héros recadré en image de partage ; LocalBusiness desservant toutes les villes actives.
+const ogImage = await photoShareImage(hero);
+const jsonLd = [localBusiness({ ...business(lang), areaServed: servedCities(lang) })];
 ---
-<Base ctx={ctx} title={meta.title[lang]} description={meta.description[lang]}>
+<Base ctx={ctx} title={meta.title[lang]} description={meta.description[lang]} ogImage={ogImage} jsonLd={jsonLd}>
   <HeroPhoto
     ctx={ctx}
     photo={{ src: hero, portrait: heroPortrait, alt: t(lang, 'home.hero.alt') }}
